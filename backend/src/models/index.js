@@ -264,6 +264,10 @@ const Payment = make("Payment", {
     enum: ["card", "cash_on_arrival", "cash_on_completion"],
   },
   amount: Number,
+  serviceCharge: Number,
+  tax: Number,
+  totalAmount: Number,
+  transactionReference: String,
   status: {
     type: String,
     enum: ["pending", "paid", "failed", "refunded"],
@@ -288,6 +292,7 @@ const Review = make("Review", {
   booking: { ...ref("Booking"), unique: true },
   customer: ref("User"),
   provider: ref("Provider"),
+  service: ref("Service", false),
   rating: { type: Number, min: 1, max: 5, required: true },
   comment: String,
 });
