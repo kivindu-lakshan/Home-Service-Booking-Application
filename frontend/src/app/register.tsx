@@ -20,14 +20,27 @@ export default function Register() {
   const submit = async () => {
     if (!form.fullName || !form.email || !form.phone || !form.password)
       return setError("Complete all fields.");
+    if (
+      !/[A-Za-z]/.test(form.password) ||
+      !/[0-9]/.test(form.password) ||
+      form.password.length < 8
+    )
+      return setError(
+        "Password must be at least 8 characters and include a letter and a number.",
+      );
     if (form.password !== form.confirm)
       return setError("Passwords do not match.");
     setBusy(true);
     try {
-      await register(form.fullName, form.email, form.password);
+      await register(form.fullName, form.email, form.phone, form.password);
       router.replace("/");
     } catch (e: any) {
-      setError(e.response?.data?.message || "Unable to create account.");
+      const details = e.response?.data?.data;
+      setError(
+        Array.isArray(details)
+          ? details.map((item) => item.msg).join(" ")
+          : e.response?.data?.message || "Unable to create account.",
+      );
     } finally {
       setBusy(false);
     }

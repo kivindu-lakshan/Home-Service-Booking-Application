@@ -1,4 +1,11 @@
-import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import {
+  Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from "react-native";
 import type { ReactNode } from "react";
 export function Button({
   children,
@@ -67,10 +74,14 @@ export const styles = StyleSheet.create({
     borderRadius: 18,
     padding: 18,
     marginBottom: 14,
-    shadowColor: "#25213D",
-    shadowOpacity: 0.08,
-    shadowRadius: 16,
-    elevation: 3,
+    ...(Platform.OS === "web"
+      ? { boxShadow: "0 4px 16px rgba(37, 33, 61, 0.08)" }
+      : {
+          shadowColor: "#25213D",
+          shadowOpacity: 0.08,
+          shadowRadius: 16,
+          elevation: 3,
+        }),
   },
   input: {
     backgroundColor: "#F4F5FA",

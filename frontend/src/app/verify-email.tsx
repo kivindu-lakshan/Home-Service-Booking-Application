@@ -5,23 +5,27 @@ import { Button, Input } from "@/components/ui";
 import ErrorText from "@/components/ErrorText";
 import { useAuth } from "@/context/AuthContext";
 export default function VerifyEmail() {
-  const { user } = useAuth();
-  const [token, setToken] = useState("");
+  const { user, verificationToken } = useAuth();
+  const [token, setToken] = useState(verificationToken || "");
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const verify = async () => {
     try {
       await api.post("/auth/verify-email", { token });
-      setMessage("Email verified. Sign in again to refresh your session.");
+      setMessage("Email verified successfully.");
     } catch (e: any) {
       setError(e.response?.data?.message || "Unable to verify email.");
     }
   };
   const resend = async () => {
     try {
-      await api.post("/auth/resend-verification");
+      const response = await api.post("/auth/resend-verification");
+      const newToken = response.data.data?.verificationToken;
+      if (newToken) setToken(newToken);
       setMessage(
-        `A new token was generated for ${user?.email}. Check the server console.`,
+        newToken
+          ? `Development verification token generated for ${user?.email}.`
+          : `A new token was generated for ${user?.email}. Check the server console.`,
       );
     } catch (e: any) {
       setError(e.response?.data?.message || "Unable to resend token.");
