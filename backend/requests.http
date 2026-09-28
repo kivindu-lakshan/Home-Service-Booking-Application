@@ -1,0 +1,45 @@
+@base = http://localhost:3000/api/auth
+@token = paste-jwt-here
+###
+POST {{base}}/register
+Content-Type: application/json
+
+{"fullName":"Anuka Perera","email":"anuka@example.com","phone":"+94 77 123 4567","password":"Password@123"}
+###
+POST {{base}}/login
+Content-Type: application/json
+
+{"email":"anuka@example.com","password":"Password@123"}
+###
+GET {{base}}/me
+Authorization: Bearer {{token}}
+###
+POST {{base}}/change-password
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{"currentPassword":"Password@123","newPassword":"Newpass123"}
+###
+POST {{base}}/forgot-password
+Content-Type: application/json
+
+{"email":"anuka@example.com"}
+###
+POST {{base}}/reset-password
+Content-Type: application/json
+
+{"token":"paste-console-token","newPassword":"Newpass123"}
+###
+POST {{base}}/verify-email
+Content-Type: application/json
+
+{"token":"paste-console-token"}
+###
+POST {{base}}/resend-verification
+Authorization: Bearer {{token}}
+###
+DELETE {{base}}/me
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{"password":"Password@123"}

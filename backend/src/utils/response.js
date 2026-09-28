@@ -1,0 +1,2 @@
+exports.ok = (res, data, message = 'Success') => res.json({ success: true, data, message });
+exports.fail = (res, status, message, data = null) => res.status(status).json({ success: false, data, message });
