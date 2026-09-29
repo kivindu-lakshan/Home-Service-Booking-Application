@@ -9,37 +9,29 @@ exports.create = async (req, res, next) => {
       customer: req.user._id,
     }).populate("service provider");
     if (!booking)
-      return res
-        .status(404)
-        .json({
-          success: false,
-          data: null,
-          message: "Booking not found for this customer",
-        });
+      return res.status(404).json({
+        success: false,
+        data: null,
+        message: "Booking not found for this customer",
+      });
     if (booking.status !== "completed")
-      return res
-        .status(409)
-        .json({
-          success: false,
-          data: null,
-          message: "Only completed bookings can be reviewed",
-        });
+      return res.status(409).json({
+        success: false,
+        data: null,
+        message: "Only completed bookings can be reviewed",
+      });
     if (!booking.provider)
-      return res
-        .status(409)
-        .json({
-          success: false,
-          data: null,
-          message: "This booking has no provider",
-        });
+      return res.status(409).json({
+        success: false,
+        data: null,
+        message: "This booking has no provider",
+      });
     if (await Review.exists({ booking: booking._id }))
-      return res
-        .status(409)
-        .json({
-          success: false,
-          data: null,
-          message: "This booking already has a review",
-        });
+      return res.status(409).json({
+        success: false,
+        data: null,
+        message: "This booking already has a review",
+      });
     const review = await Review.create({
       booking: booking._id,
       customer: req.user._id,

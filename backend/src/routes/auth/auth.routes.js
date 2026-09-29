@@ -1,5 +1,63 @@
-const router = require('express').Router(); const { body } = require('express-validator'); const auth = require('../../middleware/auth'); const validate = require('../../middleware/validate'); const controller = require('../../controllers/auth/auth.controller'); const password = (field) => body(field).isLength({ min: 8 }).matches(/[A-Za-z]/).matches(/[0-9]/).withMessage(controller.passwordError);
-router.post('/register', [body('fullName').trim().isLength({ min: 2 }), body('email').isEmail().normalizeEmail(), body('phone').optional().trim(), password('password')], validate, controller.register);
-router.post('/login', [body('email').isEmail().normalizeEmail(), body('password').notEmpty()], validate, controller.login);
-router.get('/me', auth, controller.me); router.post('/change-password', auth, [body('currentPassword').notEmpty(), password('newPassword')], validate, controller.changePassword);
-router.post('/forgot-password', [body('email').isEmail().normalizeEmail()], validate, controller.forgotPassword); router.post('/reset-password', [body('token').notEmpty(), password('newPassword')], validate, controller.resetPassword); router.post('/verify-email', [body('token').notEmpty()], validate, controller.verifyEmail); router.post('/resend-verification', auth, controller.resendVerification); router.delete('/me', auth, [body('password').notEmpty()], validate, controller.deleteMe); module.exports = router;
+const router = require("express").Router();
+const { body } = require("express-validator");
+const auth = require("../../middleware/auth");
+const validate = require("../../middleware/validate");
+const controller = require("../../controllers/auth/auth.controller");
+const password = (field) =>
+  body(field)
+    .isLength({ min: 8 })
+    .matches(/[A-Za-z]/)
+    .matches(/[0-9]/)
+    .withMessage(controller.passwordError);
+router.post(
+  "/register",
+  [
+    body("fullName").trim().isLength({ min: 2 }),
+    body("email").isEmail().normalizeEmail(),
+    body("phone").optional().trim(),
+    password("password"),
+  ],
+  validate,
+  controller.register,
+);
+router.post(
+  "/login",
+  [body("email").isEmail().normalizeEmail(), body("password").notEmpty()],
+  validate,
+  controller.login,
+);
+router.get("/me", auth, controller.me);
+router.post(
+  "/change-password",
+  auth,
+  [body("currentPassword").notEmpty(), password("newPassword")],
+  validate,
+  controller.changePassword,
+);
+router.post(
+  "/forgot-password",
+  [body("email").isEmail().normalizeEmail()],
+  validate,
+  controller.forgotPassword,
+);
+router.post(
+  "/reset-password",
+  [body("token").notEmpty(), password("newPassword")],
+  validate,
+  controller.resetPassword,
+);
+router.post(
+  "/verify-email",
+  [body("token").notEmpty()],
+  validate,
+  controller.verifyEmail,
+);
+router.post("/resend-verification", auth, controller.resendVerification);
+router.delete(
+  "/me",
+  auth,
+  [body("password").notEmpty()],
+  validate,
+  controller.deleteMe,
+);
+module.exports = router;

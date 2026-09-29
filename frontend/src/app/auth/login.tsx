@@ -53,7 +53,10 @@ export default function Login() {
         value={password}
         onChangeText={setPassword}
       />
-      <Text style={styles.link} onPress={() => router.push("/auth/forgot-password")}>
+      <Text
+        style={styles.link}
+        onPress={() => router.push("/auth/forgot-password")}
+      >
         Forgot password?
       </Text>
       <Button

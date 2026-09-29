@@ -100,13 +100,11 @@ exports.assignProvider = async (req, res, next) => {
         .status(404)
         .json({ success: false, data: null, message: "Booking not found" });
     if (!provider)
-      return res
-        .status(422)
-        .json({
-          success: false,
-          data: null,
-          message: "Provider is not active, available, or does not exist",
-        });
+      return res.status(422).json({
+        success: false,
+        data: null,
+        message: "Provider is not active, available, or does not exist",
+      });
     booking.provider = provider._id;
     booking.status = "assigned";
     booking.statusHistory.push({

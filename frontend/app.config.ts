@@ -6,7 +6,8 @@ function readRootEnv(): Record<string, string> {
   const envPath = path.resolve(__dirname, "../.env");
   if (!fs.existsSync(envPath)) return {};
   return Object.fromEntries(
-    fs.readFileSync(envPath, "utf8")
+    fs
+      .readFileSync(envPath, "utf8")
       .split(/\r?\n/)
       .filter((line) => line && !line.startsWith("#"))
       .map((line) => {
@@ -17,7 +18,9 @@ function readRootEnv(): Record<string, string> {
 }
 
 const rootEnv = readRootEnv();
-const expoConfig = appJson.expo as typeof appJson.expo & { extra?: Record<string, unknown> };
+const expoConfig = appJson.expo as typeof appJson.expo & {
+  extra?: Record<string, unknown>;
+};
 export default {
   ...appJson,
   expo: {

@@ -36,37 +36,31 @@ exports.create = async (req, res, next) => {
         .status(404)
         .json({ success: false, data: null, message: "Booking not found" });
     if (booking.status === "cancelled")
-      return res
-        .status(409)
-        .json({
-          success: false,
-          data: null,
-          message: "Cancelled bookings cannot be paid",
-        });
+      return res.status(409).json({
+        success: false,
+        data: null,
+        message: "Cancelled bookings cannot be paid",
+      });
     const method =
       req.body.method ||
       (req.body.paymentMethodId ? "card" : "cash_on_completion");
     if (!["card", "cash_on_arrival", "cash_on_completion"].includes(method))
-      return res
-        .status(422)
-        .json({
-          success: false,
-          data: null,
-          message: "Invalid payment method",
-        });
+      return res.status(422).json({
+        success: false,
+        data: null,
+        message: "Invalid payment method",
+      });
     if (method === "card") {
       const paymentMethod = await PaymentMethod.findOne({
         _id: req.body.paymentMethodId,
         user: req.user._id,
       });
       if (!paymentMethod)
-        return res
-          .status(422)
-          .json({
-            success: false,
-            data: null,
-            message: "Select a saved payment method",
-          });
+        return res.status(422).json({
+          success: false,
+          data: null,
+          message: "Select a saved payment method",
+        });
     }
     const paid = method === "card";
     const payment = await Payment.findOneAndUpdate(
@@ -109,13 +103,11 @@ exports.createMethod = async (req, res, next) => {
   try {
     const { type, brand, last4, gatewayToken, isDefault } = req.body;
     if (type === "card" && (!last4 || !/^\d{4}$/.test(last4)))
-      return res
-        .status(422)
-        .json({
-          success: false,
-          data: null,
-          message: "Only a valid four-digit last4 value may be stored",
-        });
+      return res.status(422).json({
+        success: false,
+        data: null,
+        message: "Only a valid four-digit last4 value may be stored",
+      });
     if (isDefault)
       await PaymentMethod.updateMany(
         { user: req.user._id },

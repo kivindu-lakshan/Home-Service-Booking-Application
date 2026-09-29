@@ -5,7 +5,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { api, clearToken, saveToken } from "@/api/client";
+import { api, clearToken, getStoredToken, saveToken } from "@/api/client";
 type User = {
   id: string;
   fullName: string;
@@ -16,10 +16,12 @@ type User = {
 type AuthValue = {
   user: User | null;
   loading: boolean;
+  verificationToken: string | null;
   login: (email: string, password: string) => Promise<void>;
   register: (
     fullName: string,
     email: string,
+    phone: string,
     password: string,
   ) => Promise<void>;
   logout: () => Promise<void>;
@@ -27,6 +29,7 @@ type AuthValue = {
 const AuthContext = createContext<AuthValue>({
   user: null,
   loading: true,
+  verificationToken: null,
   login: async () => {},
   register: async () => {},
   logout: async () => {},
@@ -34,10 +37,15 @@ const AuthContext = createContext<AuthValue>({
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [verificationToken, setVerificationToken] = useState<string | null>(
+    null,
+  );
   useEffect(() => {
-    api
-      .get("/auth/me")
-      .then((r) => setUser(r.data.data))
+    getStoredToken()
+      .then((token) => (token ? api.get("/auth/me") : null))
+      .then((r) => {
+        if (r) setUser(r.data.data);
+      })
       .catch(() => clearToken())
       .finally(() => setLoading(false));
   }, []);
@@ -49,18 +57,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const register = async (
     fullName: string,
     email: string,
+    phone: string,
     password: string,
   ) => {
-    const r = await api.post("/auth/register", { fullName, email, password });
+    const r = await api.post("/auth/register", {
+      fullName,
+      email,
+      phone,
+      password,
+    });
     await saveToken(r.data.data.token);
     setUser(r.data.data.user);
+    setVerificationToken(r.data.data.verificationToken || null);
   };
   const logout = async () => {
     await clearToken();
     setUser(null);
   };
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout }}>
+    <AuthContext.Provider
+      value={{ user, loading, verificationToken, login, register, logout }}
+    >
       {children}
     </AuthContext.Provider>
   );
