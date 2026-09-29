@@ -12,6 +12,17 @@ async function ownedBooking(req, bookingId) {
   );
 }
 
+exports.listCustomerBookings = async (req, res, next) => {
+  try {
+    const bookings = await Booking.find({ customer: req.user._id })
+      .populate("service provider")
+      .sort({ scheduledDate: -1 });
+    return send(res, bookings);
+  } catch (error) {
+    return next(error);
+  }
+};
+
 exports.getByBooking = async (req, res, next) => {
   try {
     const booking = await ownedBooking(req, req.params.bookingId);

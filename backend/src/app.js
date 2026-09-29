@@ -22,7 +22,6 @@ app.get("/api/health", (req, res) =>
 app.use("/api/auth", authLimit, require("./routes/auth/auth.routes"));
 app.use("/api/payments", require("./routes/payment/payment.routes"));
 app.use("/api/reviews", require("./routes/review/review.routes"));
-app.use("/api/bookings", require("./routes/booking/booking.routes"));
 app.use("/api/admin", require("./routes/admin/admin.routes"));
 app.use(errorHandler);
 module.exports = app;

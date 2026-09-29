@@ -2,6 +2,7 @@ const router = require("express").Router();
 const auth = require("../../middleware/auth");
 const controller = require("../../controllers/payment/payment.controller");
 router.use(auth);
+router.get("/bookings", controller.listCustomerBookings);
 router.get("/methods", controller.listMethods);
 router.post("/methods", controller.createMethod);
 router.delete("/methods/:id", controller.deleteMethod);

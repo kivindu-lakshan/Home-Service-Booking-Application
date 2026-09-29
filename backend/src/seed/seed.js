@@ -9,6 +9,25 @@ const date = (days) => new Date(Date.now() + days * 86400000);
 
 async function seed() {
   await mongoose.connect(process.env.MONGODB_URI);
+  const removedCollections = [
+    "notifications",
+    "supporttickets",
+    "favorites",
+    "customservicerequests",
+    "providerlocations",
+    "chatmessages",
+    "refunds",
+    "complaints",
+  ];
+  await Promise.all(
+    removedCollections.map(async (name) => {
+      try {
+        await mongoose.connection.dropCollection(name);
+      } catch (error) {
+        if (error.codeName !== "NamespaceNotFound") throw error;
+      }
+    }),
+  );
   await Promise.all(Object.values(models).map((model) => model.deleteMany({})));
   const passwordHash = await bcrypt.hash(password, 12);
   const [admin, customer, secondCustomer, providerUser] =

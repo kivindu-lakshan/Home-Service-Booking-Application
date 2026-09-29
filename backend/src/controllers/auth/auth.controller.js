@@ -1,7 +1,11 @@
 const bcrypt = require("bcryptjs");
 const { User, AuthToken } = require("../../models");
 const { ok, fail } = require("../../utils/response");
-const { signAccessToken, randomToken, hashToken } = require("../../utils/tokens");
+const {
+  signAccessToken,
+  randomToken,
+  hashToken,
+} = require("../../utils/tokens");
 
 const publicUser = (user) => ({
   id: user._id,
@@ -12,11 +16,17 @@ const publicUser = (user) => ({
   emailVerified: user.emailVerified,
   status: user.status,
 });
-const passwordError = "Password must be at least 8 characters and include a letter and a number.";
+const passwordError =
+  "Password must be at least 8 characters and include a letter and a number.";
 
 async function createAuthToken(user, type, minutes) {
   const raw = randomToken();
-  await AuthToken.create({ user: user._id, type, tokenHash: hashToken(raw), expiresAt: new Date(Date.now() + minutes * 60000) });
+  await AuthToken.create({
+    user: user._id,
+    type,
+    tokenHash: hashToken(raw),
+    expiresAt: new Date(Date.now() + minutes * 60000),
+  });
   console.log(`[SIMULATED EMAIL] ${type} token for ${user.email}: ${raw}`);
   return raw;
 }
@@ -24,25 +34,141 @@ async function createAuthToken(user, type, minutes) {
 exports.register = async (req, res, next) => {
   try {
     const { fullName, email, phone, password } = req.body;
-    if (await User.exists({ email })) return fail(res, 409, "An account with that email already exists.");
-    const user = await User.create({ fullName, email, phone, passwordHash: await bcrypt.hash(password, 12) });
-    const verificationToken = await createAuthToken(user, "verify_email", 60 * 24);
-    return ok(res, { user: publicUser(user), token: signAccessToken(user), ...(process.env.NODE_ENV !== "production" && { verificationToken }) }, "Account created.");
-  } catch (error) { next(error); }
+    if (await User.exists({ email }))
+      return fail(res, 409, "An account with that email already exists.");
+    const user = await User.create({
+      fullName,
+      email,
+      phone,
+      passwordHash: await bcrypt.hash(password, 12),
+    });
+    const verificationToken = await createAuthToken(
+      user,
+      "verify_email",
+      60 * 24,
+    );
+    return ok(
+      res,
+      {
+        user: publicUser(user),
+        token: signAccessToken(user),
+        ...(process.env.NODE_ENV !== "production" && { verificationToken }),
+      },
+      "Account created.",
+    );
+  } catch (error) {
+    next(error);
+  }
 };
 
 exports.login = async (req, res, next) => {
   try {
-    const user = await User.findOne({ email: req.body.email }).select("+passwordHash");
-    if (!user || user.status !== "active" || !(await bcrypt.compare(req.body.password, user.passwordHash))) return fail(res, 401, "Invalid email or password.");
-    return ok(res, { user: publicUser(user), token: signAccessToken(user) }, "Signed in.");
-  } catch (error) { next(error); }
+    const user = await User.findOne({ email: req.body.email }).select(
+      "+passwordHash",
+    );
+    if (
+      !user ||
+      user.status !== "active" ||
+      !(await bcrypt.compare(req.body.password, user.passwordHash))
+    )
+      return fail(res, 401, "Invalid email or password.");
+    return ok(
+      res,
+      { user: publicUser(user), token: signAccessToken(user) },
+      "Signed in.",
+    );
+  } catch (error) {
+    next(error);
+  }
 };
 exports.me = (req, res) => ok(res, publicUser(req.user));
-exports.changePassword = async (req, res, next) => { try { const user = await User.findById(req.user._id).select("+passwordHash"); if (!(await bcrypt.compare(req.body.currentPassword, user.passwordHash))) return fail(res, 400, "Current password is incorrect."); user.passwordHash = await bcrypt.hash(req.body.newPassword, 12); await user.save(); ok(res, null, "Password changed."); } catch (error) { next(error); } };
-exports.forgotPassword = async (req, res, next) => { try { const user = await User.findOne({ email: req.body.email }); if (user && user.status === "active") await createAuthToken(user, "reset_password", 30); ok(res, null, "If an account exists, reset instructions have been sent."); } catch (error) { next(error); } };
-exports.resetPassword = async (req, res, next) => { try { const record = await AuthToken.findOne({ tokenHash: hashToken(req.body.token), type: "reset_password", usedAt: null, expiresAt: { $gt: new Date() } }); if (!record) return fail(res, 400, "Invalid or expired reset token."); await User.findByIdAndUpdate(record.user, { passwordHash: await bcrypt.hash(req.body.newPassword, 12) }); record.usedAt = new Date(); await record.save(); ok(res, null, "Password reset."); } catch (error) { next(error); } };
-exports.verifyEmail = async (req, res, next) => { try { const record = await AuthToken.findOne({ tokenHash: hashToken(req.body.token), type: "verify_email", usedAt: null, expiresAt: { $gt: new Date() } }); if (!record) return fail(res, 400, "Invalid or expired verification token."); await User.findByIdAndUpdate(record.user, { emailVerified: true }); record.usedAt = new Date(); await record.save(); ok(res, null, "Email verified."); } catch (error) { next(error); } };
-exports.resendVerification = async (req, res, next) => { try { const user = await User.findById(req.user._id); if (user.emailVerified) return ok(res, null, "Email is already verified."); const verificationToken = await createAuthToken(user, "verify_email", 60 * 24); ok(res, process.env.NODE_ENV !== "production" ? { verificationToken } : null, "A verification token was generated."); } catch (error) { next(error); } };
-exports.deleteMe = async (req, res, next) => { try { const user = await User.findById(req.user._id).select("+passwordHash"); if (!(await bcrypt.compare(req.body.password, user.passwordHash))) return fail(res, 400, "Password is incorrect."); user.status = "deleted"; await user.save(); ok(res, null, "Account deleted."); } catch (error) { next(error); } };
+exports.changePassword = async (req, res, next) => {
+  try {
+    const user = await User.findById(req.user._id).select("+passwordHash");
+    if (!(await bcrypt.compare(req.body.currentPassword, user.passwordHash)))
+      return fail(res, 400, "Current password is incorrect.");
+    user.passwordHash = await bcrypt.hash(req.body.newPassword, 12);
+    await user.save();
+    ok(res, null, "Password changed.");
+  } catch (error) {
+    next(error);
+  }
+};
+exports.forgotPassword = async (req, res, next) => {
+  try {
+    const user = await User.findOne({ email: req.body.email });
+    if (user && user.status === "active")
+      await createAuthToken(user, "reset_password", 30);
+    ok(res, null, "If an account exists, reset instructions have been sent.");
+  } catch (error) {
+    next(error);
+  }
+};
+exports.resetPassword = async (req, res, next) => {
+  try {
+    const record = await AuthToken.findOne({
+      tokenHash: hashToken(req.body.token),
+      type: "reset_password",
+      usedAt: null,
+      expiresAt: { $gt: new Date() },
+    });
+    if (!record) return fail(res, 400, "Invalid or expired reset token.");
+    await User.findByIdAndUpdate(record.user, {
+      passwordHash: await bcrypt.hash(req.body.newPassword, 12),
+    });
+    record.usedAt = new Date();
+    await record.save();
+    ok(res, null, "Password reset.");
+  } catch (error) {
+    next(error);
+  }
+};
+exports.verifyEmail = async (req, res, next) => {
+  try {
+    const record = await AuthToken.findOne({
+      tokenHash: hashToken(req.body.token),
+      type: "verify_email",
+      usedAt: null,
+      expiresAt: { $gt: new Date() },
+    });
+    if (!record)
+      return fail(res, 400, "Invalid or expired verification token.");
+    await User.findByIdAndUpdate(record.user, { emailVerified: true });
+    record.usedAt = new Date();
+    await record.save();
+    ok(res, null, "Email verified.");
+  } catch (error) {
+    next(error);
+  }
+};
+exports.resendVerification = async (req, res, next) => {
+  try {
+    const user = await User.findById(req.user._id);
+    if (user.emailVerified) return ok(res, null, "Email is already verified.");
+    const verificationToken = await createAuthToken(
+      user,
+      "verify_email",
+      60 * 24,
+    );
+    ok(
+      res,
+      process.env.NODE_ENV !== "production" ? { verificationToken } : null,
+      "A verification token was generated.",
+    );
+  } catch (error) {
+    next(error);
+  }
+};
+exports.deleteMe = async (req, res, next) => {
+  try {
+    const user = await User.findById(req.user._id).select("+passwordHash");
+    if (!(await bcrypt.compare(req.body.password, user.passwordHash)))
+      return fail(res, 400, "Password is incorrect.");
+    user.status = "deleted";
+    await user.save();
+    ok(res, null, "Account deleted.");
+  } catch (error) {
+    next(error);
+  }
+};
 exports.passwordError = passwordError;

@@ -1,6 +1,5 @@
 const {
   Booking,
-  Complaint,
   Provider,
   BookingAssignment,
   AdminActivityLog,
@@ -17,7 +16,6 @@ exports.dashboard = async (req, res, next) => {
       pending,
       ongoing,
       completed,
-      complaints,
       availableProviders,
       recentActivity,
     ] = await Promise.all([
@@ -25,7 +23,6 @@ exports.dashboard = async (req, res, next) => {
       Booking.countDocuments({ status: "pending" }),
       Booking.countDocuments({ status: { $in: activeStatuses } }),
       Booking.countDocuments({ status: "completed" }),
-      Complaint.countDocuments({ status: { $in: ["open", "investigating"] } }),
       Provider.countDocuments({ status: "active", isAvailable: true }),
       AdminActivityLog.find()
         .populate("actor", "fullName email")
@@ -37,7 +34,6 @@ exports.dashboard = async (req, res, next) => {
       pending,
       ongoing,
       completed,
-      complaints,
       availableProviders,
       recentActivity,
     });

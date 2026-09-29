@@ -23,22 +23,12 @@ const address = new Schema(
 );
 const settings = new Schema(
   {
-    notifyBookingConfirmations: { type: Boolean, default: true },
-    notifyArrivalStatus: { type: Boolean, default: true },
-    notifyReminders: { type: Boolean, default: true },
-    notifyPromotions: { type: Boolean, default: false },
     theme: { type: String, enum: ["light", "dark"], default: "light" },
-    easyOnEyes: { type: Boolean, default: false },
-    gentleByDesign: { type: Boolean, default: false },
     textSize: {
       type: String,
       enum: ["small", "medium", "large"],
       default: "medium",
     },
-    reduceMotion: { type: Boolean, default: false },
-    highContrast: { type: Boolean, default: false },
-    locationPermission: { type: Boolean, default: false },
-    shareUsageData: { type: Boolean, default: false },
   },
   { _id: false },
 );
@@ -70,32 +60,6 @@ const User = make("User", {
   },
   addresses: [address],
   settings: { type: settings, default: () => ({}) },
-});
-const Notification = make("Notification", {
-  user: ref("User"),
-  booking: ref("Booking", false),
-  type: {
-    type: String,
-    enum: ["confirmation", "status", "arrival", "reminder", "promo", "refund"],
-  },
-  title: String,
-  body: String,
-  isRead: { type: Boolean, default: false },
-});
-const SupportTicket = make("SupportTicket", {
-  user: ref("User", false),
-  email: String,
-  category: {
-    type: String,
-    enum: ["cant_sign_in", "update_details", "booking_problem", "other"],
-  },
-  message: String,
-  status: {
-    type: String,
-    enum: ["open", "in_progress", "resolved"],
-    default: "open",
-  },
-  resolvedAt: Date,
 });
 const AuthToken = make("AuthToken", {
   user: ref("User"),
@@ -146,22 +110,6 @@ const Provider = make("Provider", {
       isAvailable: Boolean,
     },
   ],
-});
-const Favorite = make("Favorite", {
-  user: ref("User"),
-  provider: ref("Provider"),
-});
-Favorite.schema.index({ user: 1, provider: 1 }, { unique: true });
-const CustomServiceRequest = make("CustomServiceRequest", {
-  user: ref("User"),
-  title: String,
-  description: String,
-  addressId: String,
-  status: {
-    type: String,
-    enum: ["new", "quoted", "converted", "closed"],
-    default: "new",
-  },
 });
 const statusHistory = new Schema(
   {
@@ -224,18 +172,6 @@ Booking.schema.index(
     },
   },
 );
-const ProviderLocation = make("ProviderLocation", {
-  booking: ref("Booking"),
-  latitude: Number,
-  longitude: Number,
-  recordedAt: { type: Date, default: Date.now, index: { expires: 604800 } },
-});
-const ChatMessage = make("ChatMessage", {
-  booking: ref("Booking"),
-  sender: ref("User"),
-  body: String,
-  isRead: { type: Boolean, default: false },
-});
 const BookingAssignment = make("BookingAssignment", {
   booking: ref("Booking"),
   provider: ref("Provider"),
@@ -276,18 +212,6 @@ const Payment = make("Payment", {
   receiptNo: { type: String, unique: true, sparse: true },
   paidAt: Date,
 });
-const Refund = make("Refund", {
-  payment: ref("Payment"),
-  complaint: ref("Complaint", false),
-  amount: Number,
-  reason: String,
-  status: {
-    type: String,
-    enum: ["requested", "approved", "processed", "rejected"],
-  },
-  processedBy: ref("User", false),
-  processedAt: Date,
-});
 const Review = make("Review", {
   booking: { ...ref("Booking"), unique: true },
   customer: ref("User"),
@@ -295,19 +219,6 @@ const Review = make("Review", {
   service: ref("Service", false),
   rating: { type: Number, min: 1, max: 5, required: true },
   comment: String,
-});
-const Complaint = make("Complaint", {
-  booking: ref("Booking"),
-  customer: ref("User"),
-  type: { type: String, enum: ["quality", "no_show", "overcharge", "other"] },
-  description: String,
-  status: {
-    type: String,
-    enum: ["open", "investigating", "resolved", "rejected"],
-    default: "open",
-  },
-  resolutionNote: String,
-  resolvedAt: Date,
 });
 const AdminActivityLog = make("AdminActivityLog", {
   actor: ref("User"),
@@ -317,23 +228,15 @@ const AdminActivityLog = make("AdminActivityLog", {
 });
 const models = {
   User,
-  Notification,
-  SupportTicket,
   AuthToken,
   ServiceCategory,
   Service,
   Provider,
-  Favorite,
-  CustomServiceRequest,
   Booking,
-  ProviderLocation,
-  ChatMessage,
   BookingAssignment,
   PaymentMethod,
   Payment,
-  Refund,
   Review,
-  Complaint,
   AdminActivityLog,
 };
 module.exports = { ...models, models };

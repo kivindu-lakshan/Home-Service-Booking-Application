@@ -1,6 +1,6 @@
 import { api } from "./client";
 
-export const getMyBookings = () => api.get("/bookings/mine");
+export const getMyBookings = () => api.get("/payments/bookings");
 export const getBooking = (bookingId: string) =>
   api.get(`/bookings/${bookingId}`);
 export const getPayment = (bookingId: string) =>
