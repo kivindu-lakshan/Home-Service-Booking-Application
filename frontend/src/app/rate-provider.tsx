@@ -1,2 +1,84 @@
-import { useState } from "react"; import { router, useLocalSearchParams } from "expo-router"; import { ScrollView, Text, TextInput } from "react-native"; import { Button, Card } from "@/components/ui"; import { createReview } from "@/api/domain"; import ErrorText from "@/components/ErrorText";
-export default function RateProvider() { const { bookingId } = useLocalSearchParams<{ bookingId: string }>(); const [rating, setRating] = useState(0); const [comment, setComment] = useState(""); const [error, setError] = useState(""); const [busy, setBusy] = useState(false); const submit = async () => { if (!rating) return setError("Select a rating from 1 to 5 stars."); setBusy(true); setError(""); try { const response = await createReview({ bookingId, rating, comment }); router.replace({ pathname: "/review-submitted", params: { rating: response.data.data.rating } }); } catch (e: any) { setError(e.response?.data?.message || "Unable to submit review."); } finally { setBusy(false); } }; return <ScrollView style={{ backgroundColor: "#F7F7FB" }} contentContainerStyle={{ padding: 20 }}><Text style={{ fontSize: 30, fontWeight: "900", color: "#25213D" }}>Rate your provider</Text><Text style={{ color: "#747B90", marginVertical: 10 }}>Your review is linked to completed booking {bookingId}.</Text><Card><Text style={{ color: "#25213D", fontWeight: "900", fontSize: 18 }}>How was your experience?</Text><Text style={{ color: "#F29D38", fontSize: 38, marginTop: 12 }}>{[1, 2, 3, 4, 5].map((value) => <Text key={value} onPress={() => setRating(value)}>{value <= rating ? "★" : "☆"}</Text>)}</Text></Card><TextInput placeholder="Write an optional review" placeholderTextColor="#8890A5" multiline value={comment} onChangeText={setComment} style={{ minHeight: 120, backgroundColor: "#FFF", borderRadius: 14, padding: 16, textAlignVertical: "top", color: "#25213D", marginBottom: 14 }} /><ErrorText>{error}</ErrorText><Button onPress={() => { void submit(); }}>{busy ? "Submitting..." : "Submit review"}</Button><Text onPress={() => router.replace("/bookings")} style={{ color: "#747B90", textAlign: "center", marginTop: 18 }}>Skip for now</Text></ScrollView>; }
+import { useState } from "react";
+import { router, useLocalSearchParams } from "expo-router";
+import { ScrollView, Text, TextInput } from "react-native";
+import { Button, Card } from "@/components/ui";
+import { createReview } from "@/api/domain";
+import ErrorText from "@/components/ErrorText";
+export default function RateProvider() {
+  const { bookingId } = useLocalSearchParams<{ bookingId: string }>();
+  const [rating, setRating] = useState(0);
+  const [comment, setComment] = useState("");
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+  const submit = async () => {
+    if (!rating) return setError("Select a rating from 1 to 5 stars.");
+    setBusy(true);
+    setError("");
+    try {
+      const response = await createReview({ bookingId, rating, comment });
+      router.replace({
+        pathname: "/review-submitted",
+        params: { rating: response.data.data.rating },
+      });
+    } catch (e: any) {
+      setError(e.response?.data?.message || "Unable to submit review.");
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <ScrollView
+      style={{ backgroundColor: "#F7F7FB" }}
+      contentContainerStyle={{ padding: 20 }}
+    >
+      <Text style={{ fontSize: 30, fontWeight: "900", color: "#25213D" }}>
+        Rate your provider
+      </Text>
+      <Text style={{ color: "#747B90", marginVertical: 10 }}>
+        Your review is linked to completed booking {bookingId}.
+      </Text>
+      <Card>
+        <Text style={{ color: "#25213D", fontWeight: "900", fontSize: 18 }}>
+          How was your experience?
+        </Text>
+        <Text style={{ color: "#F29D38", fontSize: 38, marginTop: 12 }}>
+          {[1, 2, 3, 4, 5].map((value) => (
+            <Text key={value} onPress={() => setRating(value)}>
+              {value <= rating ? "★" : "☆"}
+            </Text>
+          ))}
+        </Text>
+      </Card>
+      <TextInput
+        placeholder="Write an optional review"
+        placeholderTextColor="#8890A5"
+        multiline
+        value={comment}
+        onChangeText={setComment}
+        style={{
+          minHeight: 120,
+          backgroundColor: "#FFF",
+          borderRadius: 14,
+          padding: 16,
+          textAlignVertical: "top",
+          color: "#25213D",
+          marginBottom: 14,
+        }}
+      />
+      <ErrorText>{error}</ErrorText>
+      <Button
+        onPress={() => {
+          void submit();
+        }}
+      >
+        {busy ? "Submitting..." : "Submit review"}
+      </Button>
+      <Text
+        onPress={() => router.replace("/bookings")}
+        style={{ color: "#747B90", textAlign: "center", marginTop: 18 }}
+      >
+        Skip for now
+      </Text>
+    </ScrollView>
+  );
+}

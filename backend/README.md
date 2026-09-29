@@ -14,19 +14,19 @@ Authentication remains available under `/api/auth`; the remaining domain collect
 
 Payment, review, and admin management endpoints are now backed by MongoDB:
 
-| Method | Endpoint | Purpose |
-|---|---|---|
-| GET/POST | `/api/payments/booking/:bookingId` | Read or record a payment record |
-| GET/POST/DELETE | `/api/payments/methods` | Manage saved payment methods |
-| POST | `/api/reviews` | Submit one review for a completed customer booking |
-| GET | `/api/reviews/provider/:providerId` | Read provider rating and reviews |
-| GET | `/api/reviews/booking/:bookingId` | Read a booking review |
-| GET | `/api/admin/dashboard` | Admin-only MongoDB aggregations/counts |
-| GET | `/api/admin/bookings` | Admin-only search/filter bookings |
-| GET | `/api/admin/bookings/:id/available-providers` | Find active available providers |
-| POST | `/api/admin/bookings/:id/assign` | Persist provider assignment |
-| GET | `/api/admin/jobs` | Admin-only active job monitor |
-| PATCH | `/api/admin/jobs/:id/status` | Persist job status changes |
+| Method          | Endpoint                                      | Purpose                                            |
+| --------------- | --------------------------------------------- | -------------------------------------------------- |
+| GET/POST        | `/api/payments/booking/:bookingId`            | Read or record a payment record                    |
+| GET/POST/DELETE | `/api/payments/methods`                       | Manage saved payment methods                       |
+| POST            | `/api/reviews`                                | Submit one review for a completed customer booking |
+| GET             | `/api/reviews/provider/:providerId`           | Read provider rating and reviews                   |
+| GET             | `/api/reviews/booking/:bookingId`             | Read a booking review                              |
+| GET             | `/api/admin/dashboard`                        | Admin-only MongoDB aggregations/counts             |
+| GET             | `/api/admin/bookings`                         | Admin-only search/filter bookings                  |
+| GET             | `/api/admin/bookings/:id/available-providers` | Find active available providers                    |
+| POST            | `/api/admin/bookings/:id/assign`              | Persist provider assignment                        |
+| GET             | `/api/admin/jobs`                             | Admin-only active job monitor                      |
+| PATCH           | `/api/admin/jobs/:id/status`                  | Persist job status changes                         |
 
 The frontend refreshes data when these screens open and after mutations; bookings and jobs also support pull-to-refresh. The current repository has no booking/service creation flow, so these APIs intentionally require real booking/service/provider records already present in Atlas rather than generating demo data.
 

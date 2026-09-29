@@ -1,2 +1,10 @@
-const router = require("express").Router(); const auth = require("../middleware/auth"); const controller = require("../controllers/payment.controller");
-router.use(auth); router.get("/methods", controller.listMethods); router.post("/methods", controller.createMethod); router.delete("/methods/:id", controller.deleteMethod); router.get("/booking/:bookingId", controller.getByBooking); router.post("/booking/:bookingId", controller.create); module.exports = router;
+const router = require("express").Router();
+const auth = require("../middleware/auth");
+const controller = require("../controllers/payment.controller");
+router.use(auth);
+router.get("/methods", controller.listMethods);
+router.post("/methods", controller.createMethod);
+router.delete("/methods/:id", controller.deleteMethod);
+router.get("/booking/:bookingId", controller.getByBooking);
+router.post("/booking/:bookingId", controller.create);
+module.exports = router;

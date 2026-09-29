@@ -1,2 +1,13 @@
-const router = require("express").Router(); const auth = require("../middleware/auth"); const role = require("../middleware/role"); const controller = require("../controllers/admin.controller");
-router.use(auth, role("admin")); router.get("/dashboard", controller.dashboard); router.get("/bookings", controller.bookings); router.get("/bookings/:id/available-providers", controller.availableProviders); router.post("/bookings/:id/assign", controller.assignProvider); router.get("/jobs", controller.jobs); router.patch("/jobs/:id/status", controller.updateJobStatus); router.get("/users", controller.users); module.exports = router;
+const router = require("express").Router();
+const auth = require("../middleware/auth");
+const role = require("../middleware/role");
+const controller = require("../controllers/admin.controller");
+router.use(auth, role("admin"));
+router.get("/dashboard", controller.dashboard);
+router.get("/bookings", controller.bookings);
+router.get("/bookings/:id/available-providers", controller.availableProviders);
+router.post("/bookings/:id/assign", controller.assignProvider);
+router.get("/jobs", controller.jobs);
+router.patch("/jobs/:id/status", controller.updateJobStatus);
+router.get("/users", controller.users);
+module.exports = router;

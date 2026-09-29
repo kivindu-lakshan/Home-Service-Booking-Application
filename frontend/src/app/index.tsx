@@ -58,11 +58,15 @@ export default function HomeScreen() {
         Change password
       </Button>
       <View style={{ height: 12 }} />
-      <Button secondary onPress={() => router.push("/bookings")}>My bookings</Button>
+      <Button secondary onPress={() => router.push("/bookings")}>
+        My bookings
+      </Button>
       {user.role === "admin" ? (
         <>
           <View style={{ height: 12 }} />
-          <Button secondary onPress={() => router.push("/admin/dashboard")}>Admin dashboard</Button>
+          <Button secondary onPress={() => router.push("/admin/dashboard")}>
+            Admin dashboard
+          </Button>
         </>
       ) : null}
       <View style={{ height: 12 }} />

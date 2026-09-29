@@ -23,14 +23,38 @@ export default function RootLayout() {
           options={{ title: "Change password" }}
         />
         <Stack.Screen name="bookings" options={{ title: "My bookings" }} />
-        <Stack.Screen name="payment-details" options={{ title: "Payment details" }} />
-        <Stack.Screen name="payment-success" options={{ title: "Payment successful" }} />
-        <Stack.Screen name="rate-provider" options={{ title: "Rate provider" }} />
-        <Stack.Screen name="review-submitted" options={{ title: "Review submitted" }} />
-        <Stack.Screen name="provider-reviews" options={{ title: "Provider reviews" }} />
-        <Stack.Screen name="admin/dashboard" options={{ title: "Admin dashboard" }} />
-        <Stack.Screen name="admin/bookings" options={{ title: "Manage bookings" }} />
-        <Stack.Screen name="admin/assign-provider" options={{ title: "Assign provider" }} />
+        <Stack.Screen
+          name="payment-details"
+          options={{ title: "Payment details" }}
+        />
+        <Stack.Screen
+          name="payment-success"
+          options={{ title: "Payment successful" }}
+        />
+        <Stack.Screen
+          name="rate-provider"
+          options={{ title: "Rate provider" }}
+        />
+        <Stack.Screen
+          name="review-submitted"
+          options={{ title: "Review submitted" }}
+        />
+        <Stack.Screen
+          name="provider-reviews"
+          options={{ title: "Provider reviews" }}
+        />
+        <Stack.Screen
+          name="admin/dashboard"
+          options={{ title: "Admin dashboard" }}
+        />
+        <Stack.Screen
+          name="admin/bookings"
+          options={{ title: "Manage bookings" }}
+        />
+        <Stack.Screen
+          name="admin/assign-provider"
+          options={{ title: "Assign provider" }}
+        />
         <Stack.Screen name="admin/jobs" options={{ title: "Job monitor" }} />
       </Stack>
     </AuthProvider>
