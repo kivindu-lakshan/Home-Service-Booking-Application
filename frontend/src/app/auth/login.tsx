@@ -53,7 +53,7 @@ export default function Login() {
         value={password}
         onChangeText={setPassword}
       />
-      <Text style={styles.link} onPress={() => router.push("/forgot-password")}>
+      <Text style={styles.link} onPress={() => router.push("/auth/forgot-password")}>
         Forgot password?
       </Text>
       <Button
@@ -65,7 +65,7 @@ export default function Login() {
       </Button>
       <Text style={styles.footer}>
         New here?{" "}
-        <Text style={styles.link} onPress={() => router.push("/register")}>
+        <Text style={styles.link} onPress={() => router.push("/auth/register")}>
           Create account
         </Text>
       </Text>

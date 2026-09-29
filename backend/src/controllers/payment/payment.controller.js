@@ -1,5 +1,5 @@
 const crypto = require("crypto");
-const { Booking, Payment, PaymentMethod } = require("../models");
+const { Booking, Payment, PaymentMethod } = require("../../models");
 
 const send = (res, data, message = "Success") =>
   res.json({ success: true, data, message });

@@ -13,7 +13,7 @@ export default function ResetPassword() {
     if (password !== confirm) return setError("Passwords do not match.");
     try {
       await api.post("/auth/reset-password", { token, newPassword: password });
-      router.replace("/login");
+      router.replace("/auth/login");
     } catch (e: any) {
       setError(e.response?.data?.message || "Unable to reset password.");
     }

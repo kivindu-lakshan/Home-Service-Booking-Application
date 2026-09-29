@@ -53,7 +53,7 @@ export default function PaymentDetails() {
       });
       await getPayment(bookingId);
       router.replace({
-        pathname: "/payment-success",
+        pathname: "/payment/success",
         params: {
           bookingId,
           receipt: response.data.data.payment.receiptNo || "pending",

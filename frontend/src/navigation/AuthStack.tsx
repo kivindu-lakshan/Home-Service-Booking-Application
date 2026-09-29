@@ -1,9 +1,9 @@
 export const AuthStack = {
   screens: [
-    "login",
-    "register",
-    "forgot-password",
-    "reset-password",
-    "verify-email",
+    "auth/login",
+    "auth/register",
+    "auth/forgot-password",
+    "auth/reset-password",
+    "auth/verify-email",
   ],
 };

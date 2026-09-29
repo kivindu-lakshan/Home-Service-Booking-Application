@@ -1,1 +1,16 @@
-export const AppStack = { screens: ["index", "change-password"] };
+export const AppStack = {
+	screens: [
+		"index",
+		"auth/change-password",
+		"bookings/index",
+		"payment/details",
+		"payment/success",
+		"reviews/rate",
+		"reviews/submitted",
+		"reviews/provider",
+		"admin/dashboard",
+		"admin/bookings",
+		"admin/assign-provider",
+		"admin/jobs",
+	],
+};

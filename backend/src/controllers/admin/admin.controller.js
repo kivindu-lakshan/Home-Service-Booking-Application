@@ -5,7 +5,7 @@ const {
   BookingAssignment,
   AdminActivityLog,
   User,
-} = require("../models");
+} = require("../../models");
 const send = (res, data, message = "Success") =>
   res.json({ success: true, data, message });
 const activeStatuses = ["assigned", "en_route", "arrived", "in_progress"];

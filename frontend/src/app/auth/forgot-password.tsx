@@ -54,7 +54,7 @@ export default function ForgotPassword() {
         </>
       )}
       <Text
-        onPress={() => router.push("/reset-password")}
+        onPress={() => router.push("/auth/reset-password")}
         style={{ color: "#5B3DF5", fontWeight: "800", marginTop: 20 }}
       >
         I have a token

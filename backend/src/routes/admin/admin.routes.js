@@ -1,7 +1,7 @@
 const router = require("express").Router();
-const auth = require("../middleware/auth");
-const role = require("../middleware/role");
-const controller = require("../controllers/admin.controller");
+const auth = require("../../middleware/auth");
+const role = require("../../middleware/role");
+const controller = require("../../controllers/admin/admin.controller");
 router.use(auth, role("admin"));
 router.get("/dashboard", controller.dashboard);
 router.get("/bookings", controller.bookings);

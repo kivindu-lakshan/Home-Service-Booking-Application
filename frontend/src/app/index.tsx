@@ -6,7 +6,7 @@ import { useAuth } from "@/context/AuthContext";
 export default function HomeScreen() {
   const { user, loading, logout } = useAuth();
   useEffect(() => {
-    if (!loading && !user) router.replace("/login");
+    if (!loading && !user) router.replace("/auth/login");
   }, [loading, user]);
   if (loading || !user)
     return (
@@ -49,12 +49,12 @@ export default function HomeScreen() {
         </Text>
       </Card>
       {!user.emailVerified && (
-        <Button onPress={() => router.push("/verify-email")}>
+        <Button onPress={() => router.push("/auth/verify-email")}>
           Verify email
         </Button>
       )}
       <View style={{ height: 12 }} />
-      <Button secondary onPress={() => router.push("/change-password")}>
+      <Button secondary onPress={() => router.push("/auth/change-password")}>
         Change password
       </Button>
       <View style={{ height: 12 }} />

@@ -85,7 +85,7 @@ export default function BookingsScreen() {
               <Pressable
                 onPress={() =>
                   router.push({
-                    pathname: "/payment-details",
+                    pathname: "/payment/details",
                     params: { bookingId: booking._id },
                   })
                 }
@@ -98,7 +98,7 @@ export default function BookingsScreen() {
                 <Pressable
                   onPress={() =>
                     router.push({
-                      pathname: "/rate-provider",
+                      pathname: "/reviews/rate",
                       params: { bookingId: booking._id },
                     })
                   }

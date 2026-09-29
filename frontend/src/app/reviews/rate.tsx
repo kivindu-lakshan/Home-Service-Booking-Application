@@ -17,7 +17,7 @@ export default function RateProvider() {
     try {
       const response = await createReview({ bookingId, rating, comment });
       router.replace({
-        pathname: "/review-submitted",
+        pathname: "/reviews/submitted",
         params: { rating: response.data.data.rating },
       });
     } catch (e: any) {

@@ -1,4 +1,4 @@
-const bcrypt = require('bcryptjs'); const { User, AuthToken } = require('../models'); const { ok, fail } = require('../utils/response'); const { signAccessToken, randomToken, hashToken } = require('../utils/tokens');
+const bcrypt = require('bcryptjs'); const { User, AuthToken } = require('../../models'); const { ok, fail } = require('../../utils/response'); const { signAccessToken, randomToken, hashToken } = require('../../utils/tokens');
 const publicUser = (user) => ({ id: user._id, fullName: user.fullName, email: user.email, phone: user.phone, role: user.role, emailVerified: user.emailVerified, status: user.status });
 const passwordError = 'Password must be at least 8 characters and include a letter and a number.';
 async function createAuthToken(user, type, minutes) { const raw = randomToken(); await AuthToken.create({ user: user._id, type, tokenHash: hashToken(raw), expiresAt: new Date(Date.now() + minutes * 60000) }); console.log(`[SIMULATED EMAIL] ${type} token for ${user.email}: ${raw}`); return raw; }

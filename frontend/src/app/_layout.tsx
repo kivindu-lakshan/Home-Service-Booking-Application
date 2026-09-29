@@ -7,40 +7,40 @@ export default function RootLayout() {
         screenOptions={{ headerBackTitle: "Back", headerTintColor: "#5B3DF5" }}
       >
         <Stack.Screen name="index" options={{ headerShown: false }} />
-        <Stack.Screen name="login" options={{ title: "Sign in" }} />
-        <Stack.Screen name="register" options={{ title: "Create account" }} />
+        <Stack.Screen name="auth/login" options={{ title: "Sign in" }} />
+        <Stack.Screen name="auth/register" options={{ title: "Create account" }} />
         <Stack.Screen
-          name="forgot-password"
+          name="auth/forgot-password"
           options={{ title: "Forgot password" }}
         />
         <Stack.Screen
-          name="reset-password"
+          name="auth/reset-password"
           options={{ title: "Reset password" }}
         />
-        <Stack.Screen name="verify-email" options={{ title: "Verify email" }} />
+        <Stack.Screen name="auth/verify-email" options={{ title: "Verify email" }} />
         <Stack.Screen
-          name="change-password"
+          name="auth/change-password"
           options={{ title: "Change password" }}
         />
-        <Stack.Screen name="bookings" options={{ title: "My bookings" }} />
+        <Stack.Screen name="bookings/index" options={{ title: "My bookings" }} />
         <Stack.Screen
-          name="payment-details"
+          name="payment/details"
           options={{ title: "Payment details" }}
         />
         <Stack.Screen
-          name="payment-success"
+          name="payment/success"
           options={{ title: "Payment successful" }}
         />
         <Stack.Screen
-          name="rate-provider"
+          name="reviews/rate"
           options={{ title: "Rate provider" }}
         />
         <Stack.Screen
-          name="review-submitted"
+          name="reviews/submitted"
           options={{ title: "Review submitted" }}
         />
         <Stack.Screen
-          name="provider-reviews"
+          name="reviews/provider"
           options={{ title: "Provider reviews" }}
         />
         <Stack.Screen

@@ -1,6 +1,6 @@
 const router = require("express").Router();
-const auth = require("../middleware/auth");
-const { Booking } = require("../models");
+const auth = require("../../middleware/auth");
+const { Booking } = require("../../models");
 const send = (res, data) =>
   res.json({ success: true, data, message: "Success" });
 
