@@ -16,7 +16,8 @@ export default function PaymentSuccess() {
     }
   }, [bookingId]);
   useEffect(() => {
-    void load();
+    const timer = setTimeout(() => void load(), 0);
+    return () => clearTimeout(timer);
   }, [load]);
   if (!data && !error) return <LoadingState label="Loading receipt..." />;
   if (error) return <ErrorState onRetry={() => void load()} />;

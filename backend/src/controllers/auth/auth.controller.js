@@ -73,9 +73,14 @@ exports.login = async (req, res, next) => {
     if (
       !user ||
       user.status !== "active" ||
+      (req.body.role && user.role !== req.body.role) ||
       !(await bcrypt.compare(req.body.password, user.passwordHash))
     )
-      return fail(res, 401, "Invalid email or password.");
+      return fail(
+        res,
+        401,
+        "Invalid credentials for the selected account type.",
+      );
     return ok(
       res,
       { user: publicUser(user), token: signAccessToken(user) },

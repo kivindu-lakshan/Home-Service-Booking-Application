@@ -23,7 +23,11 @@ router.post(
 );
 router.post(
   "/login",
-  [body("email").isEmail().normalizeEmail(), body("password").notEmpty()],
+  [
+    body("email").isEmail().normalizeEmail(),
+    body("password").notEmpty(),
+    body("role").optional().isIn(["customer", "provider", "admin"]),
+  ],
   validate,
   controller.login,
 );

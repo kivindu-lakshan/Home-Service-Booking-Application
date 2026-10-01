@@ -1,12 +1,13 @@
+import { Button, Card } from "@/components/ui";
+import { useAuth } from "@/context/AuthContext";
 import { router } from "expo-router";
 import { useEffect } from "react";
 import { ActivityIndicator, Text, View } from "react-native";
-import { Button, Card } from "@/components/ui";
-import { useAuth } from "@/context/AuthContext";
 export default function HomeScreen() {
   const { user, loading, logout } = useAuth();
   useEffect(() => {
     if (!loading && !user) router.replace("/auth/login");
+    if (!loading && user?.role === "admin") router.replace("/admin/dashboard");
   }, [loading, user]);
   if (loading || !user)
     return (
@@ -61,10 +62,24 @@ export default function HomeScreen() {
       <Button secondary onPress={() => router.push("/auth/change-password")}>
         Change password
       </Button>
-      <View style={{ height: 12 }} />
-      <Button secondary onPress={() => router.push("/bookings")}>
-        My bookings
-      </Button>
+      {user.role !== "admin" && <View style={{ height: 12 }} />}
+      {user.role !== "admin" && (
+        <Button secondary onPress={() => router.push("/bookings")}>
+          My bookings
+        </Button>
+      )}
+      {user.role !== "admin" && (
+        <>
+          <View style={{ height: 12 }} />
+          <Button secondary onPress={() => router.push("/reviews/mine")}>
+            My reviews
+          </Button>
+          <View style={{ height: 12 }} />
+          <Button secondary onPress={() => router.push("/support")}>
+            Support tickets
+          </Button>
+        </>
+      )}
       {user.role === "admin" ? (
         <>
           <View style={{ height: 12 }} />

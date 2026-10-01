@@ -1,9 +1,9 @@
-import { useCallback, useEffect, useState } from "react";
-import { router, useLocalSearchParams } from "expo-router";
-import { Pressable, ScrollView, Text, View } from "react-native";
-import { Button, Card } from "@/components/ui";
 import { createPayment, getPayment, getPaymentMethods } from "@/api/domain";
 import { ErrorState, LoadingState } from "@/components/DataState";
+import { Button, Card, Input } from "@/components/ui";
+import { router, useLocalSearchParams } from "expo-router";
+import { useCallback, useEffect, useState } from "react";
+import { Pressable, ScrollView, Text, View } from "react-native";
 
 export default function PaymentDetails() {
   const { bookingId } = useLocalSearchParams<{ bookingId: string }>();
@@ -11,6 +11,10 @@ export default function PaymentDetails() {
   const [methods, setMethods] = useState<any[]>([]);
   const [method, setMethod] = useState("cash_on_completion");
   const [selectedMethod, setSelectedMethod] = useState<string>();
+  const [cardholderName, setCardholderName] = useState("");
+  const [cardNumber, setCardNumber] = useState("");
+  const [expiryDate, setExpiryDate] = useState("");
+  const [cvv, setCvv] = useState("");
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -29,7 +33,8 @@ export default function PaymentDetails() {
     }
   }, [bookingId]);
   useEffect(() => {
-    void load();
+    const timer = setTimeout(() => void load(), 0);
+    return () => clearTimeout(timer);
   }, [load]);
   if (loading) return <LoadingState label="Loading payment details..." />;
   if (!data)
@@ -50,6 +55,9 @@ export default function PaymentDetails() {
       const response = await createPayment(bookingId, {
         method,
         paymentMethodId: selectedMethod,
+        ...(!selectedMethod && method === "card"
+          ? { card: { cardholderName, cardNumber, expiryDate, cvv } }
+          : {}),
       });
       await getPayment(bookingId);
       router.replace({
@@ -137,6 +145,75 @@ export default function PaymentDetails() {
           </Card>
         </Pressable>
       ))}
+      <Pressable
+        onPress={() => {
+          setMethod("card");
+          setSelectedMethod(undefined);
+        }}
+      >
+        <Card>
+          <Text
+            style={{
+              color:
+                method === "card" && !selectedMethod ? "#5B3DF5" : "#25213D",
+              fontWeight: "800",
+            }}
+          >
+            Use a new card
+          </Text>
+        </Card>
+      </Pressable>
+      {method === "card" && !selectedMethod ? (
+        <Card>
+          <Text
+            style={{ color: "#25213D", fontWeight: "900", marginBottom: 12 }}
+          >
+            Card details
+          </Text>
+          <Input
+            placeholder="Card owner's name"
+            value={cardholderName}
+            onChangeText={setCardholderName}
+            autoCapitalize="words"
+          />
+          <Input
+            placeholder="Card number (16 digits)"
+            value={cardNumber}
+            onChangeText={(value) =>
+              setCardNumber(value.replace(/\D/g, "").slice(0, 16))
+            }
+            keyboardType="number-pad"
+            maxLength={16}
+          />
+          <View style={{ flexDirection: "row", gap: 10 }}>
+            <Input
+              placeholder="MM/YY"
+              value={expiryDate}
+              onChangeText={(value) =>
+                setExpiryDate(value.replace(/[^\d/]/g, "").slice(0, 5))
+              }
+              keyboardType="number-pad"
+              maxLength={5}
+              style={{ flex: 1 }}
+            />
+            <Input
+              placeholder="CVV"
+              value={cvv}
+              onChangeText={(value) =>
+                setCvv(value.replace(/\D/g, "").slice(0, 4))
+              }
+              keyboardType="number-pad"
+              secureTextEntry
+              maxLength={4}
+              style={{ flex: 1 }}
+            />
+          </View>
+          <Text style={{ color: "#747B90", fontSize: 12 }}>
+            Your full card number and CVV are used only to authorize this
+            payment.
+          </Text>
+        </Card>
+      ) : null}
       <Pressable
         onPress={() => {
           setMethod("cash_on_completion");

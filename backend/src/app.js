@@ -24,6 +24,7 @@ app.use("/api/addresses", require("./routes/address/address.routes"));
 app.use("/api/support", require("./routes/support/support.routes"));
 app.use("/api/payments", require("./routes/payment/payment.routes"));
 app.use("/api/reviews", require("./routes/review/review.routes"));
+app.use("/api/tickets", require("./routes/ticket/ticket.routes"));
 app.use("/api/admin", require("./routes/admin/admin.routes"));
 app.use(errorHandler);
 module.exports = app;
