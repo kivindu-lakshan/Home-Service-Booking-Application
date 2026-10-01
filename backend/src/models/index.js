@@ -229,7 +229,17 @@ const AdminActivityLog = make("AdminActivityLog", {
   entityType: String,
   entityId: String,
 });
+const supportCategories = ["Booking issue", "Payment issue", "Service provider issue", "Account issue", "Technical issue", "Other"];
+const SupportTicket = make("SupportTicket", {
+  user: ref("User"),
+  category: { type: String, required: true, enum: supportCategories },
+  subject: { type: String, required: true, trim: true, minlength: 3, maxlength: 120 },
+  description: { type: String, required: true, trim: true, minlength: 10, maxlength: 2000 },
+  status: { type: String, enum: ["pending", "in_progress", "resolved", "cancelled"], default: "pending", required: true },
+});
+SupportTicket.schema.index({ user: 1, createdAt: -1 });
 const models = {
+  SupportTicket,
   User,
   AuthToken,
   ServiceCategory,
@@ -242,4 +252,4 @@ const models = {
   Review,
   AdminActivityLog,
 };
-module.exports = { ...models, models };
+module.exports = { ...models, models, supportCategories };
