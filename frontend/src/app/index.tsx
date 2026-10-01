@@ -1,102 +1,56 @@
-import { Button, Card } from "@/components/ui";
-import { useAuth } from "@/context/AuthContext";
 import { router } from "expo-router";
 import { useEffect } from "react";
 import { ActivityIndicator, Text, View } from "react-native";
+import { Button, Card } from "@/components/ui";
+import { useAuth } from "@/context/AuthContext";
+
 export default function HomeScreen() {
   const { user, loading, logout } = useAuth();
+
   useEffect(() => {
-    if (!loading && !user) router.replace("/auth/login");
-    if (!loading && user?.role === "admin") router.replace("/admin/dashboard");
+    if (loading) return;
+    if (!user) {
+      router.replace("/onboarding/landing");
+    } else if (user.role === "admin") {
+      router.replace("/admin/dashboard");
+    }
   }, [loading, user]);
-  if (loading || !user)
+
+  if (loading || !user) {
     return (
       <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
         <ActivityIndicator color="#5B3DF5" />
       </View>
     );
+  }
+
   return (
-    <View
-      style={{
-        flex: 1,
-        backgroundColor: "#F7F7FB",
-        padding: 24,
-        justifyContent: "center",
-      }}
-    >
-      <Text style={{ color: "#0F9D8A", fontWeight: "900", letterSpacing: 1 }}>
-        HOME SERVICE
-      </Text>
-      <Text
-        style={{
-          color: "#25213D",
-          fontSize: 30,
-          fontWeight: "900",
-          marginTop: 8,
-        }}
-      >
+    <View style={{ flex: 1, backgroundColor: "#F7F7FB", padding: 24, justifyContent: "center" }}>
+      <Text style={{ color: "#0F9D8A", fontWeight: "900", letterSpacing: 1 }}>HOME SERVICE</Text>
+      <Text style={{ color: "#25213D", fontSize: 30, fontWeight: "900", marginTop: 8 }}>
         Welcome, {user.fullName}
       </Text>
       <Card>
         <Text style={{ color: "#747B90" }}>{user.email}</Text>
-        <Text
-          style={{
-            color: user.emailVerified ? "#0F9D8A" : "#F29D38",
-            fontWeight: "800",
-            marginTop: 12,
-          }}
-        >
+        <Text style={{ color: user.emailVerified ? "#0F9D8A" : "#F29D38", fontWeight: "800", marginTop: 12 }}>
           {user.emailVerified ? "Email verified" : "Email not verified"}
         </Text>
       </Card>
-      {!user.emailVerified && (
-        <Button onPress={() => router.push("/auth/verify-email")}>
-          Verify email
-        </Button>
-      )}
+      {!user.emailVerified && <Button onPress={() => router.push("/auth/verify-email")}>Verify email</Button>}
       <View style={{ height: 12 }} />
-      <Button secondary onPress={() => router.push("/profile")}>
-        My profile
-      </Button>
+      <Button secondary onPress={() => router.push("/profile")}>My profile</Button>
       <View style={{ height: 12 }} />
-      <Button secondary onPress={() => router.push("/auth/change-password")}>
-        Change password
-      </Button>
-      {user.role !== "admin" && <View style={{ height: 12 }} />}
-      {user.role !== "admin" && (
-        <Button secondary onPress={() => router.push("/bookings")}>
-          My bookings
-        </Button>
-      )}
-      {user.role !== "admin" && (
-        <>
-          <View style={{ height: 12 }} />
-          <Button secondary onPress={() => router.push("/reviews/mine")}>
-            My reviews
-          </Button>
-          <View style={{ height: 12 }} />
-          <Button secondary onPress={() => router.push("/support")}>
-            Support tickets
-          </Button>
-        </>
-      )}
-      {user.role === "admin" ? (
-        <>
-          <View style={{ height: 12 }} />
-          <Button secondary onPress={() => router.push("/admin/dashboard")}>
-            Admin dashboard
-          </Button>
-        </>
-      ) : null}
+      <Button secondary onPress={() => router.push("/auth/change-password")}>Change password</Button>
+      {user.role !== "admin" && <>
+        <View style={{ height: 12 }} />
+        <Button secondary onPress={() => router.push("/bookings")}>My bookings</Button>
+        <View style={{ height: 12 }} />
+        <Button secondary onPress={() => router.push("/reviews/mine")}>My reviews</Button>
+        <View style={{ height: 12 }} />
+        <Button secondary onPress={() => router.push("/support")}>Support tickets</Button>
+      </>}
       <View style={{ height: 12 }} />
-      <Button
-        secondary
-        onPress={() => {
-          void logout();
-        }}
-      >
-        Log out
-      </Button>
+      <Button secondary onPress={() => { void logout(); }}>Log out</Button>
     </View>
   );
 }

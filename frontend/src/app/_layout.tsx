@@ -7,6 +7,9 @@ export default function RootLayout() {
     <AuthProvider>
       <AccountThemeProvider>
         <Stack screenOptions={{ headerBackTitle: "Back", headerTintColor: "#5B3DF5" }}>
+          <Stack.Screen name="onboarding/landing" options={{ headerShown: false }} />
+          <Stack.Screen name="onboarding/welcome" options={{ headerShown: false }} />
+          <Stack.Screen name="onboarding/account-type" options={{ headerShown: false }} />
           <Stack.Screen name="index" options={{ headerShown: false }} />
           <Stack.Screen name="settings/account-security" options={{ headerShown: false }} />
           <Stack.Screen name="settings/appearance" options={{ headerShown: false }} />
@@ -20,8 +23,8 @@ export default function RootLayout() {
           <Stack.Screen name="personal-information" options={{ headerShown: false }} />
           <Stack.Screen name="addresses/index" options={{ headerShown: false }} />
           <Stack.Screen name="addresses/form" options={{ headerShown: false }} />
-          <Stack.Screen name="auth/login" options={{ title: "Sign in" }} />
-          <Stack.Screen name="auth/register" options={{ title: "Create account" }} />
+          <Stack.Screen name="auth/login" options={{ headerShown: false }} />
+          <Stack.Screen name="auth/register" options={{ headerShown: false }} />
           <Stack.Screen name="auth/forgot-password" options={{ title: "Forgot password" }} />
           <Stack.Screen name="auth/reset-password" options={{ title: "Reset password" }} />
           <Stack.Screen name="auth/verify-email" options={{ title: "Verify email" }} />

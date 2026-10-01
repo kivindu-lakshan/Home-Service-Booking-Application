@@ -1,174 +1,99 @@
+import { authError } from "@/api/auth-error";
+import { AuthButton, AuthField, AuthFooter, AuthLink, AuthPage } from "@/components/auth/AuthUI";
 import ErrorText from "@/components/ErrorText";
-import { Button, Input } from "@/components/ui";
 import { useAuth } from "@/context/AuthContext";
 import { router } from "expo-router";
 import { BriefcaseBusiness, ShieldCheck, UserRound } from "lucide-react-native";
-import { useState } from "react";
-import {
-    ActivityIndicator,
-    KeyboardAvoidingView,
-    Platform,
-    Pressable,
-    Text,
-    View,
-} from "react-native";
+import { useRef, useState } from "react";
+import { Pressable, View } from "react-native";
+import { AccountText as Text } from "@/components/settings/AccountText";
+import { useAccountStyles } from "@/context/AccountThemeContext";
 
 type Role = "customer" | "provider" | "admin";
 const roles: { id: Role; label: string; icon: typeof UserRound }[] = [
-  { id: "customer", label: "Sign in as customer", icon: UserRound },
-  { id: "provider", label: "Sign in as provider", icon: BriefcaseBusiness },
-  { id: "admin", label: "Sign in as admin", icon: ShieldCheck },
+  { id: "customer", label: "Customer", icon: UserRound },
+  { id: "provider", label: "Provider", icon: BriefcaseBusiness },
+  { id: "admin", label: "Admin", icon: ShieldCheck },
 ];
-const colors = {
-  navy: "#1A1A2E",
-  purple: "#5B3DF5",
-  border: "#D1D1D6",
-  gold: "#FBBF24",
-  white: "#FFFFFF",
-  muted: "#8E8E9A",
-};
 
 export default function Login() {
   const { login } = useAuth();
+  const themed = useAccountStyles();
   const [role, setRole] = useState<Role>("customer");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [fields, setFields] = useState<{ email?: string; password?: string }>({});
   const [busy, setBusy] = useState(false);
+  const lock = useRef(false);
+
   const submit = async () => {
+    if (lock.current) return;
+    const nextFields: typeof fields = {};
+    if (!email.trim()) nextFields.email = "Email is required.";
+    if (!password) nextFields.password = "Password is required.";
+    setFields(nextFields);
     setError("");
-    if (!email || !password)
-      return setError("Email and password are required.");
+    if (Object.keys(nextFields).length) return;
+    lock.current = true;
     setBusy(true);
     try {
-      const user = await login(email, password, role);
+      const user = await login(email.trim(), password, role);
       router.replace(user.role === "admin" ? "/admin/dashboard" : "/");
-    } catch (e: any) {
-      setError(
-        e.response?.data?.message ||
-          "Invalid credentials for the selected account type.",
-      );
+    } catch (failure) {
+      const details = authError(failure, "Unable to sign in. Please try again.");
+      setError(details.message);
+      setFields(details.fields);
     } finally {
+      lock.current = false;
       setBusy(false);
     }
   };
+
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
-      style={styles.page}
+    <AuthPage
+      title={"Welcome\nhome again."}
+      subtitle="Your next helping hand is a tap away."
+      back="/onboarding/landing"
+      busy={busy}
     >
-      <View style={styles.brand}>
-        <ShieldCheck size={22} color={colors.gold} />
-        <Text style={styles.eyebrow}>HOME SERVICE</Text>
-      </View>
-      <Text style={styles.title}>Welcome back</Text>
-      <Text style={styles.subtitle}>Choose your account type to continue.</Text>
-      <View style={styles.roleList}>
+      <Text style={themed({ color: "#303B55", fontWeight: "800", marginBottom: 8 })}>
+        Choose account type
+      </Text>
+      <View style={{ flexDirection: "row", gap: 8, marginBottom: 16 }}>
         {roles.map(({ id, label, icon: Icon }) => (
           <Pressable
             key={id}
-            onPress={() => setRole(id)}
             accessibilityRole="radio"
-            accessibilityState={{ selected: role === id }}
-            style={[styles.role, role === id && styles.roleActive]}
+            accessibilityState={{ selected: role === id, disabled: busy }}
+            disabled={busy}
+            onPress={() => setRole(id)}
+            style={themed({
+              flex: 1,
+              minHeight: 48,
+              borderRadius: 14,
+              paddingHorizontal: 8,
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 3,
+              backgroundColor: role === id ? "#633CFF" : "#EDE7FF",
+            })}
           >
-            <Icon size={20} color={role === id ? colors.white : colors.navy} />
-            <Text
-              style={[styles.roleText, role === id && styles.roleTextActive]}
-            >
+            <Icon size={18} color={role === id ? "#FFFFFF" : "#303B55"} />
+            <Text style={themed({ color: role === id ? "#FFFFFF" : "#303B55", fontSize: 12, fontWeight: "800" })}>
               {label}
             </Text>
           </Pressable>
         ))}
       </View>
+      <AuthField label="Email address" value={email} editable={!busy} autoCapitalize="none" keyboardType="email-address" autoComplete="email" textContentType="emailAddress" error={fields.email} onChangeText={(value) => { setEmail(value); setFields((current) => ({ ...current, email: undefined })); }} />
+      <AuthField label="Password" value={password} editable={!busy} password autoComplete="current-password" textContentType="password" error={fields.password} onChangeText={(value) => { setPassword(value); setFields((current) => ({ ...current, password: undefined })); }} />
+      <AuthLink title="Forgot password?" disabled={busy} onPress={() => router.push("/auth/forgot-password")} />
       <ErrorText>{error}</ErrorText>
-      <Input
-        accessibilityLabel="Email"
-        placeholder="Email"
-        autoCapitalize="none"
-        keyboardType="email-address"
-        value={email}
-        onChangeText={setEmail}
-      />
-      <Input
-        accessibilityLabel="Password"
-        placeholder="Password"
-        secureTextEntry
-        value={password}
-        onChangeText={setPassword}
-      />
-      <Text
-        style={styles.link}
-        onPress={() => router.push("/auth/forgot-password")}
-      >
-        Forgot password?
-      </Text>
-      <Button
-        onPress={() => {
-          void submit();
-        }}
-      >
-        {busy ? (
-          <ActivityIndicator color={colors.white} />
-        ) : (
-          `Sign in as ${role}`
-        )}
-      </Button>
-      <Text style={styles.footer}>
-        New here?{" "}
-        <Text style={styles.link} onPress={() => router.push("/auth/register")}>
-          Create account
-        </Text>
-      </Text>
-    </KeyboardAvoidingView>
+      <AuthFooter>
+        <AuthButton title={busy ? "Signing in..." : `Sign in as ${role}`} busy={busy} onPress={() => void submit()} />
+        <AuthButton title="Create an account" secondary disabled={busy} onPress={() => router.push("/auth/register")} />
+      </AuthFooter>
+    </AuthPage>
   );
 }
-
-const styles = {
-  page: {
-    flex: 1,
-    backgroundColor: colors.white,
-    padding: 24,
-    justifyContent: "flex-start" as const,
-    paddingTop: 72,
-    alignItems: "stretch" as const,
-  },
-  brand: {
-    flexDirection: "row" as const,
-    alignItems: "center" as const,
-    gap: 8,
-  },
-  eyebrow: {
-    color: colors.navy,
-    fontWeight: "900" as const,
-    letterSpacing: 1.5,
-  },
-  title: {
-    color: colors.navy,
-    fontSize: 32,
-    fontWeight: "900" as const,
-    marginTop: 12,
-    textAlign: "center" as const,
-  },
-  subtitle: {
-    color: colors.muted,
-    marginVertical: 10,
-    textAlign: "center" as const,
-  },
-  roleList: { gap: 8, marginVertical: 16 },
-  role: {
-    minHeight: 48,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 14,
-    paddingHorizontal: 14,
-    flexDirection: "row" as const,
-    alignItems: "center" as const,
-    gap: 10,
-  },
-  roleActive: { backgroundColor: colors.purple, borderColor: colors.purple },
-  roleText: { color: colors.navy, fontWeight: "800" as const },
-  roleTextActive: { color: colors.white },
-  link: { color: colors.purple, fontWeight: "800" as const, marginBottom: 18 },
-  footer: { color: colors.muted, textAlign: "center" as const, marginTop: 20 },
-};
