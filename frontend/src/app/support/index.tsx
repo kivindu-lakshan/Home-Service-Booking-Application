@@ -1,5 +1,7 @@
+import { useAccountStyles } from "@/context/AccountThemeContext";
 import { Redirect, router, useLocalSearchParams } from "expo-router";
-import { Pressable, Text, View } from "react-native";
+import { Pressable, View } from "react-native";
+import { AccountText as Text } from "@/components/settings/AccountText";
 import { getTickets, statusLabels } from "@/api/support";
 import { useSupportData } from "@/hooks/useSupportData";
 import { EmptyState, LoadingState } from "@/components/DataState";
@@ -8,6 +10,7 @@ import { Card } from "@/components/ui";
 import { AddressPage as Page, AddressButton as Button, AddressNotice as Notice, addressStyles as styles } from "@/components/address/AddressUI";
 const messages: Record<string, string> = { created: "Your support request has been submitted.", updated: "Your support request has been updated.", cancelled: "Your support request has been cancelled." };
 export default function SupportScreen() {
+  const themed = useAccountStyles();
   const state = useSupportData(getTickets);
   const { result } = useLocalSearchParams<{ result?: string }>();
   if (!state.authLoading && !state.user) return <Redirect href="/auth/login" />;
@@ -16,11 +19,11 @@ export default function SupportScreen() {
     {result && messages[result] && <Notice>{messages[result]}</Notice>}
     {state.user && state.user.role !== "customer" ? <ErrorText>Support requests are available to customer accounts.</ErrorText> : <>
       <Button title="Create support request" disabled={state.authLoading || state.expired} onPress={() => open()} />
-      <Text accessibilityRole="header" style={[styles.label, { marginTop: 28, marginBottom: 16 }]}>My requests</Text>
+      <Text accessibilityRole="header" style={themed([styles.label, { marginTop: 28, marginBottom: 16 }])}>My requests</Text>
       {state.loading ? <LoadingState label="Loading your requests..." /> : state.error ? <View><ErrorText>{state.error}</ErrorText><Button secondary title={state.expired ? "Sign in" : "Try again"} onPress={() => state.expired ? router.replace("/auth/login") : void state.load()} /></View>
         : !state.data?.length ? <EmptyState label="No support requests yet. Create a request when you need a hand." />
         : state.data.map((ticket) => <Pressable key={ticket._id} accessibilityRole="button" accessibilityLabel={`View ${ticket.subject}`} onPress={() => open(ticket._id)}>
-          <Card><Text style={styles.label}>{ticket.subject}</Text><Text>{ticket.category}</Text><Text style={styles.hint}>{statusLabels[ticket.status]} ? {new Date(ticket.createdAt).toLocaleDateString()}</Text></Card>
+          <Card><Text style={themed(styles.label)}>{ticket.subject}</Text><Text>{ticket.category}</Text><Text style={themed(styles.hint)}>{statusLabels[ticket.status]} ? {new Date(ticket.createdAt).toLocaleDateString()}</Text></Card>
         </Pressable>)}
     </>}
   </Page>;

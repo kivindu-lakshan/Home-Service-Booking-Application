@@ -1,7 +1,10 @@
-import { StyleSheet, Text, View } from "react-native";
+import { useAccountStyles } from "@/context/AccountThemeContext";
+import { StyleSheet, View } from "react-native";
+import { AccountText as Text } from "@/components/settings/AccountText";
 export function SettingsIcon({ name }: { name: "lock" | "bell" | "sparkle" | "eye" }) {
-  return <View style={styles.canvas} accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
-    {name === "sparkle" ? <Text style={styles.sparkle}>{"\u2727"}</Text> : name === "eye" ? <><View style={styles.eye} /><View style={styles.pupil} /></> : name === "lock" ? <><View style={styles.shackle} /><View style={styles.lock} /><View style={styles.keyhole} /></> : <><View style={styles.bell} /><View style={styles.rim} /><View style={styles.clapper} /></>}
+  const themed = useAccountStyles();
+  return <View style={themed(styles.canvas)} accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+    {name === "sparkle" ? <Text style={themed(styles.sparkle)}>{"\u2727"}</Text> : name === "eye" ? <><View style={themed(styles.eye)} /><View style={themed(styles.pupil)} /></> : name === "lock" ? <><View style={themed(styles.shackle)} /><View style={themed(styles.lock)} /><View style={themed(styles.keyhole)} /></> : <><View style={themed(styles.bell)} /><View style={themed(styles.rim)} /><View style={themed(styles.clapper)} /></>}
   </View>;
 }
 const styles = StyleSheet.create({

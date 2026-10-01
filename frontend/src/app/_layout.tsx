@@ -1,8 +1,10 @@
 import { Stack } from "expo-router";
+import { AccountThemeProvider } from "@/context/AccountThemeContext";
 import { AuthProvider } from "@/context/AuthContext";
 export default function RootLayout() {
   return (
     <AuthProvider>
+      <AccountThemeProvider>
       <Stack
         screenOptions={{ headerBackTitle: "Back", headerTintColor: "#5B3DF5" }}
       >
@@ -78,6 +80,7 @@ export default function RootLayout() {
         />
         <Stack.Screen name="admin/jobs" options={{ title: "Job monitor" }} />
       </Stack>
+      </AccountThemeProvider>
     </AuthProvider>
   );
 }

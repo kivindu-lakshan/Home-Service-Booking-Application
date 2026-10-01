@@ -1,11 +1,6 @@
-import {
-  Platform,
-  Pressable,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from "react-native";
+import { useAccountStyles } from "@/context/AccountThemeContext";
+import { Platform, Pressable, StyleSheet, TextInput, View } from "react-native";
+import { AccountText as Text } from "@/components/settings/AccountText";
 import type { ReactNode } from "react";
 export function Button({
   children,
@@ -16,23 +11,26 @@ export function Button({
   onPress: () => void;
   secondary?: boolean;
 }) {
+  const themed = useAccountStyles();
   return (
     <Pressable
       onPress={onPress}
-      style={[styles.button, secondary && styles.secondary]}
+      style={themed([styles.button, secondary && styles.secondary])}
     >
-      <Text style={[styles.buttonText, secondary && styles.secondaryText]}>
+      <Text style={themed([styles.buttonText, secondary && styles.secondaryText])}>
         {children}
       </Text>
     </Pressable>
   );
 }
 export function Card({ children }: { children: ReactNode }) {
-  return <View style={styles.card}>{children}</View>;
+  const themed = useAccountStyles();
+  return <View style={themed(styles.card)}>{children}</View>;
 }
 export function Input(props: React.ComponentProps<typeof TextInput>) {
+  const themed = useAccountStyles();
   return (
-    <TextInput placeholderTextColor="#8890A5" style={styles.input} {...props} />
+    <TextInput placeholderTextColor={themed({ placeholderTextColor: "#8890A5" }).placeholderTextColor} style={themed(styles.input)} {...props} />
   );
 }
 export function Chip({
@@ -42,18 +40,20 @@ export function Chip({
   children: ReactNode;
   active?: boolean;
 }) {
+  const themed = useAccountStyles();
   return (
-    <View style={[styles.chip, active && styles.activeChip]}>
-      <Text style={[styles.chipText, active && styles.activeChipText]}>
+    <View style={themed([styles.chip, active && styles.activeChip])}>
+      <Text style={themed([styles.chipText, active && styles.activeChipText])}>
         {children}
       </Text>
     </View>
   );
 }
 export function StatusBadge({ status }: { status: string }) {
+  const themed = useAccountStyles();
   return (
-    <View style={styles.status}>
-      <Text style={styles.statusText}>{status.replace("_", " ")}</Text>
+    <View style={themed(styles.status)}>
+      <Text style={themed(styles.statusText)}>{status.replace("_", " ")}</Text>
     </View>
   );
 }

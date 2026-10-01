@@ -1,6 +1,8 @@
+import { useAccountStyles } from "@/context/AccountThemeContext";
 import { useCallback, useRef, useState } from "react";
 import { Redirect, router, useFocusEffect, useLocalSearchParams } from "expo-router";
-import { Modal, StyleSheet, Switch, Text, View } from "react-native";
+import { Modal, StyleSheet, Switch, View } from "react-native";
+import { AccountText as Text } from "@/components/settings/AccountText";
 import { useAuth } from "@/context/AuthContext";
 import { addressError, createAddress, deleteAddress, getAddress, getAddresses, updateAddress } from "@/api/addresses";
 import { addressFields, emptyAddress, validateAddress, type AddressDraft, type AddressErrors } from "@/validation/address";
@@ -10,6 +12,7 @@ import { LoadingState } from "@/components/DataState";
 import { AddressButton, AddressPage, addressStyles } from "@/components/address/AddressUI";
 
 export default function AddressFormScreen() {
+  const themed = useAccountStyles();
   const { user, loading: authLoading } = useAuth();
   const userId = user?.id;
   const { id } = useLocalSearchParams<{ id?: string }>();
@@ -102,11 +105,11 @@ export default function AddressFormScreen() {
       ) : <>
         {addressFields.map(({ key, title, optional, placeholder }) => {
           const fieldError = serverErrors[key] || (touched[key] ? errors[key] : undefined);
-          return <View key={key} style={addressStyles.field}>
-            <Text style={addressStyles.label}>{title}{optional ? " – optional" : ""}</Text>
+          return <View key={key} style={themed(addressStyles.field)}>
+            <Text style={themed(addressStyles.label)}>{title}{optional ? " – optional" : ""}</Text>
             <Input accessibilityLabel={`${title}${optional ? ", optional" : ", required"}`}
               value={draft[key]} placeholder={placeholder} editable={!busy && !expired}
-              style={[addressStyles.input, !!fieldError && addressStyles.invalid]}
+              style={themed([addressStyles.input, !!fieldError && addressStyles.invalid])}
               onBlur={() => setTouched((current) => ({ ...current, [key]: true }))}
               onChangeText={(value) => {
                 setDraft((current) => ({ ...current, [key]: value }));
@@ -116,16 +119,16 @@ export default function AddressFormScreen() {
             <ErrorText>{fieldError}</ErrorText>
           </View>;
         })}
-        <View style={styles.defaultRow}>
-          <Text style={styles.defaultLabel}>Set as default address</Text>
+        <View style={themed(styles.defaultRow)}>
+          <Text style={themed(styles.defaultLabel)}>Set as default address</Text>
           <Switch accessibilityLabel="Set as default address" value={draft.isDefault}
             disabled={!!busy || expired || lockedDefault} trackColor={{ false: "#D9DDEA", true: "#BBA8FF" }} thumbColor={draft.isDefault ? "#633CFF" : "#FFFFFF"}
             onValueChange={(value) => setDraft((current) => ({ ...current, isDefault: value }))} />
         </View>
-        <Text style={addressStyles.hint}>{lockedDefault
+        <Text style={themed(addressStyles.hint)}>{lockedDefault
           ? editing ? "This is your default. To change it, open another address and set that as default." : "Your first saved address becomes your default."
           : "Selecting this replaces your current default address."}</Text>
-        <View style={addressStyles.footer}>
+        <View style={themed(addressStyles.footer)}>
           <ErrorText>{error}</ErrorText>
           {expired ? <AddressButton title="Sign in" onPress={() => router.replace("/auth/login")} /> : <>
             <AddressButton title={busy === "save" ? "Saving address..." : "Save address"} busy={busy === "save"}
@@ -135,10 +138,10 @@ export default function AddressFormScreen() {
         </View>
       </>}
       <Modal transparent visible={confirmDelete} animationType="fade" onRequestClose={() => { if (!busy) setConfirmDelete(false); }}>
-        <View style={styles.scrim}>
-          <View accessibilityViewIsModal style={styles.dialog}>
-            <Text accessibilityRole="header" style={styles.dialogTitle}>Delete this address?</Text>
-            <Text style={styles.dialogText}>This removes your saved place. You can add it again later. If it is your default, one of your remaining addresses will become the default.</Text>
+        <View style={themed(styles.scrim)}>
+          <View accessibilityViewIsModal style={themed(styles.dialog)}>
+            <Text accessibilityRole="header" style={themed(styles.dialogTitle)}>Delete this address?</Text>
+            <Text style={themed(styles.dialogText)}>This removes your saved place. You can add it again later. If it is your default, one of your remaining addresses will become the default.</Text>
             <AddressButton title={busy === "delete" ? "Deleting..." : "Delete address"} danger busy={busy === "delete"}
               disabled={!!busy} onPress={() => void mutate("delete")} />
             <AddressButton title="Keep address" secondary disabled={!!busy} onPress={() => setConfirmDelete(false)} />

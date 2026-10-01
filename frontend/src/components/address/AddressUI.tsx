@@ -1,21 +1,24 @@
+import { useAccountStyles } from "@/context/AccountThemeContext";
 import type { ReactNode } from "react";
-import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { AccountText as Text } from "@/components/settings/AccountText";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export function AddressPage({ title, subtitle, onBack, busy, children }: {
   title: string; subtitle: string; onBack: () => void; busy?: boolean; children: ReactNode;
 }) {
+  const themed = useAccountStyles();
   return (
-    <SafeAreaView style={addressStyles.safeArea}>
-      <KeyboardAvoidingView style={addressStyles.page} behavior={Platform.OS === "ios" ? "padding" : undefined}>
+    <SafeAreaView style={themed(addressStyles.safeArea)}>
+      <KeyboardAvoidingView style={themed(addressStyles.page)} behavior={Platform.OS === "ios" ? "padding" : undefined}>
         <ScrollView contentContainerStyle={addressStyles.content} keyboardShouldPersistTaps="handled">
           <Pressable accessibilityRole="button" accessibilityLabel="Go back" disabled={busy}
             accessibilityState={{ disabled: busy }} onPress={onBack}
-            style={({ pressed }) => [addressStyles.back, (pressed || busy) && addressStyles.disabled]}>
-            <Text style={addressStyles.backArrow}>‹</Text>
+            style={themed(({ pressed }) => [addressStyles.back, (pressed || busy) && addressStyles.disabled])}>
+            <Text style={themed(addressStyles.backArrow)}>‹</Text>
           </Pressable>
-          <Text accessibilityRole="header" style={addressStyles.title}>{title}</Text>
-          <Text style={addressStyles.subtitle}>{subtitle}</Text>
+          <Text accessibilityRole="header" style={themed(addressStyles.title)}>{title}</Text>
+          <Text style={themed(addressStyles.subtitle)}>{subtitle}</Text>
           {children}
         </ScrollView>
       </KeyboardAvoidingView>
@@ -25,18 +28,20 @@ export function AddressPage({ title, subtitle, onBack, busy, children }: {
 export function AddressButton({ title, onPress, disabled = false, busy = false, secondary = false, danger = false }: {
   title: string; onPress: () => void; disabled?: boolean; busy?: boolean; secondary?: boolean; danger?: boolean;
 }) {
+  const themed = useAccountStyles();
   return (
     <Pressable accessibilityRole="button" accessibilityLabel={title}
       accessibilityState={{ disabled: disabled || busy, busy }} disabled={disabled || busy} onPress={onPress}
-      style={({ pressed }) => [addressStyles.button, secondary && addressStyles.secondary, danger && addressStyles.danger,
-        (pressed || disabled || busy) && addressStyles.disabled]}>
-      {busy && <ActivityIndicator color={secondary ? "#633CFF" : "#FFFFFF"} />}
-      <Text style={[addressStyles.buttonText, secondary && addressStyles.secondaryText]}>{title}</Text>
+      style={themed(({ pressed }) => [addressStyles.button, secondary && addressStyles.secondary, danger && addressStyles.danger,
+        (pressed || disabled || busy) && addressStyles.disabled])}>
+      {busy && <ActivityIndicator color={themed({ color: secondary ? "#633CFF" : "#FFFFFF" }).color} />}
+      <Text style={themed([addressStyles.buttonText, secondary && addressStyles.secondaryText])}>{title}</Text>
     </Pressable>
   );
 }
 export function AddressNotice({ children }: { children: ReactNode }) {
-  return <View style={addressStyles.notice}><Text accessibilityRole="alert" style={addressStyles.noticeText}>{children}</Text></View>;
+  const themed = useAccountStyles();
+  return <View style={themed(addressStyles.notice)}><Text accessibilityRole="alert" style={themed(addressStyles.noticeText)}>{children}</Text></View>;
 }
 export const addressStyles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: "#F7F7FD" },

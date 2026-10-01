@@ -1,6 +1,8 @@
+import { useAccountStyles } from "@/context/AccountThemeContext";
 import { useCallback, useRef, useState } from "react";
 import { Redirect, router, useFocusEffect, useLocalSearchParams } from "expo-router";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
+import { AccountText as Text } from "@/components/settings/AccountText";
 import { useAuth } from "@/context/AuthContext";
 import { addressError, getAddresses, type SavedAddress } from "@/api/addresses";
 import { EmptyState, LoadingState } from "@/components/DataState";
@@ -11,6 +13,7 @@ import { AddressButton, AddressNotice, AddressPage, addressStyles } from "@/comp
 const messages: Record<string, string> = { created: "Your new address has been saved.", updated: "Your address has been updated.", deleted: "Your address has been deleted." };
 
 export default function SavedAddressesScreen() {
+  const themed = useAccountStyles();
   const { user, loading: authLoading } = useAuth();
   const userId = user?.id;
   const { result } = useLocalSearchParams<{ result?: string }>();
@@ -57,26 +60,26 @@ export default function SavedAddressesScreen() {
         <View><ErrorText>{error}</ErrorText><AddressButton title={expired ? "Sign in" : "Try again"}
           secondary onPress={() => expired ? router.replace("/auth/login") : void load()} /></View>
       ) : addresses.length === 0 ? <EmptyState label="No saved addresses yet. Add your first place below." /> : (
-        <View style={styles.cards}>
+        <View style={themed(styles.cards)}>
           {addresses.map((address) => (
             <Pressable key={address._id} accessibilityRole="button"
               accessibilityLabel={`Edit ${address.label}${address.isDefault ? ", default address" : ""}. ${address.line1}, ${address.areaCity}`}
-              onPress={() => open(address._id)} style={({ pressed }) => [styles.card, pressed && addressStyles.disabled]}>
-              <View style={styles.icon}><ProfileIcon name={address.label.toLowerCase() === "home" ? "home" : "pin"} /></View>
-              <View style={styles.copy}>
-                <View style={styles.cardHeading}>
-                  <Text style={styles.name}>{address.label}</Text>
-                  {address.isDefault && <Text style={styles.badge}>Default</Text>}
+              onPress={() => open(address._id)} style={themed(({ pressed }) => [styles.card, pressed && addressStyles.disabled])}>
+              <View style={themed(styles.icon)}><ProfileIcon name={address.label.toLowerCase() === "home" ? "home" : "pin"} /></View>
+              <View style={themed(styles.copy)}>
+                <View style={themed(styles.cardHeading)}>
+                  <Text style={themed(styles.name)}>{address.label}</Text>
+                  {address.isDefault && <Text style={themed(styles.badge)}>Default</Text>}
                 </View>
-                <Text style={styles.summary}>{address.line1}{"\n"}{address.areaCity}</Text>
+                <Text style={themed(styles.summary)}>{address.line1}{"\n"}{address.areaCity}</Text>
               </View>
-              <Text style={styles.chevron} accessible={false}>›</Text>
+              <Text style={themed(styles.chevron)} accessible={false}>›</Text>
             </Pressable>
           ))}
-          <Text style={addressStyles.hint}>Choose a place to edit its details or change your default address.</Text>
+          <Text style={themed(addressStyles.hint)}>Choose a place to edit its details or change your default address.</Text>
         </View>
       )}
-      <View style={addressStyles.footer}>
+      <View style={themed(addressStyles.footer)}>
         <AddressButton title="+ Add a new address" disabled={authLoading || loading || expired} onPress={() => open()} />
       </View>
     </AddressPage>

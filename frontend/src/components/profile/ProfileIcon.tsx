@@ -1,4 +1,6 @@
-import { StyleSheet, Text, View } from "react-native";
+import { useAccountStyles } from "@/context/AccountThemeContext";
+import { StyleSheet, View } from "react-native";
+import { AccountText as Text } from "@/components/settings/AccountText";
 
 export type ProfileIconName = "person" | "pin" | "grid" | "heart" | "home" | "calendar";
 
@@ -7,31 +9,32 @@ export function ProfileIcon({ name, color = "#8157FF" }: {
   name: ProfileIconName;
   color?: string;
 }) {
+  const themed = useAccountStyles();
   const stroke = { borderColor: color };
   return (
-    <View style={styles.canvas} accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+    <View style={themed(styles.canvas)} accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
       {name === "person" && <>
-        <View style={[styles.head, stroke]} />
-        <View style={[styles.shoulders, stroke]} />
+        <View style={themed([styles.head, stroke])} />
+        <View style={themed([styles.shoulders, stroke])} />
       </>}
       {name === "pin" && <>
-        <View style={[styles.pin, stroke]} />
-        <View style={[styles.pinDot, stroke]} />
+        <View style={themed([styles.pin, stroke])} />
+        <View style={themed([styles.pinDot, stroke])} />
       </>}
-      {name === "grid" && <View style={styles.grid}>
-        {[0, 1, 2, 3].map((item) => <View key={item} style={[styles.square, stroke]} />)}
+      {name === "grid" && <View style={themed(styles.grid)}>
+        {[0, 1, 2, 3].map((item) => <View key={item} style={themed([styles.square, stroke])} />)}
       </View>}
-      {name === "heart" && <Text style={[styles.heart, { color }]}>♡</Text>}
+      {name === "heart" && <Text style={themed([styles.heart, { color }])}>♡</Text>}
       {name === "home" && <>
-        <View style={[styles.roof, stroke]} />
-        <View style={[styles.house, stroke]} />
-        <View style={[styles.door, stroke]} />
+        <View style={themed([styles.roof, stroke])} />
+        <View style={themed([styles.house, stroke])} />
+        <View style={themed([styles.door, stroke])} />
       </>}
       {name === "calendar" && <>
-        <View style={[styles.calendar, stroke]} />
-        <View style={[styles.calendarLine, { backgroundColor: color }]} />
-        <View style={[styles.ring, { left: 7, backgroundColor: color }]} />
-        <View style={[styles.ring, { right: 7, backgroundColor: color }]} />
+        <View style={themed([styles.calendar, stroke])} />
+        <View style={themed([styles.calendarLine, { backgroundColor: color }])} />
+        <View style={themed([styles.ring, { left: 7, backgroundColor: color }])} />
+        <View style={themed([styles.ring, { right: 7, backgroundColor: color }])} />
       </>}
     </View>
   );

@@ -1,8 +1,11 @@
+import { useAccountStyles } from "@/context/AccountThemeContext";
 import { useState } from "react";
-import { Image, StyleSheet, Text, View } from "react-native";
+import { Image, StyleSheet, View } from "react-native";
+import { AccountText as Text } from "@/components/settings/AccountText";
 import type { MyProfile } from "@/api/profile";
 
 export function ProfileAvatar({ profile }: { profile: MyProfile }) {
+  const themed = useAccountStyles();
   const [failed, setFailed] = useState(false);
   const words = profile.fullName.trim().split(/\s+/).filter(Boolean);
   const initials = (words.length > 1
@@ -11,11 +14,11 @@ export function ProfileAvatar({ profile }: { profile: MyProfile }) {
   ).toLocaleUpperCase();
   const photo = profile.avatarUrl?.trim();
   return (
-    <View style={styles.avatar}>
+    <View style={themed(styles.avatar)}>
       {photo && /^https?:\/\//i.test(photo) && !failed ? (
-        <Image source={{ uri: photo }} style={styles.photo} resizeMode="cover"
+        <Image source={{ uri: photo }} style={themed(styles.photo)} resizeMode="cover"
           accessibilityLabel={`${profile.fullName}'s profile photo`} onError={() => setFailed(true)} />
-      ) : <Text style={styles.initials} accessibilityLabel={`${profile.fullName}'s initials`}>{initials}</Text>}
+      ) : <Text style={themed(styles.initials)} accessibilityLabel={`${profile.fullName}'s initials`}>{initials}</Text>}
     </View>
   );
 }

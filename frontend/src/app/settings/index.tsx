@@ -1,6 +1,8 @@
+import { useAccountStyles } from "@/context/AccountThemeContext";
 import { useRef, useState } from "react";
 import { Redirect, router, useLocalSearchParams } from "expo-router";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
+import { AccountText as Text } from "@/components/settings/AccountText";
 import { useAuth } from "@/context/AuthContext";
 import { LoadingState } from "@/components/DataState";
 import ErrorText from "@/components/ErrorText";
@@ -14,6 +16,7 @@ const options = [
   { title: "Help & support", icon: "heart", route: "/support" },
 ] as const;
 export default function SettingsScreen() {
+  const themed = useAccountStyles();
   const { user, loading, logout } = useAuth();
   const { saved } = useLocalSearchParams<{ saved?: string }>();
   const [busy, setBusy] = useState(false);
@@ -30,10 +33,10 @@ export default function SettingsScreen() {
   return <Page title="Make it yours." subtitle="A comfortable space, just the way you like it." busy={busy} onBack={() => router.dismissTo("/profile")}>
     {loading ? <LoadingState /> : <>
       {saved === "1" && <Notice>Your notification preferences have been saved.</Notice>}
-      <View style={styles.cards}>{options.map((option) => <SettingsCard key={option.title} title={option.title} icon={option.icon} disabled={busy}
+      <View style={themed(styles.cards)}>{options.map((option) => <SettingsCard key={option.title} title={option.title} icon={option.icon} disabled={busy}
         onPress={() => { router.setParams({ saved: undefined }); router.push(option.route); }} />)}</View>
       <ErrorText>{error}</ErrorText>
-      <Pressable accessibilityRole="button" disabled={busy} accessibilityState={{ disabled: busy, busy }} onPress={() => void signOut()} style={styles.signOut}><Text style={styles.signOutText}>{busy ? "Signing out..." : "Sign out"}</Text></Pressable>
+      <Pressable accessibilityRole="button" disabled={busy} accessibilityState={{ disabled: busy, busy }} onPress={() => void signOut()} style={themed(styles.signOut)}><Text style={themed(styles.signOutText)}>{busy ? "Signing out..." : "Sign out"}</Text></Pressable>
     </>}
   </Page>;
 }

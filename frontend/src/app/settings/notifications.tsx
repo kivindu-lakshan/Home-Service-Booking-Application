@@ -1,12 +1,15 @@
+import { useAccountStyles } from "@/context/AccountThemeContext";
 import { useCallback, useRef, useState } from "react";
 import { Redirect, router, useFocusEffect } from "expo-router";
-import { StyleSheet, Switch, Text, View } from "react-native";
+import { StyleSheet, Switch, View } from "react-native";
+import { AccountText as Text } from "@/components/settings/AccountText";
 import { useAuth } from "@/context/AuthContext";
 import { getNotificationPreferences, saveNotificationPreferences, notificationError, preferenceFields, type NotificationPreferences } from "@/api/notification-preferences";
 import { LoadingState } from "@/components/DataState";
 import ErrorText from "@/components/ErrorText";
 import { AddressPage as Page, AddressButton as Button, addressStyles } from "@/components/address/AddressUI";
 export default function NotificationPreferencesScreen() {
+  const themed = useAccountStyles();
   const { user, loading: authLoading } = useAuth();
   const [draft, setDraft] = useState<NotificationPreferences | null>(null);
   const [loading, setLoading] = useState(true);
@@ -44,16 +47,16 @@ export default function NotificationPreferencesScreen() {
   if (!authLoading && !user) return <Redirect href="/auth/login" />;
   return <Page title="The updates you want." subtitle="Choose your booking notifications." busy={busy} onBack={() => router.dismissTo("/settings")}>
     {authLoading || loading ? <LoadingState label="Loading your preferences..." /> : <>
-      {draft && <><View style={styles.cards}>{preferenceFields.map(({ key, title, hint }) => <View key={key} style={styles.card}>
-        <View style={{ flex: 1 }}><Text style={styles.title}>{title}</Text><Text style={styles.hint}>{hint}</Text></View>
+      {draft && <><View style={themed(styles.cards)}>{preferenceFields.map(({ key, title, hint }) => <View key={key} style={themed(styles.card)}>
+        <View style={themed({ flex: 1 })}><Text style={themed(styles.title)}>{title}</Text><Text style={themed(styles.hint)}>{hint}</Text></View>
         <Switch accessibilityLabel={title} accessibilityHint={hint} value={draft[key]} disabled={busy || expired}
           onValueChange={(value) => { if (typeof value === "boolean") setDraft((current) => current ? { ...current, [key]: value } : current); }}
           trackColor={{ false: "#CDD3E1", true: "#35CC63" }} thumbColor="#FFFFFF" ios_backgroundColor="#CDD3E1" />
       </View>)}</View>
-      <Text style={styles.note}>Tap Done to save your choices. Push delivery also depends on notification permissions on your device.</Text></>}
+      <Text style={themed(styles.note)}>Tap Done to save your choices. Push delivery also depends on notification permissions on your device.</Text></>}
       <ErrorText>{error}</ErrorText>
       {expired ? <Button secondary title="Sign in" onPress={() => router.replace("/auth/login")} /> : !draft && <Button secondary title="Try again" onPress={() => void load()} />}
-      {draft && <View style={addressStyles.footer}><Button title="Done" busy={busy} disabled={expired} onPress={() => void save()} /></View>}
+      {draft && <View style={themed(addressStyles.footer)}><Button title="Done" busy={busy} disabled={expired} onPress={() => void save()} /></View>}
     </>}
   </Page>;
 }

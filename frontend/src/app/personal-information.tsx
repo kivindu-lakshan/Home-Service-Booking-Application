@@ -1,10 +1,9 @@
+import { useAccountStyles } from "@/context/AccountThemeContext";
 import { useCallback, useRef, useState } from "react";
 import { isAxiosError } from "axios";
 import { Redirect, router, useFocusEffect } from "expo-router";
-import {
-  ActivityIndicator, KeyboardAvoidingView, Platform, Pressable,
-  ScrollView, StyleSheet, Text, View,
-} from "react-native";
+import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { AccountText as Text } from "@/components/settings/AccountText";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { getMyProfile, updateMyProfile, type MyProfile } from "@/api/profile";
 import { Input } from "@/components/ui";
@@ -17,6 +16,7 @@ type FieldErrors = { fullName?: string; phone?: string };
 type ApiError = { message?: string; data?: { path?: string; msg?: string }[] };
 
 export default function PersonalInformationScreen() {
+  const themed = useAccountStyles();
   const { user, loading: authLoading, syncProfile } = useAuth();
   const userId = user?.id;
   const [profile, setProfile] = useState<MyProfile | null>(null);
@@ -131,46 +131,46 @@ export default function PersonalInformationScreen() {
   if (!authLoading && !user) return <Redirect href="/auth/login" />;
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <KeyboardAvoidingView style={styles.page} behavior={Platform.OS === "ios" ? "padding" : undefined}>
+    <SafeAreaView style={themed(styles.safeArea)}>
+      <KeyboardAvoidingView style={themed(styles.page)} behavior={Platform.OS === "ios" ? "padding" : undefined}>
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
           <Pressable accessibilityRole="button" accessibilityLabel="Back to My Profile"
             disabled={saving} accessibilityState={{ disabled: saving }}
             onPress={() => router.dismissTo("/profile")}
-            style={({ pressed }) => [styles.back, (pressed || saving) && styles.disabled]}>
-            <Text style={styles.backArrow}>‹</Text>
+            style={themed(({ pressed }) => [styles.back, (pressed || saving) && styles.disabled])}>
+            <Text style={themed(styles.backArrow)}>‹</Text>
           </Pressable>
-          <Text style={styles.title} accessibilityRole="header">Personal information</Text>
-          <Text style={styles.subtitle}>A few details that make this space yours.</Text>
+          <Text style={themed(styles.title)} accessibilityRole="header">Personal information</Text>
+          <Text style={themed(styles.subtitle)}>A few details that make this space yours.</Text>
 
           {authLoading || loading ? (
-            <View style={styles.loading} accessibilityLiveRegion="polite">
-              <ActivityIndicator color="#633CFF" />
-              <Text style={styles.hint}>Loading your details...</Text>
+            <View style={themed(styles.loading)} accessibilityLiveRegion="polite">
+              <ActivityIndicator color={themed({ color: "#633CFF" }).color} />
+              <Text style={themed(styles.hint)}>Loading your details...</Text>
             </View>
           ) : !profile ? (
-            <View style={styles.form}>
+            <View style={themed(styles.form)}>
               <ErrorText>{error}</ErrorText>
-              <Pressable accessibilityRole="button" style={styles.saveButton}
+              <Pressable accessibilityRole="button" style={themed(styles.saveButton)}
                 onPress={() => sessionExpired ? router.replace("/auth/login") : void loadProfile()}>
-                <Text style={styles.saveText}>{sessionExpired ? "Sign in" : "Try again"}</Text>
+                <Text style={themed(styles.saveText)}>{sessionExpired ? "Sign in" : "Try again"}</Text>
               </Pressable>
             </View>
           ) : (
             <>
-              <View style={styles.profileCard}>
+              <View style={themed(styles.profileCard)}>
                 <ProfileAvatar key={`${profile.id}:${profile.avatarUrl}`} profile={profile} />
-                <View style={styles.identity}>
-                  <Text style={styles.name}>{profile.fullName}</Text>
-                  <Text style={styles.hint}>Your profile photo</Text>
+                <View style={themed(styles.identity)}>
+                  <Text style={themed(styles.name)}>{profile.fullName}</Text>
+                  <Text style={themed(styles.hint)}>Your profile photo</Text>
                 </View>
               </View>
 
-              <View style={styles.form}>
-                <Text style={styles.label}>Full name</Text>
+              <View style={themed(styles.form)}>
+                <Text style={themed(styles.label)}>Full name</Text>
                 <Input accessibilityLabel="Full name" value={fullName}
                   editable={!saving && !sessionExpired} autoComplete="name" autoCapitalize="words"
-                  style={[styles.input, !!nameError && styles.invalid]}
+                  style={themed([styles.input, !!nameError && styles.invalid])}
                   onChangeText={(value) => {
                     setFullName(value);
                     setFieldErrors((current) => ({ ...current, fullName: undefined }));
@@ -178,37 +178,37 @@ export default function PersonalInformationScreen() {
                   }} />
                 <ErrorText>{nameError}</ErrorText>
 
-                <Text style={styles.label}>Email address</Text>
-                <View style={styles.readOnly}>
-                  <Text selectable style={styles.email} accessibilityLabel={`Email address, read only: ${profile.email}`}>{profile.email}</Text>
+                <Text style={themed(styles.label)}>Email address</Text>
+                <View style={themed(styles.readOnly)}>
+                  <Text selectable style={themed(styles.email)} accessibilityLabel={`Email address, read only: ${profile.email}`}>{profile.email}</Text>
                 </View>
-                <Text style={styles.help}>Your sign-in email is read-only.</Text>
+                <Text style={themed(styles.help)}>Your sign-in email is read-only.</Text>
 
-                <Text style={styles.label}>Phone number</Text>
+                <Text style={themed(styles.label)}>Phone number</Text>
                 <Input accessibilityLabel="Phone number" value={phone}
                   editable={!saving && !sessionExpired} keyboardType="phone-pad" autoComplete="tel"
                   placeholder="e.g. 0771234567"
-                  style={[styles.input, !!phoneError && styles.invalid]}
+                  style={themed([styles.input, !!phoneError && styles.invalid])}
                   onChangeText={(value) => {
                     setPhone(value);
                     setFieldErrors((current) => ({ ...current, phone: undefined }));
                     setError("");
                   }} />
                 <ErrorText>{phoneError}</ErrorText>
-                <Text style={styles.help}>Use a 10-digit Sri Lankan mobile number starting with 07. Spaces are removed when saving.</Text>
+                <Text style={themed(styles.help)}>Use a 10-digit Sri Lankan mobile number starting with 07. Spaces are removed when saving.</Text>
 
                 <ErrorText>{error}</ErrorText>
                 {sessionExpired ? (
-                  <Pressable accessibilityRole="button" style={styles.saveButton} onPress={() => router.replace("/auth/login")}>
-                    <Text style={styles.saveText}>Sign in again</Text>
+                  <Pressable accessibilityRole="button" style={themed(styles.saveButton)} onPress={() => router.replace("/auth/login")}>
+                    <Text style={themed(styles.saveText)}>Sign in again</Text>
                   </Pressable>
                 ) : (
                   <Pressable accessibilityRole="button" accessibilityLabel={saving ? "Saving changes" : "Save changes"}
                     accessibilityState={{ disabled: saving || formInvalid, busy: saving }} disabled={saving || formInvalid}
                     onPress={() => void save()}
-                    style={({ pressed }) => [styles.saveButton, (saving || formInvalid || pressed) && styles.disabled]}>
-                    {saving && <ActivityIndicator color="#FFFFFF" />}
-                    <Text style={styles.saveText}>{saving ? "Saving changes..." : "Save changes"}</Text>
+                    style={themed(({ pressed }) => [styles.saveButton, (saving || formInvalid || pressed) && styles.disabled])}>
+                    {saving && <ActivityIndicator color={themed({ color: "#FFFFFF" }).color} />}
+                    <Text style={themed(styles.saveText)}>{saving ? "Saving changes..." : "Save changes"}</Text>
                   </Pressable>
                 )}
               </View>

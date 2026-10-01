@@ -1,6 +1,8 @@
+import { useAccountStyles } from "@/context/AccountThemeContext";
 import { useCallback, useState } from "react";
 import { Redirect, router, useLocalSearchParams } from "expo-router";
-import { Pressable, Text, View } from "react-native";
+import { Pressable, View } from "react-native";
+import { AccountText as Text } from "@/components/settings/AccountText";
 import { getTicket, saveTicket } from "@/api/support";
 import { useSupportData } from "@/hooks/useSupportData";
 import { useSupportMutation } from "@/hooks/useSupportMutation";
@@ -23,6 +25,7 @@ export default function SupportFormScreen() {
   </Page>;
 }
 function SupportForm({ initial, id }: { initial: SupportDraft; id?: string }) {
+  const themed = useAccountStyles();
   const [draft, setDraft] = useState<SupportDraft>(initial);
   const [touched, setTouched] = useState<Partial<Record<keyof SupportDraft, boolean>>>({});
   const mutation = useSupportMutation();
@@ -37,20 +40,20 @@ function SupportForm({ initial, id }: { initial: SupportDraft; id?: string }) {
     if (!Object.keys(errors).length) void mutation.run((signal) => saveTicket(draft, id, signal), id ? "updated" : "created");
   };
   return <Page title={id ? "Edit request" : "Create support request"} subtitle="A few details help us understand the issue." busy={mutation.busy} onBack={() => router.dismissTo("/support")}>
-    <Text style={styles.label}>Category</Text>
-    <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 12 }}>
-      {supportCategories.map((category) => <Pressable key={category} accessibilityRole="radio" accessibilityState={{ checked: draft.category === category, disabled: mutation.busy }} disabled={mutation.busy} onPress={() => change("category", category)} style={{ padding: 12, borderRadius: 16, backgroundColor: draft.category === category ? "#633CFF" : "#EDE7FF" }}><Text style={{ color: draft.category === category ? "white" : "#633CFF" }}>{category}</Text></Pressable>)}
+    <Text style={themed(styles.label)}>Category</Text>
+    <View style={themed({ flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 12 })}>
+      {supportCategories.map((category) => <Pressable key={category} accessibilityRole="radio" accessibilityState={{ checked: draft.category === category, disabled: mutation.busy }} disabled={mutation.busy} onPress={() => change("category", category)} style={themed({ padding: 12, borderRadius: 16, backgroundColor: draft.category === category ? "#633CFF" : "#EDE7FF" })}><Text style={themed({ color: draft.category === category ? "white" : "#633CFF" })}>{category}</Text></Pressable>)}
     </View>
     <ErrorText>{mutation.fields.category || (touched.category ? errors.category : undefined)}</ErrorText>
-    {(["subject", "description"] as const).map((key) => <View key={key} style={styles.field}>
-      <Text style={styles.label}>{key === "subject" ? "Subject" : "Description"}</Text>
+    {(["subject", "description"] as const).map((key) => <View key={key} style={themed(styles.field)}>
+      <Text style={themed(styles.label)}>{key === "subject" ? "Subject" : "Description"}</Text>
       <Input accessibilityLabel={key === "subject" ? "Subject" : "Description"} value={draft[key]} editable={!mutation.busy} multiline={key === "description"} textAlignVertical={key === "description" ? "top" : "center"}
-        style={[styles.input, key === "description" && { minHeight: 160 }, (mutation.fields[key] || touched[key] && errors[key]) && styles.invalid]}
+        style={themed([styles.input, key === "description" && { minHeight: 160 }, (mutation.fields[key] || touched[key] && errors[key]) && styles.invalid])}
         onChangeText={(value) => change(key, value)} onBlur={() => setTouched((current) => ({ ...current, [key]: true }))} />
       <ErrorText>{mutation.fields[key] || (touched[key] ? errors[key] : undefined)}</ErrorText>
     </View>)}
     <ErrorText>{mutation.error}</ErrorText>
     {mutation.expired && <Button secondary title="Sign in" onPress={() => router.replace("/auth/login")} />}
-    <View style={styles.footer}><Button title={id ? "Save changes" : "Submit request"} busy={mutation.busy} disabled={mutation.expired || Object.keys(errors).length > 0 || Object.values(mutation.fields).some(Boolean)} onPress={submit} /></View>
+    <View style={themed(styles.footer)}><Button title={id ? "Save changes" : "Submit request"} busy={mutation.busy} disabled={mutation.expired || Object.keys(errors).length > 0 || Object.values(mutation.fields).some(Boolean)} onPress={submit} /></View>
   </Page>;
 }

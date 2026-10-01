@@ -1,7 +1,9 @@
+import { useAccountStyles } from "@/context/AccountThemeContext";
 import { useCallback, useRef, useState } from "react";
 import { isAxiosError } from "axios";
 import { Redirect, router, useFocusEffect, useLocalSearchParams } from "expo-router";
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { AccountText as Text } from "@/components/settings/AccountText";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { getMyProfile, type MyProfile } from "@/api/profile";
 import { useAuth } from "@/context/AuthContext";
@@ -21,6 +23,7 @@ type ProfileState =
   | { status: "error"; sessionExpired: boolean };
 
 export default function MyProfileScreen() {
+  const themed = useAccountStyles();
   const { updated } = useLocalSearchParams<{ updated?: string }>();
   const { user, loading: authLoading } = useAuth();
   const [state, setState] = useState<ProfileState>({ status: "loading" });
@@ -56,80 +59,80 @@ export default function MyProfileScreen() {
   if (!authLoading && !user) return <Redirect href="/auth/login" />;
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <View style={styles.page}>
+    <SafeAreaView style={themed(styles.safeArea)}>
+      <View style={themed(styles.page)}>
         <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
           <Pressable accessibilityRole="button" accessibilityLabel="Go back" hitSlop={6}
             onPress={() => router.canGoBack() ? router.back() : router.replace("/")}
-            style={({ pressed }) => [styles.back, pressed && styles.pressed]}>
-            <Text style={styles.backArrow}>‹</Text>
+            style={themed(({ pressed }) => [styles.back, pressed && styles.pressed])}>
+            <Text style={themed(styles.backArrow)}>‹</Text>
           </Pressable>
-          <Text style={styles.title} accessibilityRole="header">Your little corner.</Text>
-          <Text style={styles.subtitle}>Everything for your account, in one place.</Text>
+          <Text style={themed(styles.title)} accessibilityRole="header">Your little corner.</Text>
+          <Text style={themed(styles.subtitle)}>Everything for your account, in one place.</Text>
           {updated === "1" && (
-            <Text accessibilityRole="alert" style={styles.success}>Your profile changes have been saved.</Text>
+            <Text accessibilityRole="alert" style={themed(styles.success)}>Your profile changes have been saved.</Text>
           )}
 
           {authLoading || state.status === "loading" ? (
-            <View style={[styles.profileCard, styles.stateCard]} accessibilityLiveRegion="polite">
-              <ActivityIndicator color="#633CFF" />
-              <Text style={styles.stateText}>Loading your profile...</Text>
+            <View style={themed([styles.profileCard, styles.stateCard])} accessibilityLiveRegion="polite">
+              <ActivityIndicator color={themed({ color: "#633CFF" }).color} />
+              <Text style={themed(styles.stateText)}>Loading your profile...</Text>
             </View>
           ) : state.status === "error" ? (
-            <View style={[styles.profileCard, styles.errorCard]}>
-              <Text style={styles.errorText} accessibilityRole="alert">
+            <View style={themed([styles.profileCard, styles.errorCard])}>
+              <Text style={themed(styles.errorText)} accessibilityRole="alert">
                 {state.sessionExpired ? "Your session has expired. Please sign in again." : "Unable to load your profile. Please try again."}
               </Text>
               <Pressable accessibilityRole="button"
                 onPress={() => state.sessionExpired ? router.replace("/auth/login") : void loadProfile()}
-                style={styles.retry}>
-                <Text style={styles.retryText}>{state.sessionExpired ? "Sign in" : "Try again"}</Text>
+                style={themed(styles.retry)}>
+                <Text style={themed(styles.retryText)}>{state.sessionExpired ? "Sign in" : "Try again"}</Text>
               </Pressable>
             </View>
           ) : (
-            <View style={styles.profileCard}>
+            <View style={themed(styles.profileCard)}>
               <ProfileAvatar key={`${state.profile.id}:${state.profile.avatarUrl}`} profile={state.profile} />
-              <View style={styles.identity}>
-                <Text style={styles.name}>{state.profile.fullName}</Text>
-                <Text style={styles.email}>{state.profile.email}</Text>
-                <Text style={[styles.verification, !state.profile.emailVerified && styles.unverified]}>
+              <View style={themed(styles.identity)}>
+                <Text style={themed(styles.name)}>{state.profile.fullName}</Text>
+                <Text style={themed(styles.email)}>{state.profile.email}</Text>
+                <Text style={themed([styles.verification, !state.profile.emailVerified && styles.unverified])}>
                   {state.profile.emailVerified ? "✓ Email verified" : "Email not verified"}
                 </Text>
               </View>
             </View>
           )}
 
-          <View style={styles.cards}>
+          <View style={themed(styles.cards)}>
             {cards.map((card) => (
               <Pressable key={card.title} accessibilityRole="button"
                 onPress={() => {
                   router.setParams({ updated: undefined });
                   router.push(card.icon === "grid" ? "/settings" : card.icon === "heart" ? "/support" : card.icon === "pin" ? "/addresses" : "/personal-information");
                 }}
-                accessibilityLabel={`${card.title}. ${card.subtitle}.`} style={styles.menuCard}>
-                <View style={styles.iconTile}><ProfileIcon name={card.icon} /></View>
-                <View style={styles.cardCopy}>
-                  <Text style={styles.cardTitle}>{card.title}</Text>
-                  <Text style={styles.cardSubtitle}>{card.subtitle}</Text>
+                accessibilityLabel={`${card.title}. ${card.subtitle}.`} style={themed(styles.menuCard)}>
+                <View style={themed(styles.iconTile)}><ProfileIcon name={card.icon} /></View>
+                <View style={themed(styles.cardCopy)}>
+                  <Text style={themed(styles.cardTitle)}>{card.title}</Text>
+                  <Text style={themed(styles.cardSubtitle)}>{card.subtitle}</Text>
                 </View>
-                <Text style={styles.chevron} accessible={false}>›</Text>
+                <Text style={themed(styles.chevron)} accessible={false}>›</Text>
               </Pressable>
             ))}
           </View>
         </ScrollView>
 
-        <View style={styles.bottomBar}>
-          <Pressable accessibilityRole="button" accessibilityLabel="Home" style={styles.navItem} onPress={() => router.replace("/")}>
-            <ProfileIcon name="home" color="#7E8AA4" /><Text style={styles.navLabel}>Home</Text>
+        <View style={themed(styles.bottomBar)}>
+          <Pressable accessibilityRole="button" accessibilityLabel="Home" style={themed(styles.navItem)} onPress={() => router.replace("/")}>
+            <ProfileIcon name="home" color={themed({ color: "#7E8AA4" }).color} /><Text style={themed(styles.navLabel)}>Home</Text>
           </Pressable>
-          <Pressable disabled accessibilityRole="button" accessibilityState={{ disabled: true }} accessibilityLabel="Services. Coming soon." style={styles.navItem}>
-            <ProfileIcon name="grid" color="#7E8AA4" /><Text style={styles.navLabel}>Services</Text>
+          <Pressable disabled accessibilityRole="button" accessibilityState={{ disabled: true }} accessibilityLabel="Services. Coming soon." style={themed(styles.navItem)}>
+            <ProfileIcon name="grid" color={themed({ color: "#7E8AA4" }).color} /><Text style={themed(styles.navLabel)}>Services</Text>
           </Pressable>
-          <Pressable accessibilityRole="button" accessibilityLabel="Bookings" style={styles.navItem} onPress={() => router.push("/bookings")}>
-            <ProfileIcon name="calendar" color="#7E8AA4" /><Text style={styles.navLabel}>Bookings</Text>
+          <Pressable accessibilityRole="button" accessibilityLabel="Bookings" style={themed(styles.navItem)} onPress={() => router.push("/bookings")}>
+            <ProfileIcon name="calendar" color={themed({ color: "#7E8AA4" }).color} /><Text style={themed(styles.navLabel)}>Bookings</Text>
           </Pressable>
-          <View accessible accessibilityRole="tab" accessibilityState={{ selected: true }} accessibilityLabel="Profile" style={[styles.navItem, styles.activeNav]}>
-            <ProfileIcon name="person" /><Text style={[styles.navLabel, styles.activeLabel]}>Profile</Text>
+          <View accessible accessibilityRole="tab" accessibilityState={{ selected: true }} accessibilityLabel="Profile" style={themed([styles.navItem, styles.activeNav])}>
+            <ProfileIcon name="person" /><Text style={themed([styles.navLabel, styles.activeLabel])}>Profile</Text>
           </View>
         </View>
       </View>

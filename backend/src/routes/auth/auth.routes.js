@@ -30,6 +30,15 @@ router.post(
 const notifications = require("../../controllers/auth/notification-preferences.controller");
 const notificationFields = ["bookingConfirmations", "arrivalStatusUpdates", "bookingReminders"];
 const noStore = (req, res, next) => { res.set("Cache-Control", "no-store"); next(); };
+const appearance = require("../../controllers/auth/appearance.controller");
+router.get("/me/appearance", auth, noStore, appearance.read);
+router.patch("/me/appearance", auth, noStore, (req, res, next) => {
+  const values = req.body;
+  if (!values || typeof values !== "object" || Array.isArray(values) || Object.keys(values).length !== 1 ||
+      !Object.hasOwn(values, "theme") || !["light", "dark"].includes(values.theme))
+    return fail(res, 400, "Provide only theme, with a value of light or dark.");
+  next();
+}, appearance.update);
 router.get("/me/notification-preferences", auth, noStore, notifications.read);
 router.patch("/me/notification-preferences", auth, noStore, (req, res, next) => {
   const values = req.body;
