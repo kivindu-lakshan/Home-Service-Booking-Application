@@ -101,13 +101,12 @@ export default function MyProfileScreen() {
 
           <View style={styles.cards}>
             {cards.map((card) => (
-              <Pressable key={card.title} disabled={card.icon === "grid"} accessibilityRole="button"
-                accessibilityState={{ disabled: card.icon === "grid" }}
+              <Pressable key={card.title} accessibilityRole="button"
                 onPress={() => {
                   router.setParams({ updated: undefined });
-                  router.push(card.icon === "heart" ? "/support" : card.icon === "pin" ? "/addresses" : "/personal-information");
+                  router.push(card.icon === "grid" ? "/settings" : card.icon === "heart" ? "/support" : card.icon === "pin" ? "/addresses" : "/personal-information");
                 }}
-                accessibilityLabel={`${card.title}. ${card.subtitle}.${card.icon !== "grid" ? "" : " Coming soon."}`} style={styles.menuCard}>
+                accessibilityLabel={`${card.title}. ${card.subtitle}.`} style={styles.menuCard}>
                 <View style={styles.iconTile}><ProfileIcon name={card.icon} /></View>
                 <View style={styles.cardCopy}>
                   <Text style={styles.cardTitle}>{card.title}</Text>
@@ -117,7 +116,6 @@ export default function MyProfileScreen() {
               </Pressable>
             ))}
           </View>
-          <Text style={styles.comingSoon}>More account features coming soon.</Text>
         </ScrollView>
 
         <View style={styles.bottomBar}>

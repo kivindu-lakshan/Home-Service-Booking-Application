@@ -24,8 +24,14 @@ const address = new Schema(
   },
   { _id: true },
 );
+const notificationPreferences = new Schema({
+  bookingConfirmations: { type: Boolean, default: true },
+  arrivalStatusUpdates: { type: Boolean, default: true },
+  bookingReminders: { type: Boolean, default: true },
+}, { _id: false });
 const settings = new Schema(
   {
+    notifications: { type: notificationPreferences, default: () => ({}) },
     theme: { type: String, enum: ["light", "dark"], default: "light" },
     textSize: {
       type: String,

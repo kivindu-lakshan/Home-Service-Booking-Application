@@ -7,6 +7,11 @@ export default function RootLayout() {
         screenOptions={{ headerBackTitle: "Back", headerTintColor: "#5B3DF5" }}
       >
         <Stack.Screen name="index" options={{ headerShown: false }} />
+        <Stack.Screen name="settings/account-security" options={{ headerShown: false }} />
+        <Stack.Screen name="settings/appearance" options={{ headerShown: false }} />
+        <Stack.Screen name="settings/privacy" options={{ headerShown: false }} />
+        <Stack.Screen name="settings/index" options={{ headerShown: false }} />
+        <Stack.Screen name="settings/notifications" options={{ headerShown: false }} />
         <Stack.Screen name="support/index" options={{ headerShown: false }} />
         <Stack.Screen name="support/form" options={{ headerShown: false }} />
         <Stack.Screen name="support/details" options={{ headerShown: false }} />

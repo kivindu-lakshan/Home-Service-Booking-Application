@@ -27,6 +27,23 @@ router.post(
   validate,
   controller.login,
 );
+const notifications = require("../../controllers/auth/notification-preferences.controller");
+const notificationFields = ["bookingConfirmations", "arrivalStatusUpdates", "bookingReminders"];
+const noStore = (req, res, next) => { res.set("Cache-Control", "no-store"); next(); };
+router.get("/me/notification-preferences", auth, noStore, notifications.read);
+router.patch("/me/notification-preferences", auth, noStore, (req, res, next) => {
+  const values = req.body;
+  if (!values || typeof values !== "object" || Array.isArray(values) || !Object.keys(values).length ||
+      Object.keys(values).some((key) => !notificationFields.includes(key)))
+    return fail(res, 400, "Provide only bookingConfirmations, arrivalStatusUpdates and bookingReminders.");
+  next();
+}, notificationFields.map((key) => body(key).optional()
+  .custom((value) => typeof value === "boolean").withMessage("Preference must be true or false.").hide()),
+(req, res, next) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) return fail(res, 400, "Validation failed", errors.array());
+  next();
+}, notifications.update);
 router.get("/me", auth, controller.me);
 router.patch(
   "/me",
