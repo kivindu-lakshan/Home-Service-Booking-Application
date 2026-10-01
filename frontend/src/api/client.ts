@@ -17,10 +17,12 @@ const removeToken = async () => {
   else await SecureStore.deleteItemAsync(TOKEN_KEY);
 };
 
-const apiUrl =
-  process.env.EXPO_PUBLIC_API_URL ||
-  Constants.expoConfig?.extra?.apiUrl ||
-  "http://localhost:3000/api";
+// Web runs on the backend computer; physical devices use the configured LAN URL.
+const apiUrl = Platform.OS === "web"
+  ? "http://localhost:3000/api"
+  : process.env.EXPO_PUBLIC_API_URL ||
+    Constants.expoConfig?.extra?.apiUrl ||
+    "http://localhost:3000/api";
 export const api = axios.create({ baseURL: apiUrl });
 api.interceptors.request.use(async (config) => {
   const token = await getToken();
