@@ -101,13 +101,13 @@ export default function MyProfileScreen() {
 
           <View style={styles.cards}>
             {cards.map((card) => (
-              <Pressable key={card.title} disabled={card.icon !== "person"} accessibilityRole="button"
-                accessibilityState={{ disabled: card.icon !== "person" }}
+              <Pressable key={card.title} disabled={card.icon !== "person" && card.icon !== "pin"} accessibilityRole="button"
+                accessibilityState={{ disabled: card.icon !== "person" && card.icon !== "pin" }}
                 onPress={() => {
                   router.setParams({ updated: undefined });
-                  router.push("/personal-information");
+                  router.push(card.icon === "pin" ? "/addresses" : "/personal-information");
                 }}
-                accessibilityLabel={`${card.title}. ${card.subtitle}.${card.icon === "person" ? "" : " Coming soon."}`} style={styles.menuCard}>
+                accessibilityLabel={`${card.title}. ${card.subtitle}.${card.icon === "person" || card.icon === "pin" ? "" : " Coming soon."}`} style={styles.menuCard}>
                 <View style={styles.iconTile}><ProfileIcon name={card.icon} /></View>
                 <View style={styles.cardCopy}>
                   <Text style={styles.cardTitle}>{card.title}</Text>
