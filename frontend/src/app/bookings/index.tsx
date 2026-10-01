@@ -1,17 +1,19 @@
-import { useCallback, useEffect, useState } from "react";
-import { router } from "expo-router";
-import {
-  Pressable,
-  RefreshControl,
-  ScrollView,
-  Text,
-  View,
-} from "react-native";
-import { Card } from "@/components/ui";
-import { EmptyState, ErrorState, LoadingState } from "@/components/DataState";
 import { getMyBookings } from "@/api/domain";
+import { EmptyState, ErrorState, LoadingState } from "@/components/DataState";
+import { Card } from "@/components/ui";
+import { useAuth } from "@/context/AuthContext";
+import { router } from "expo-router";
+import { useCallback, useEffect, useState } from "react";
+import {
+    Pressable,
+    RefreshControl,
+    ScrollView,
+    Text,
+    View,
+} from "react-native";
 
 export default function BookingsScreen() {
+  const { user } = useAuth();
   const [bookings, setBookings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -31,8 +33,13 @@ export default function BookingsScreen() {
     }
   }, []);
   useEffect(() => {
-    void load();
-  }, [load]);
+    if (user?.role === "admin") {
+      router.replace("/admin/dashboard");
+      return;
+    }
+    const timer = setTimeout(() => void load(), 0);
+    return () => clearTimeout(timer);
+  }, [load, user?.role]);
   if (loading) return <LoadingState label="Loading bookings..." />;
   if (error) return <ErrorState onRetry={() => void load()} />;
   return (

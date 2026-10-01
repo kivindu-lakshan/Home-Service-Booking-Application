@@ -41,8 +41,8 @@ export default function Login() {
       return setError("Email and password are required.");
     setBusy(true);
     try {
-      await login(email, password, role);
-      router.replace("/");
+      const user = await login(email, password, role);
+      router.replace(user.role === "admin" ? "/admin/dashboard" : "/");
     } catch (e: any) {
       setError(
         e.response?.data?.message ||
@@ -129,7 +129,9 @@ const styles = {
     flex: 1,
     backgroundColor: colors.white,
     padding: 24,
-    justifyContent: "center" as const,
+    justifyContent: "flex-start" as const,
+    paddingTop: 72,
+    alignItems: "stretch" as const,
   },
   brand: {
     flexDirection: "row" as const,
@@ -146,8 +148,13 @@ const styles = {
     fontSize: 32,
     fontWeight: "900" as const,
     marginTop: 12,
+    textAlign: "center" as const,
   },
-  subtitle: { color: colors.muted, marginVertical: 10 },
+  subtitle: {
+    color: colors.muted,
+    marginVertical: 10,
+    textAlign: "center" as const,
+  },
   roleList: { gap: 8, marginVertical: 16 },
   role: {
     minHeight: 48,

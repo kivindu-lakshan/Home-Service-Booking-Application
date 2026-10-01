@@ -1,5 +1,5 @@
-import { Stack } from "expo-router";
 import { AuthProvider } from "@/context/AuthContext";
+import { Stack } from "expo-router";
 export default function RootLayout() {
   return (
     <AuthProvider>
@@ -52,9 +52,19 @@ export default function RootLayout() {
           name="reviews/provider"
           options={{ title: "Provider reviews" }}
         />
+        <Stack.Screen name="reviews/mine" options={{ title: "My reviews" }} />
+        <Stack.Screen name="support" options={{ title: "Support" }} />
+        <Stack.Screen
+          name="admin/tickets"
+          options={{ title: "Support tickets" }}
+        />
         <Stack.Screen
           name="admin/dashboard"
           options={{ title: "Admin dashboard" }}
+        />
+        <Stack.Screen
+          name="admin/profile"
+          options={{ title: "Admin profile" }}
         />
         <Stack.Screen
           name="admin/bookings"

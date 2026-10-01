@@ -6,8 +6,9 @@ import {
     CheckCircle2,
     ChevronRight,
     ClipboardList,
-    LayoutDashboard,
+    MessageSquareText,
     ShieldCheck,
+    UserRound,
     UsersRound,
     WalletCards,
     Wrench,
@@ -31,13 +32,20 @@ const C = {
   white: "#FFFFFF",
   muted: "#8E8E9A",
 };
-type Section = "Overview" | "Bookings" | "Payments" | "Reviews" | "Users";
+type Section =
+  | "Overview"
+  | "Bookings"
+  | "Payments"
+  | "Reviews"
+  | "Users"
+  | "Tickets";
 const sections: Section[] = [
   "Overview",
   "Bookings",
   "Payments",
   "Reviews",
   "Users",
+  "Tickets",
 ];
 
 export default function AdminDashboard() {
@@ -57,7 +65,8 @@ export default function AdminDashboard() {
     }
   }, []);
   useEffect(() => {
-    void load();
+    const timer = setTimeout(() => void load(), 0);
+    return () => clearTimeout(timer);
   }, [load]);
   if (loading) return <LoadingState label="Loading admin dashboard..." />;
   if (error)
@@ -98,9 +107,13 @@ export default function AdminDashboard() {
               <Text style={styles.overline}>OPERATIONS</Text>
               <Text style={styles.heroTitle}>Admin dashboard</Text>
             </View>
-            <View style={styles.iconCircle}>
-              <LayoutDashboard size={21} color={C.white} />
-            </View>
+            <Pressable
+              accessibilityLabel="Open admin profile"
+              onPress={() => router.push("/admin/profile")}
+              style={styles.iconCircle}
+            >
+              <UserRound size={21} color={C.white} />
+            </Pressable>
           </View>
           <View style={[styles.row, { marginTop: 24 }]}>
             <View>
@@ -176,6 +189,14 @@ export default function AdminDashboard() {
               onPress={() => router.push("/admin/bookings")}
             />
           )}
+          {section === "Tickets" && (
+            <Action
+              title="Customer support"
+              subtitle="Reply to and resolve customer complaints."
+              icon={<MessageSquareText size={21} color={C.purple} />}
+              onPress={() => router.push("/admin/tickets")}
+            />
+          )}
         </View>
       </ScrollView>
     </View>
@@ -215,6 +236,12 @@ function Overview({ data }: { data: any }) {
         subtitle="Review live assignment and progress statuses."
         icon={<Wrench size={21} color={C.purple} />}
         onPress={() => router.push("/admin/jobs")}
+      />
+      <Action
+        title="Customer support"
+        subtitle="Reply to open complaints and service questions."
+        icon={<MessageSquareText size={21} color={C.purple} />}
+        onPress={() => router.push("/admin/tickets")}
       />
     </View>
   );

@@ -220,6 +220,19 @@ const Review = make("Review", {
   rating: { type: Number, min: 1, max: 5, required: true },
   comment: String,
 });
+const Ticket = make("Ticket", {
+  customer: ref("User"),
+  subject: { type: String, required: true, trim: true, maxlength: 120 },
+  message: { type: String, required: true, trim: true, maxlength: 4000 },
+  status: {
+    type: String,
+    enum: ["open", "in_progress", "resolved"],
+    default: "open",
+  },
+  adminResponse: { type: String, trim: true, maxlength: 4000 },
+  respondedAt: Date,
+  respondedBy: ref("User", false),
+});
 const AdminActivityLog = make("AdminActivityLog", {
   actor: ref("User"),
   action: String,
@@ -237,6 +250,7 @@ const models = {
   PaymentMethod,
   Payment,
   Review,
+  Ticket,
   AdminActivityLog,
 };
 module.exports = { ...models, models };
