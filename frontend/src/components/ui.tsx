@@ -1,25 +1,32 @@
-import {
-  Platform,
-  Pressable,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from "react-native";
 import type { ReactNode } from "react";
+import {
+    Platform,
+    Pressable,
+    StyleSheet,
+    Text,
+    TextInput,
+    View,
+} from "react-native";
 export function Button({
   children,
   onPress,
   secondary = false,
+  disabled = false,
 }: {
   children: ReactNode;
   onPress: () => void;
   secondary?: boolean;
+  disabled?: boolean;
 }) {
   return (
     <Pressable
       onPress={onPress}
-      style={[styles.button, secondary && styles.secondary]}
+      disabled={disabled}
+      style={[
+        styles.button,
+        secondary && styles.secondary,
+        disabled && styles.disabled,
+      ]}
     >
       <Text style={[styles.buttonText, secondary && styles.secondaryText]}>
         {children}
@@ -69,6 +76,7 @@ export const styles = StyleSheet.create({
   buttonText: { color: "#FFF", fontWeight: "800", fontSize: 15 },
   secondary: { backgroundColor: "#EDEBFF" },
   secondaryText: { color: "#5B3DF5" },
+  disabled: { opacity: 0.45 },
   card: {
     backgroundColor: "#FFF",
     borderRadius: 18,

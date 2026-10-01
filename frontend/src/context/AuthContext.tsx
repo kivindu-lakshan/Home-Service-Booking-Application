@@ -1,11 +1,11 @@
-import {
-  createContext,
-  useContext,
-  useEffect,
-  useState,
-  type ReactNode,
-} from "react";
 import { api, clearToken, getStoredToken, saveToken } from "@/api/client";
+import {
+    createContext,
+    useContext,
+    useEffect,
+    useState,
+    type ReactNode,
+} from "react";
 type User = {
   id: string;
   fullName: string;
@@ -17,7 +17,11 @@ type AuthValue = {
   user: User | null;
   loading: boolean;
   verificationToken: string | null;
-  login: (email: string, password: string) => Promise<void>;
+  login: (
+    email: string,
+    password: string,
+    role: "customer" | "provider" | "admin",
+  ) => Promise<void>;
   register: (
     fullName: string,
     email: string,
@@ -49,8 +53,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .catch(() => clearToken())
       .finally(() => setLoading(false));
   }, []);
-  const login = async (email: string, password: string) => {
-    const r = await api.post("/auth/login", { email, password });
+  const login = async (
+    email: string,
+    password: string,
+    role: "customer" | "provider" | "admin",
+  ) => {
+    const r = await api.post("/auth/login", { email, password, role });
     await saveToken(r.data.data.token);
     setUser(r.data.data.user);
   };

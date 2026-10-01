@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useState } from "react";
-import { useLocalSearchParams } from "expo-router";
-import { ScrollView, Text } from "react-native";
-import { Card } from "@/components/ui";
 import { getProviderReviews } from "@/api/domain";
 import { EmptyState, ErrorState, LoadingState } from "@/components/DataState";
+import { Card } from "@/components/ui";
+import { useLocalSearchParams } from "expo-router";
+import { Star } from "lucide-react-native";
+import { useCallback, useEffect, useState } from "react";
+import { ScrollView, Text } from "react-native";
 export default function ProviderReviews() {
   const { providerId } = useLocalSearchParams<{ providerId: string }>();
   const [data, setData] = useState<any>();
@@ -37,7 +38,8 @@ export default function ProviderReviews() {
           marginVertical: 12,
         }}
       >
-        ★ {Number(data.provider?.ratingAvg || 0).toFixed(1)} ·{" "}
+        <Star size={20} color="#FBBF24" fill="#FBBF24" />{" "}
+        {Number(data.provider?.ratingAvg || 0).toFixed(1)} ·{" "}
         {data.provider?.reviewCount || 0} reviews
       </Text>
       {data.reviews.length === 0 ? (
@@ -46,8 +48,14 @@ export default function ProviderReviews() {
         data.reviews.map((review: any) => (
           <Card key={review._id}>
             <Text style={{ color: "#F29D38", fontSize: 22 }}>
-              {"★".repeat(review.rating)}
-              {"☆".repeat(5 - review.rating)}
+              {[1, 2, 3, 4, 5].map((value) => (
+                <Star
+                  key={value}
+                  size={18}
+                  color="#FBBF24"
+                  fill={value <= review.rating ? "#FBBF24" : "#FFFFFF"}
+                />
+              ))}
             </Text>
             <Text style={{ color: "#25213D", fontWeight: "800", marginTop: 8 }}>
               {review.customer?.fullName || "Customer"}

@@ -83,6 +83,15 @@ exports.availableProviders = async (req, res, next) => {
 };
 exports.assignProvider = async (req, res, next) => {
   try {
+    const mongoose = require("mongoose");
+    if (!req.body.providerId || !mongoose.isValidObjectId(req.body.providerId))
+      return res
+        .status(422)
+        .json({
+          success: false,
+          data: null,
+          message: "Select a valid provider before assigning",
+        });
     const [booking, provider] = await Promise.all([
       Booking.findById(req.params.id),
       Provider.findOne({

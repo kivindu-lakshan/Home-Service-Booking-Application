@@ -1,6 +1,7 @@
-import { router, useLocalSearchParams } from "expo-router";
-import { Text, View } from "react-native";
 import { Button } from "@/components/ui";
+import { router, useLocalSearchParams } from "expo-router";
+import { Star } from "lucide-react-native";
+import { Text, View } from "react-native";
 export default function ReviewSubmitted() {
   const { rating } = useLocalSearchParams<{ rating: string }>();
   return (
@@ -26,7 +27,14 @@ export default function ReviewSubmitted() {
         Review submitted
       </Text>
       <Text style={{ color: "#F29D38", fontSize: 38, marginVertical: 20 }}>
-        {"★".repeat(Number(rating || 0))}
+        {[1, 2, 3, 4, 5].map((value) => (
+          <Star
+            key={value}
+            size={30}
+            color="#FBBF24"
+            fill={value <= Number(rating || 0) ? "#FBBF24" : "#FFFFFF"}
+          />
+        ))}
       </Text>
       <Text style={{ color: "#747B90", marginBottom: 22 }}>
         Your feedback was saved to MongoDB and will help other customers.
