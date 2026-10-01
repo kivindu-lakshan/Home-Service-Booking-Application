@@ -7,6 +7,8 @@ export default function RootLayout() {
         screenOptions={{ headerBackTitle: "Back", headerTintColor: "#5B3DF5" }}
       >
         <Stack.Screen name="index" options={{ headerShown: false }} />
+        <Stack.Screen name="profile" options={{ headerShown: false }} />
+        <Stack.Screen name="personal-information" options={{ headerShown: false }} />
         <Stack.Screen name="auth/login" options={{ title: "Sign in" }} />
         <Stack.Screen
           name="auth/register"

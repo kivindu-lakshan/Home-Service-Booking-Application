@@ -1,8 +1,9 @@
 const router = require("express").Router();
-const { body } = require("express-validator");
+const { body, validationResult } = require("express-validator");
 const auth = require("../../middleware/auth");
 const validate = require("../../middleware/validate");
 const controller = require("../../controllers/auth/auth.controller");
+const { fail } = require("../../utils/response");
 const password = (field) =>
   body(field)
     .isLength({ min: 8 })
@@ -27,6 +28,40 @@ router.post(
   controller.login,
 );
 router.get("/me", auth, controller.me);
+router.patch(
+  "/me",
+  auth,
+  (req, res, next) => {
+    // Reject unknown fields before validation so submitted secrets are never echoed.
+    const fields = req.body;
+    if (!fields || typeof fields !== "object" || Array.isArray(fields) ||
+        Object.keys(fields).some((key) => !["fullName", "phone"].includes(key))) {
+      return fail(res, 400, "Provide only fullName and phone to update your profile.");
+    }
+    next();
+  },
+  [
+    body("fullName").exists({ values: "null" }).withMessage("Full name is required.")
+      .bail().isString().withMessage("Full name must be text.")
+      .bail().trim().notEmpty().withMessage("Full name is required.")
+      .bail().isLength({ min: 2, max: 100 })
+      .withMessage("Full name must be between 2 and 100 characters.")
+      .bail().matches(/^\p{L}[\p{L}\p{M} ]*$/u)
+      .withMessage("Full name must contain only letters and spaces.").hide(),
+    body("phone").exists({ values: "null" }).withMessage("Phone number is required.")
+      .bail().isString().withMessage("Phone number must be text.")
+      .bail().customSanitizer((value) => value.replace(/\s/g, ""))
+      .notEmpty().withMessage("Phone number is required.")
+      .bail().matches(/^07[0-9]{8}$/)
+      .withMessage("Enter a 10-digit Sri Lankan mobile number starting with 07, e.g. 0771234567.").hide(),
+  ],
+  (req, res, next) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) return fail(res, 400, "Validation failed", errors.array());
+    next();
+  },
+  controller.updateMe,
+);
 router.post(
   "/change-password",
   auth,

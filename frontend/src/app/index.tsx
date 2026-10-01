@@ -54,6 +54,10 @@ export default function HomeScreen() {
         </Button>
       )}
       <View style={{ height: 12 }} />
+      <Button secondary onPress={() => router.push("/profile")}>
+        My profile
+      </Button>
+      <View style={{ height: 12 }} />
       <Button secondary onPress={() => router.push("/auth/change-password")}>
         Change password
       </Button>

@@ -16,6 +16,10 @@ const publicUser = (user) => ({
   emailVerified: user.emailVerified,
   status: user.status,
 });
+const publicProfile = (user) => ({
+  ...publicUser(user),
+  avatarUrl: user.avatarUrl || null,
+});
 const passwordError =
   "Password must be at least 8 characters and include a letter and a number.";
 
@@ -81,7 +85,28 @@ exports.login = async (req, res, next) => {
     next(error);
   }
 };
-exports.me = (req, res) => ok(res, publicUser(req.user));
+exports.me = (req, res) => {
+  res.set("Cache-Control", "no-store");
+  return ok(res, publicProfile(req.user));
+};
+exports.updateMe = async (req, res) => {
+  res.set("Cache-Control", "no-store");
+  try {
+    const changes = {};
+    // Never pass the request body directly to MongoDB.
+    if (Object.hasOwn(req.body, "fullName")) changes.fullName = req.body.fullName;
+    if (Object.hasOwn(req.body, "phone")) changes.phone = req.body.phone;
+    const user = await User.findOneAndUpdate(
+      { _id: req.user._id, status: "active" },
+      { $set: changes },
+      { new: true, runValidators: true },
+    );
+    if (!user) return fail(res, 401, "Your session is no longer active. Please sign in again.");
+    return ok(res, publicProfile(user), "Profile updated successfully.");
+  } catch {
+    return fail(res, 500, "Unable to save your profile. Please try again.");
+  }
+};
 exports.changePassword = async (req, res, next) => {
   try {
     const user = await User.findById(req.user._id).select("+passwordHash");

@@ -1,6 +1,7 @@
 import {
   createContext,
   useContext,
+  useCallback,
   useEffect,
   useState,
   type ReactNode,
@@ -10,6 +11,7 @@ type User = {
   id: string;
   fullName: string;
   email: string;
+  phone?: string;
   role: string;
   emailVerified: boolean;
 };
@@ -25,6 +27,7 @@ type AuthValue = {
     password: string,
   ) => Promise<void>;
   logout: () => Promise<void>;
+  syncProfile: (profile: Pick<User, "id" | "fullName" | "phone">) => void;
 };
 const AuthContext = createContext<AuthValue>({
   user: null,
@@ -33,6 +36,7 @@ const AuthContext = createContext<AuthValue>({
   login: async () => {},
   register: async () => {},
   logout: async () => {},
+  syncProfile: () => {},
 });
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
@@ -74,9 +78,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await clearToken();
     setUser(null);
   };
+  const syncProfile = useCallback((profile: Pick<User, "id" | "fullName" | "phone">) => {
+    setUser((current) => current?.id === profile.id
+      ? { ...current, fullName: profile.fullName, phone: profile.phone }
+      : current);
+  }, []);
   return (
     <AuthContext.Provider
-      value={{ user, loading, verificationToken, login, register, logout }}
+      value={{ user, loading, verificationToken, login, register, logout, syncProfile }}
     >
       {children}
     </AuthContext.Provider>
