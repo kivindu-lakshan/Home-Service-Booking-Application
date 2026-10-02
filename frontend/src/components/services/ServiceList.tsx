@@ -1,7 +1,7 @@
 import { useCallback, useRef, useState } from 'react';
 import { router, useFocusEffect } from 'expo-router';
-import { Modal, Pressable, RefreshControl, ScrollView, View } from 'react-native';
-import { ChevronLeft, Layers } from 'lucide-react-native';
+import { Modal, Pressable, RefreshControl, ScrollView, TextInput, View } from 'react-native';
+import { ChevronLeft, Layers, Search, Sparkles } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { AccountText as Text } from '@/components/settings/AccountText';
 import { useAccountStyles } from '@/context/AccountThemeContext';
@@ -10,14 +10,18 @@ import { LoadingState, EmptyState } from '@/components/DataState';
 import ErrorText from '@/components/ErrorText';
 import { deleteService, getServices, serviceError, type Service } from '@/api/services';
 import { useAuth } from '@/context/AuthContext';
+import ProviderServiceCard from './ProviderServiceCard';
 import { ServiceCard, ServiceAction, serviceStyles } from './ServiceUI';
 export default function ServiceList({ admin = false }: { admin?: boolean }) {
   const themed = useAccountStyles();
   const { user } = useAuth();
+  const provider = !admin && user?.role === 'provider';
+  const [query, setQuery] = useState('');
   const [services, setServices] = useState<Service[]>([]);
   const [showInactive, setShowInactive] = useState(false);
   const [notice, setNotice] = useState('');
   const visibleServices = services.filter(service => admin && showInactive ? !service.isActive : service.isActive);
+  const filteredServices = provider ? visibleServices.filter(service => `${service.name} ${service.category?.name || ''} ${service.description || ''}`.toLowerCase().includes(query.trim().toLowerCase())) : visibleServices;
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
@@ -58,12 +62,17 @@ export default function ServiceList({ admin = false }: { admin?: boolean }) {
       </View>
       <Text accessibilityRole='header' style={themed(serviceStyles.heading)}>{admin ? 'Service Management' : 'Available services'}</Text>
       <Text style={themed(serviceStyles.copy)}>{admin ? 'Manage services offered through HomeHalo.' : 'Explore services offered through HomeHalo.'}</Text>
+      {provider && <>
+        <View style={themed({ backgroundColor: '#EEE8FF', borderRadius: 16, padding: 16, marginTop: 12, marginBottom: 20, flexDirection: 'row', alignItems: 'center', gap: 12 })}><Sparkles size={23} color='#633CFF' /><View style={{ flex: 1 }}><Text style={themed({ color: '#453084', fontSize: 13, fontWeight: '800', marginBottom: 5 })}>Find your next opportunity</Text><Text style={themed({ color: '#81749F', fontSize: 11, lineHeight: 18 })}>Choose a service that fits your skills. Share your qualifications to apply.</Text></View></View>
+        <View style={themed({ backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#EEEDF5', borderRadius: 14, flexDirection: 'row', gap: 10, alignItems: 'center', paddingHorizontal: 14, marginBottom: 22 })}><Search size={18} color='#8A91A4' /><TextInput accessibilityLabel='Search services' placeholder='Search services or categories' value={query} onChangeText={setQuery} placeholderTextColor='#8A91A4' style={themed({ flex: 1, minWidth: 0, minHeight: 48, fontSize: 12, color: '#242E49' })} /></View>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}><Text style={themed({ color: '#242E49', fontSize: 15, fontWeight: '800' })}>Explore services</Text><Text style={themed({ color: '#8A91A4', fontSize: 11 })}>{loading ? 'Loading…' : `${filteredServices.length} available`}</Text></View>
+      </>}
       {admin && <View style={serviceStyles.toolbar}><Text style={themed(serviceStyles.sectionLabel)}>{visibleServices.length} {showInactive ? 'inactive' : 'active'} services</Text><ServiceAction title='+ Add Service' label='Add service' icon='add' primary onPress={() => router.push('/admin/service-form')} /></View>}
-      {admin && <View style={{ alignItems: 'flex-start', marginBottom: 20 }}><ServiceAction title={showInactive ? 'View active services' : `View inactive services (${services.filter(service => !service.isActive).length})`} label={showInactive ? 'Back to active services' : `Inactive services Â· ${services.filter(service => !service.isActive).length}`} icon='archive' onPress={() => { setShowInactive(current => !current); setNotice(''); }} /></View>}
+      {admin && <View style={{ alignItems: 'flex-start', marginBottom: 20 }}><ServiceAction title={showInactive ? 'View active services' : `View inactive services (${services.filter(service => !service.isActive).length})`} label={showInactive ? 'Back to active services' : `Inactive services Ã‚Â· ${services.filter(service => !service.isActive).length}`} icon='archive' onPress={() => { setShowInactive(current => !current); setNotice(''); }} /></View>}
       {!!notice && <Text accessibilityRole='alert' style={themed(serviceStyles.copy)}>{notice}</Text>}
       <ErrorText>{error}</ErrorText>
       {!!error && <AddressButton title='Try again' secondary onPress={() => void load(true)} />}
-      {loading ? <LoadingState label='Loading services...' /> : !error && !visibleServices.length ? <EmptyState label={showInactive ? 'No inactive services.' : 'No active services are available yet.'} /> : visibleServices.map(service => <ServiceCard key={`${service._id}:${service.imageUrl || ''}`} service={service}>
+      {loading ? <LoadingState label='Loading services...' /> : !error && !filteredServices.length ? <EmptyState label={provider && query.trim() ? 'No services match your search.' : showInactive ? 'No inactive services.' : 'No active services are available yet.'} /> : filteredServices.map(service => provider ? <ProviderServiceCard key={`${service._id}:${service.imageUrl || ''}`} service={service} /> : <ServiceCard key={`${service._id}:${service.imageUrl || ''}`} service={service}>
         {!admin && user?.role === 'provider' && <ServiceAction title='Apply for this Service' icon='add' primary onPress={() => router.push({ pathname: '/provider/apply', params: { serviceId: service._id } })} />}
         {admin && <View style={serviceStyles.row}>
           <View style={{ flex: 1 }}><ServiceAction title='Edit' icon='edit' onPress={() => router.push({ pathname: '/admin/service-form', params: { id: service._id } })} /></View>
