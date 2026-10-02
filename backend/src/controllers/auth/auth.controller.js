@@ -53,7 +53,7 @@ exports.register = async (req, res, next) => {
   try {
     const { fullName, email, phone, password } = req.body;
     if (await User.exists({ email }))
-      return fail(res, 409, "An account with that email already exists.");
+      return fail(res, 409, "An account with that email already exists.", [{ path: "email", msg: "This email is already registered. Please sign in." }]);
     const user = await User.create({
       fullName,
       email,
@@ -71,6 +71,8 @@ exports.register = async (req, res, next) => {
       "Account created.",
     );
   } catch (error) {
+    if (error.code === 11000 && (error.keyPattern?.email || error.keyValue?.email))
+      return fail(res, 409, "An account with that email already exists.", [{ path: "email", msg: "This email is already registered. Please sign in." }]);
     next(error);
   }
 };
