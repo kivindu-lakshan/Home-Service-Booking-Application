@@ -40,7 +40,7 @@ export default function RootLayout() {
         />
         <Stack.Screen
           name="auth/verify-email"
-          options={{ title: "Verify email" }}
+          options={{ headerShown: false }}
         />
         <Stack.Screen
           name="auth/change-password"

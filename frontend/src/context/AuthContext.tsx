@@ -18,7 +18,7 @@ type User = {
 type AuthValue = {
   user: User | null;
   loading: boolean;
-  verificationToken: string | null;
+  verificationCode: string | null;
   login: (email: string, password: string) => Promise<void>;
   register: (
     fullName: string,
@@ -26,22 +26,26 @@ type AuthValue = {
     phone: string,
     password: string,
   ) => Promise<void>;
+  verifyEmail: (code: string) => Promise<void>;
+  resendVerification: () => Promise<void>;
   logout: () => Promise<void>;
   syncProfile: (profile: Pick<User, "id" | "fullName" | "phone">) => void;
 };
 const AuthContext = createContext<AuthValue>({
   user: null,
   loading: true,
-  verificationToken: null,
+  verificationCode: null,
   login: async () => {},
   register: async () => {},
+  verifyEmail: async () => {},
+  resendVerification: async () => {},
   logout: async () => {},
   syncProfile: () => {},
 });
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const [verificationToken, setVerificationToken] = useState<string | null>(
+  const [verificationCode, setVerificationCode] = useState<string | null>(
     null,
   );
   useEffect(() => {
@@ -56,6 +60,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = async (email: string, password: string) => {
     const r = await api.post("/auth/login", { email, password });
     await saveToken(r.data.data.token);
+    setVerificationCode(null);
     setUser(r.data.data.user);
   };
   const register = async (
@@ -72,9 +77,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
     await saveToken(r.data.data.token);
     setUser(r.data.data.user);
-    setVerificationToken(r.data.data.verificationToken || null);
+    setVerificationCode(r.data.data.verificationCode || null);
+  };
+  const verifyEmail = async (code: string) => {
+    const response = await api.post("/auth/verify-email", { code });
+    setUser(response.data.data);
+    setVerificationCode(null);
+  };
+  const resendVerification = async () => {
+    const response = await api.post("/auth/resend-verification");
+    setVerificationCode(response.data.data?.verificationCode || null);
   };
   const logout = async () => {
+    setVerificationCode(null);
     await clearToken();
     setUser(null);
   };
@@ -85,7 +100,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
   return (
     <AuthContext.Provider
-      value={{ user, loading, verificationToken, login, register, logout, syncProfile }}
+      value={{ user, loading, verificationCode, login, register, verifyEmail, resendVerification, logout, syncProfile }}
     >
       {children}
     </AuthContext.Provider>

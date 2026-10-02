@@ -22,9 +22,9 @@ export default function Register() {
     try { await register(form.fullName.trim(), form.email.trim(), form.phone.trim(), form.password); }
     catch (failure) { const details = authError(failure, "Unable to create account. Please try again."); setError(details.message); setFields(details.fields); return; }
     finally { lock.current = false; setBusy(false); }
-    router.replace("/");
+    router.replace("/auth/verify-email");
   };
-  return <AuthPage title={"Your home journey\nstarts here."} subtitle="Create your HomeHalo account." back="/onboarding/account-type" busy={busy}>
+  return <AuthPage afterAuth="/auth/verify-email" title={"Your home journey\nstarts here."} subtitle="Create your HomeHalo account." back="/onboarding/account-type" busy={busy}>
     <AuthField label="Full name" value={form.fullName} editable={!busy} autoComplete="name" textContentType="name" error={fields.fullName} onChangeText={(value) => update("fullName", value)} />
     <AuthField label="Email address" value={form.email} editable={!busy} autoCapitalize="none" keyboardType="email-address" autoComplete="email" textContentType="emailAddress" error={fields.email} onChangeText={(value) => update("email", value)} />
     <AuthField label="Phone number" value={form.phone} editable={!busy} keyboardType="phone-pad" autoComplete="tel" textContentType="telephoneNumber" error={fields.phone} onChangeText={(value) => update("phone", value)} />
