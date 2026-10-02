@@ -82,3 +82,30 @@ test('registration returns a six-digit demo code without verifying the new user'
     assert.equal(records.at(-1).tokenHash, hashToken(result.body.data.verificationCode));
   } finally { User.exists = exists; User.create = create; }
 });
+
+test('registration rejects invalid fields with safe field-specific 400 errors', async () => {
+  const valid = { fullName: 'Hasini Herath', email: 'hasini@example.com', phone: '0771234567', password: 'Hasini123' };
+  for (const [field, values] of Object.entries({ fullName: ['', '   ', 'H', 'Hasini123', 'Hasini!', 'H'.repeat(101)], email: ['', 'hasini@gmail', 'hasini.com'], phone: ['', '771234567', '07712345', '07712345678', '077ABC4567', '077-1234567'], password: ['', '        ', '12345678', 'password', 'abc12', 12345678] })) {
+    for (const value of values) {
+      const result = await request('/register', { ...valid, [field]: value }, null);
+      assert.equal(result.status, 400, field);
+      assert.ok(result.body.data.some(error => error.path === field));
+      assert.ok(result.body.data.every(error => !Object.hasOwn(error, 'value')));
+    }
+    const missing = { ...valid }; delete missing[field];
+    assert.equal((await request('/register', missing, null)).status, 400);
+  }
+});
+test('registration normalizes email and reports existing and racing duplicate emails', async () => {
+  const exists = User.exists, create = User.create;
+  const draft = { fullName: ' Hasini Herath ', email: ' HASINI@EXAMPLE.COM ', phone: '0771234567', password: 'Hasini123' };
+  try {
+    User.exists = async query => { assert.equal(query.email, 'hasini@example.com'); return true; };
+    let result = await request('/register', draft, null);
+    assert.equal(result.status, 409); assert.equal(result.body.data[0].path, 'email');
+    User.exists = async () => false;
+    User.create = async values => { assert.equal(values.fullName, 'Hasini Herath'); throw { code: 11000, keyPattern: { email: 1 } }; };
+    result = await request('/register', draft, null);
+    assert.equal(result.status, 409); assert.equal(result.body.data[0].path, 'email');
+  } finally { User.exists = exists; User.create = create; }
+});

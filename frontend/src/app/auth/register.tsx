@@ -13,13 +13,19 @@ export default function Register() {
   const [form, setForm] = useState<RegistrationDraft>({ fullName: "", email: "", phone: "", password: "", confirm: "" });
   const [error, setError] = useState(""); const [fields, setFields] = useState<AuthErrors>({});
   const [busy, setBusy] = useState(false); const lock = useRef(false);
-  const update = (key: keyof RegistrationDraft, value: string) => { setForm((current) => ({ ...current, [key]: value })); setFields((current) => ({ ...current, [key]: undefined })); };
+  const update = (key: keyof RegistrationDraft, value: string) => {
+    const next = { ...form, [key]: value };
+    setForm(next); setError("");
+    const errors = validateRegistration(next);
+    setFields((current) => ({ ...current, [key]: errors[key],
+      ...(key === "password" && next.confirm ? { confirm: errors.confirm } : {}) }));
+  };
   const submit = async () => {
     if (lock.current) return;
     const invalid = validateRegistration(form); setFields(invalid); setError("");
     if (Object.keys(invalid).length) return;
     lock.current = true; setBusy(true);
-    try { await register(form.fullName.trim(), form.email.trim(), form.phone.trim(), form.password); }
+    try { await register(form.fullName.trim(), form.email.trim().toLowerCase(), form.phone.trim(), form.password); }
     catch (failure) { const details = authError(failure, "Unable to create account. Please try again."); setError(details.message); setFields(details.fields); return; }
     finally { lock.current = false; setBusy(false); }
     router.replace("/auth/verify-email");
