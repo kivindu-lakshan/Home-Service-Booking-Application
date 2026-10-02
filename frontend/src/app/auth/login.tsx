@@ -3,23 +3,10 @@ import { AuthButton, AuthField, AuthFooter, AuthLink, AuthPage } from "@/compone
 import ErrorText from "@/components/ErrorText";
 import { useAuth } from "@/context/AuthContext";
 import { router } from "expo-router";
-import { BriefcaseBusiness, ShieldCheck, UserRound } from "lucide-react-native";
 import { useRef, useState } from "react";
-import { Pressable, View } from "react-native";
-import { AccountText as Text } from "@/components/settings/AccountText";
-import { useAccountStyles } from "@/context/AccountThemeContext";
-
-type Role = "customer" | "provider" | "admin";
-const roles: { id: Role; label: string; icon: typeof UserRound }[] = [
-  { id: "customer", label: "Customer", icon: UserRound },
-  { id: "provider", label: "Provider", icon: BriefcaseBusiness },
-  { id: "admin", label: "Admin", icon: ShieldCheck },
-];
 
 export default function Login() {
   const { login } = useAuth();
-  const themed = useAccountStyles();
-  const [role, setRole] = useState<Role>("customer");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -38,7 +25,7 @@ export default function Login() {
     lock.current = true;
     setBusy(true);
     try {
-      const user = await login(email.trim(), password, role);
+      const user = await login(email.trim(), password);
       router.replace(user.role === "admin" ? "/admin/dashboard" : "/");
     } catch (failure) {
       const details = authError(failure, "Unable to sign in. Please try again.");
@@ -57,41 +44,12 @@ export default function Login() {
       back="/onboarding/landing"
       busy={busy}
     >
-      <Text style={themed({ color: "#303B55", fontWeight: "800", marginBottom: 8 })}>
-        Choose account type
-      </Text>
-      <View style={{ flexDirection: "row", gap: 8, marginBottom: 16 }}>
-        {roles.map(({ id, label, icon: Icon }) => (
-          <Pressable
-            key={id}
-            accessibilityRole="radio"
-            accessibilityState={{ selected: role === id, disabled: busy }}
-            disabled={busy}
-            onPress={() => setRole(id)}
-            style={themed({
-              flex: 1,
-              minHeight: 48,
-              borderRadius: 14,
-              paddingHorizontal: 8,
-              alignItems: "center",
-              justifyContent: "center",
-              gap: 3,
-              backgroundColor: role === id ? "#633CFF" : "#EDE7FF",
-            })}
-          >
-            <Icon size={18} color={role === id ? "#FFFFFF" : "#303B55"} />
-            <Text style={themed({ color: role === id ? "#FFFFFF" : "#303B55", fontSize: 12, fontWeight: "800" })}>
-              {label}
-            </Text>
-          </Pressable>
-        ))}
-      </View>
       <AuthField label="Email address" value={email} editable={!busy} autoCapitalize="none" keyboardType="email-address" autoComplete="email" textContentType="emailAddress" error={fields.email} onChangeText={(value) => { setEmail(value); setFields((current) => ({ ...current, email: undefined })); }} />
       <AuthField label="Password" value={password} editable={!busy} password autoComplete="current-password" textContentType="password" error={fields.password} onChangeText={(value) => { setPassword(value); setFields((current) => ({ ...current, password: undefined })); }} />
       <AuthLink title="Forgot password?" disabled={busy} onPress={() => router.push("/auth/forgot-password")} />
       <ErrorText>{error}</ErrorText>
       <AuthFooter>
-        <AuthButton title={busy ? "Signing in..." : `Sign in as ${role}`} busy={busy} onPress={() => void submit()} />
+        <AuthButton title="Sign In" busy={busy} onPress={() => void submit()} />
         <AuthButton title="Create an account" secondary disabled={busy} onPress={() => router.push("/auth/register")} />
       </AuthFooter>
     </AuthPage>

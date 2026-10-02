@@ -10,7 +10,9 @@ export default function RootLayout() {
           <Stack.Screen name="onboarding/landing" options={{ headerShown: false }} />
           <Stack.Screen name="onboarding/welcome" options={{ headerShown: false }} />
           <Stack.Screen name="onboarding/account-type" options={{ headerShown: false }} />
+          <Stack.Screen name="set-service-location" options={{ headerShown: false }} />
           <Stack.Screen name="index" options={{ headerShown: false }} />
+          <Stack.Screen name="provider" options={{ headerShown: false }} />
           <Stack.Screen name="settings/account-security" options={{ headerShown: false }} />
           <Stack.Screen name="settings/appearance" options={{ headerShown: false }} />
           <Stack.Screen name="settings/privacy" options={{ headerShown: false }} />
@@ -27,7 +29,7 @@ export default function RootLayout() {
           <Stack.Screen name="auth/register" options={{ headerShown: false }} />
           <Stack.Screen name="auth/forgot-password" options={{ title: "Forgot password" }} />
           <Stack.Screen name="auth/reset-password" options={{ title: "Reset password" }} />
-          <Stack.Screen name="auth/verify-email" options={{ title: "Verify email" }} />
+          <Stack.Screen name="auth/verify-email" options={{ headerShown: false }} />
           <Stack.Screen name="auth/change-password" options={{ title: "Change password" }} />
           <Stack.Screen name="bookings/index" options={{ title: "My bookings" }} />
           <Stack.Screen name="payment/details" options={{ title: "Payment details" }} />
@@ -37,7 +39,10 @@ export default function RootLayout() {
           <Stack.Screen name="reviews/provider" options={{ title: "Provider reviews" }} />
           <Stack.Screen name="reviews/mine" options={{ title: "My reviews" }} />
           <Stack.Screen name="admin/tickets" options={{ title: "Support tickets" }} />
-          <Stack.Screen name="admin/dashboard" options={{ title: "Admin dashboard" }} />
+          <Stack.Screen name="services/index" options={{ headerShown: false }} />
+          <Stack.Screen name="admin/services" options={{ headerShown: false }} />
+          <Stack.Screen name="admin/service-form" options={{ headerShown: false }} />
+          <Stack.Screen name="admin/dashboard" options={{ headerShown: false }} />
           <Stack.Screen name="admin/profile" options={{ title: "Admin profile" }} />
           <Stack.Screen name="admin/bookings" options={{ title: "Manage bookings" }} />
           <Stack.Screen name="admin/assign-provider" options={{ title: "Assign provider" }} />
