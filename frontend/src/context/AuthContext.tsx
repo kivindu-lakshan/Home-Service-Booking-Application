@@ -24,13 +24,13 @@ type AuthValue = {
   login: (
     email: string,
     password: string,
-    role: "customer" | "provider" | "admin",
   ) => Promise<User>;
   register: (
     fullName: string,
     email: string,
     phone: string,
     password: string,
+    role: "customer" | "provider",
   ) => Promise<void>;
   verifyEmail: (code: string) => Promise<void>;
   resendVerification: () => Promise<void>;
@@ -74,9 +74,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = async (
     email: string,
     password: string,
-    role: "customer" | "provider" | "admin",
   ) => {
-    const response = await api.post("/auth/login", { email, password, role });
+    const response = await api.post("/auth/login", { email, password });
     await saveToken(response.data.data.token);
     setVerificationCode(null);
     setUser(response.data.data.user);
@@ -88,12 +87,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     email: string,
     phone: string,
     password: string,
+    role: "customer" | "provider",
   ) => {
     const response = await api.post("/auth/register", {
       fullName,
       email,
       phone,
       password,
+      role,
     });
     await saveToken(response.data.data.token);
     setUser(response.data.data.user);
