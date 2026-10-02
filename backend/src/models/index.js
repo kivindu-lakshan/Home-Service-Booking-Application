@@ -41,7 +41,14 @@ const settings = new Schema(
   },
   { _id: false },
 );
+const serviceLocation = new Schema({
+  areaCity: { type: String, required: true, trim: true, maxlength: 120 },
+  latitude: { type: Number, min: -90, max: 90 },
+  longitude: { type: Number, min: -180, max: 180 },
+  source: { type: String, enum: ["manual", "current"], required: true },
+}, { _id: false });
 const User = make("User", {
+  serviceLocation: { type: serviceLocation, default: null },
   fullName: { type: String, required: true, trim: true },
   email: {
     type: String,
