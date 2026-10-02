@@ -6,15 +6,20 @@ export function Button({
   children,
   onPress,
   secondary = false,
+  disabled = false,
 }: {
   children: ReactNode;
   onPress: () => void;
   secondary?: boolean;
+  disabled?: boolean;
 }) {
   const themed = useAccountStyles();
   return (
     <Pressable
       onPress={onPress}
+      disabled={disabled}
+      accessibilityRole="button"
+      accessibilityState={{ disabled }}
       style={themed([styles.button, secondary && styles.secondary])}
     >
       <Text style={themed([styles.buttonText, secondary && styles.secondaryText])}>

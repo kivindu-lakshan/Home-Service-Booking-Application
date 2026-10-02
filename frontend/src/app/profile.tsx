@@ -125,7 +125,7 @@ export default function MyProfileScreen() {
           <Pressable accessibilityRole="button" accessibilityLabel="Home" style={themed(styles.navItem)} onPress={() => router.replace("/")}>
             <ProfileIcon name="home" color={themed({ color: "#7E8AA4" }).color} /><Text style={themed(styles.navLabel)}>Home</Text>
           </Pressable>
-          <Pressable disabled accessibilityRole="button" accessibilityState={{ disabled: true }} accessibilityLabel="Services. Coming soon." style={themed(styles.navItem)}>
+          <Pressable disabled={user?.role !== "customer"} accessibilityRole="button" accessibilityLabel="Services" onPress={() => router.push("/customer/services")} style={themed(styles.navItem)}>
             <ProfileIcon name="grid" color={themed({ color: "#7E8AA4" }).color} /><Text style={themed(styles.navLabel)}>Services</Text>
           </Pressable>
           <Pressable accessibilityRole="button" accessibilityLabel="Bookings" style={themed(styles.navItem)} onPress={() => router.push("/bookings")}>

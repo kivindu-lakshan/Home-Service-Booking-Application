@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useState } from "react";
-import { router } from "expo-router";
+import { useCallback, useState } from "react";
+import { router, useFocusEffect } from "expo-router";
 import {
   Pressable,
   RefreshControl,
@@ -10,8 +10,12 @@ import {
 import { Card } from "@/components/ui";
 import { EmptyState, ErrorState, LoadingState } from "@/components/DataState";
 import { getMyBookings } from "@/api/domain";
+import { CustomerNav } from "@/components/customer/CustomerUI";
+import { useAuth } from "@/context/AuthContext";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function BookingsScreen() {
+  const { user } = useAuth();
   const [bookings, setBookings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -30,12 +34,14 @@ export default function BookingsScreen() {
       setRefreshing(false);
     }
   }, []);
-  useEffect(() => {
-    void load();
-  }, [load]);
-  if (loading) return <LoadingState label="Loading bookings..." />;
-  if (error) return <ErrorState onRetry={() => void load()} />;
+  useFocusEffect(useCallback(() => {
+    let active = true;
+    void Promise.resolve().then(() => { if (active) void load(); });
+    return () => { active = false; };
+  }, [load]));
   return (
+    <SafeAreaView style={{ flex: 1, backgroundColor: "#F7F7FB" }}>
+    {loading ? <View style={{ flex: 1 }}><LoadingState label="Loading bookings..." /></View> : error ? <View style={{ flex: 1 }}><ErrorState onRetry={() => void load()} /></View> :
     <ScrollView
       style={{ backgroundColor: "#F7F7FB" }}
       contentContainerStyle={{ padding: 20 }}
@@ -113,5 +119,8 @@ export default function BookingsScreen() {
         ))
       )}
     </ScrollView>
+    }
+    {user?.role === "customer" && <CustomerNav active="Bookings" />}
+    </SafeAreaView>
   );
 }

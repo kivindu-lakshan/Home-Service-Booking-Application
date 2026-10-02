@@ -3,6 +3,7 @@ import { useEffect } from "react";
 import { ActivityIndicator, Text, View } from "react-native";
 import { Button, Card } from "@/components/ui";
 import { useAuth } from "@/context/AuthContext";
+import CustomerHome from "@/components/customer/CustomerHome";
 export default function HomeScreen() {
   const { user, loading, logout } = useAuth();
   useEffect(() => {
@@ -14,6 +15,7 @@ export default function HomeScreen() {
         <ActivityIndicator color="#5B3DF5" />
       </View>
     );
+  if (user.role === "customer") return <CustomerHome />;
   return (
     <View
       style={{
