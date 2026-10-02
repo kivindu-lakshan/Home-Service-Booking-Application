@@ -9,9 +9,11 @@ import { AddressButton } from '@/components/address/AddressUI';
 import { LoadingState, EmptyState } from '@/components/DataState';
 import ErrorText from '@/components/ErrorText';
 import { deleteService, getServices, serviceError, type Service } from '@/api/services';
+import { useAuth } from '@/context/AuthContext';
 import { ServiceCard, ServiceAction, serviceStyles } from './ServiceUI';
 export default function ServiceList({ admin = false }: { admin?: boolean }) {
   const themed = useAccountStyles();
+  const { user } = useAuth();
   const [services, setServices] = useState<Service[]>([]);
   const [showInactive, setShowInactive] = useState(false);
   const [notice, setNotice] = useState('');
@@ -57,11 +59,12 @@ export default function ServiceList({ admin = false }: { admin?: boolean }) {
       <Text accessibilityRole='header' style={themed(serviceStyles.heading)}>{admin ? 'Service Management' : 'Available services'}</Text>
       <Text style={themed(serviceStyles.copy)}>{admin ? 'Manage services offered through HomeHalo.' : 'Explore services offered through HomeHalo.'}</Text>
       {admin && <View style={serviceStyles.toolbar}><Text style={themed(serviceStyles.sectionLabel)}>{visibleServices.length} {showInactive ? 'inactive' : 'active'} services</Text><ServiceAction title='+ Add Service' label='Add service' icon='add' primary onPress={() => router.push('/admin/service-form')} /></View>}
-      {admin && <View style={{ alignItems: 'flex-start', marginBottom: 20 }}><ServiceAction title={showInactive ? 'View active services' : `View inactive services (${services.filter(service => !service.isActive).length})`} label={showInactive ? 'Back to active services' : `Inactive services · ${services.filter(service => !service.isActive).length}`} icon='archive' onPress={() => { setShowInactive(current => !current); setNotice(''); }} /></View>}
+      {admin && <View style={{ alignItems: 'flex-start', marginBottom: 20 }}><ServiceAction title={showInactive ? 'View active services' : `View inactive services (${services.filter(service => !service.isActive).length})`} label={showInactive ? 'Back to active services' : `Inactive services Â· ${services.filter(service => !service.isActive).length}`} icon='archive' onPress={() => { setShowInactive(current => !current); setNotice(''); }} /></View>}
       {!!notice && <Text accessibilityRole='alert' style={themed(serviceStyles.copy)}>{notice}</Text>}
       <ErrorText>{error}</ErrorText>
       {!!error && <AddressButton title='Try again' secondary onPress={() => void load(true)} />}
       {loading ? <LoadingState label='Loading services...' /> : !error && !visibleServices.length ? <EmptyState label={showInactive ? 'No inactive services.' : 'No active services are available yet.'} /> : visibleServices.map(service => <ServiceCard key={`${service._id}:${service.imageUrl || ''}`} service={service}>
+        {!admin && user?.role === 'provider' && <ServiceAction title='Apply for this Service' icon='add' primary onPress={() => router.push({ pathname: '/provider/apply', params: { serviceId: service._id } })} />}
         {admin && <View style={serviceStyles.row}>
           <View style={{ flex: 1 }}><ServiceAction title='Edit' icon='edit' onPress={() => router.push({ pathname: '/admin/service-form', params: { id: service._id } })} /></View>
           {service.isActive && <View style={{ flex: 1 }}><ServiceAction title='Delete' icon='delete' danger onPress={() => { setDeleteError(''); setSelected(service); }} /></View>}

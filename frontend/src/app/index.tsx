@@ -14,6 +14,8 @@ export default function HomeScreen() {
       router.replace("/onboarding/landing");
     } else if (user.role === "admin") {
       router.replace("/admin/dashboard");
+    } else if (user.role === "provider") {
+      router.replace("/provider/dashboard");
     }
   }, [loading, user]);
 

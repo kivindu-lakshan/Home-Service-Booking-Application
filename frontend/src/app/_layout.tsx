@@ -12,6 +12,7 @@ export default function RootLayout() {
           <Stack.Screen name="onboarding/account-type" options={{ headerShown: false }} />
           <Stack.Screen name="set-service-location" options={{ headerShown: false }} />
           <Stack.Screen name="index" options={{ headerShown: false }} />
+          <Stack.Screen name="provider" options={{ headerShown: false }} />
           <Stack.Screen name="settings/account-security" options={{ headerShown: false }} />
           <Stack.Screen name="settings/appearance" options={{ headerShown: false }} />
           <Stack.Screen name="settings/privacy" options={{ headerShown: false }} />
