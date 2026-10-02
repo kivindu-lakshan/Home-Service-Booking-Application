@@ -6,7 +6,7 @@ export const darkPalette = {
   success: "#79DBBA", successSurface: "#183A32", danger: "#FFADB9", warning: "#F1C779",
 };
 export function accountRoute(path: string) {
-  return ["/profile", "/personal-information", "/addresses", "/support", "/settings"].some((route) => path === route || path.startsWith(`${route}/`));
+  return ["/onboarding", "/auth/login", "/auth/register", "/profile", "/personal-information", "/addresses", "/support", "/settings"].some((route) => path === route || path.startsWith(`${route}/`));
 }
 export function darkColor(value: string, property: string): string {
   const key = value.toUpperCase();

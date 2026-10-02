@@ -6,7 +6,7 @@ import { useAuth } from "@/context/AuthContext";
 export default function HomeScreen() {
   const { user, loading, logout } = useAuth();
   useEffect(() => {
-    if (!loading && !user) router.replace("/auth/login");
+    if (!loading && !user) router.replace("/onboarding/landing");
   }, [loading, user]);
   if (loading || !user)
     return (

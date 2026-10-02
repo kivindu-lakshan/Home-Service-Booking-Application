@@ -2,8 +2,8 @@ const assert = require("node:assert/strict");
 const { test } = require("node:test");
 const { accountRoute, darkColor, darkStyle, darkPalette } = require("../src/theme/account-palette.ts");
 test("only account module routes opt in", () => {
- for (const route of ["/profile", "/personal-information", "/addresses/form", "/support/details", "/settings/appearance"]) assert.equal(accountRoute(route), true);
- for (const route of ["/", "/auth/login", "/bookings", "/admin/dashboard", "/payment/details", "/provider", "/settings-other"]) assert.equal(accountRoute(route), false);
+ for (const route of ["/onboarding/landing", "/auth/login", "/auth/register", "/profile", "/personal-information", "/addresses/form", "/support/details", "/settings/appearance"]) assert.equal(accountRoute(route), true);
+ for (const route of ["/", "/auth/change-password", "/bookings", "/admin/dashboard", "/payment/details", "/provider", "/settings-other"]) assert.equal(accountRoute(route), false);
 });
 test("dark style maps surfaces, text, borders and preserves layout and button contrast", () => {
  const source = { backgroundColor: "#FFFFFF", color: "#303B55", borderColor: "#E6EAF3", padding: 12 };
