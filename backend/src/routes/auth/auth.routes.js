@@ -114,7 +114,8 @@ router.post(
 );
 router.post(
   "/verify-email",
-  [body("token").notEmpty()],
+  auth,
+  [body("code").isString().bail().trim().matches(/^[0-9]{6}$/).withMessage("Enter a 6-digit verification code.").hide()],
   validate,
   controller.verifyEmail,
 );

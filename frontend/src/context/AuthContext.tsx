@@ -20,7 +20,7 @@ type User = {
 type AuthValue = {
   user: User | null;
   loading: boolean;
-  verificationToken: string | null;
+  verificationCode: string | null;
   login: (
     email: string,
     password: string,
@@ -32,6 +32,8 @@ type AuthValue = {
     phone: string,
     password: string,
   ) => Promise<void>;
+  verifyEmail: (code: string) => Promise<void>;
+  resendVerification: () => Promise<void>;
   logout: () => Promise<void>;
   syncProfile: (profile: Pick<User, "id" | "fullName" | "phone">) => void;
 };
@@ -39,7 +41,7 @@ type AuthValue = {
 const AuthContext = createContext<AuthValue>({
   user: null,
   loading: true,
-  verificationToken: null,
+  verificationCode: null,
   login: async () => ({
     id: "",
     fullName: "",
@@ -48,6 +50,8 @@ const AuthContext = createContext<AuthValue>({
     emailVerified: false,
   }),
   register: async () => {},
+  verifyEmail: async () => {},
+  resendVerification: async () => {},
   logout: async () => {},
   syncProfile: () => {},
 });
@@ -55,7 +59,7 @@ const AuthContext = createContext<AuthValue>({
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const [verificationToken, setVerificationToken] = useState<string | null>(null);
+  const [verificationCode, setVerificationCode] = useState<string | null>(null);
 
   useEffect(() => {
     getStoredToken()
@@ -74,6 +78,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   ) => {
     const response = await api.post("/auth/login", { email, password, role });
     await saveToken(response.data.data.token);
+    setVerificationCode(null);
     setUser(response.data.data.user);
     return response.data.data.user;
   };
@@ -92,10 +97,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
     await saveToken(response.data.data.token);
     setUser(response.data.data.user);
-    setVerificationToken(response.data.data.verificationToken || null);
+    setVerificationCode(response.data.data.verificationCode || null);
+  };
+
+  const verifyEmail = async (code: string) => {
+    const response = await api.post("/auth/verify-email", { code });
+    setUser(response.data.data);
+    setVerificationCode(null);
+  };
+
+  const resendVerification = async () => {
+    const response = await api.post("/auth/resend-verification");
+    setVerificationCode(response.data.data?.verificationCode || null);
   };
 
   const logout = async () => {
+    setVerificationCode(null);
     await clearToken();
     setUser(null);
   };
@@ -113,7 +130,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   return (
     <AuthContext.Provider
-      value={{ user, loading, verificationToken, login, register, logout, syncProfile }}
+      value={{ user, loading, verificationCode, login, register, verifyEmail, resendVerification, logout, syncProfile }}
     >
       {children}
     </AuthContext.Provider>
