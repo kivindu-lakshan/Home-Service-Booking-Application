@@ -53,6 +53,7 @@ router.patch("/me/notification-preferences", auth, noStore, (req, res, next) => 
   if (!errors.isEmpty()) return fail(res, 400, "Validation failed", errors.array());
   next();
 }, notifications.update);
+router.use("/me/service-location", require("./service-location.routes"));
 router.get("/me", auth, controller.me);
 router.patch(
   "/me",

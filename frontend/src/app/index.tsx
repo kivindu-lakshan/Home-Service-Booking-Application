@@ -1,3 +1,4 @@
+import { ServiceLocationGate } from "@/components/location/ServiceLocationGate";
 import { router } from "expo-router";
 import { useEffect } from "react";
 import { ActivityIndicator, Text, View } from "react-native";
@@ -15,7 +16,7 @@ export default function HomeScreen() {
       </View>
     );
   return (
-    <View
+    <ServiceLocationGate><View
       style={{
         flex: 1,
         backgroundColor: "#F7F7FB",
@@ -82,6 +83,6 @@ export default function HomeScreen() {
       >
         Log out
       </Button>
-    </View>
+    </View></ServiceLocationGate>
   );
 }
