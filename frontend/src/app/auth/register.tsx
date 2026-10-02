@@ -1,3 +1,4 @@
+import { Pressable, View } from "react-native";
 import { router } from "expo-router";
 import { useRef, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
@@ -9,6 +10,7 @@ import ErrorText from "@/components/ErrorText";
 import { validateRegistration, type RegistrationDraft, type AuthErrors } from "@/validation/auth";
 import { authError } from "@/api/auth-error";
 export default function Register() {
+  const [role, setRole] = useState<"customer" | "provider">("customer");
   const { register } = useAuth(); const themed = useAccountStyles();
   const [form, setForm] = useState<RegistrationDraft>({ fullName: "", email: "", phone: "", password: "", confirm: "" });
   const [error, setError] = useState(""); const [fields, setFields] = useState<AuthErrors>({});
@@ -25,7 +27,7 @@ export default function Register() {
     const invalid = validateRegistration(form); setFields(invalid); setError("");
     if (Object.keys(invalid).length) return;
     lock.current = true; setBusy(true);
-    try { await register(form.fullName.trim(), form.email.trim().toLowerCase(), form.phone.trim(), form.password); }
+    try { await register(form.fullName.trim(), form.email.trim().toLowerCase(), form.phone.trim(), form.password, role); }
     catch (failure) { const details = authError(failure, "Unable to create account. Please try again."); setError(details.message); setFields(details.fields); return; }
     finally { lock.current = false; setBusy(false); }
     router.replace("/auth/verify-email");
@@ -37,6 +39,12 @@ export default function Register() {
     <AuthField label="Password" value={form.password} editable={!busy} password autoComplete="new-password" textContentType="newPassword" error={fields.password} onChangeText={(value) => update("password", value)} />
     <Text style={themed([addressStyles.hint, { marginTop: 0, marginBottom: 16 }])}>Use at least 8 characters, including a letter and a number.</Text>
     <AuthField label="Confirm password" value={form.confirm} editable={!busy} password autoComplete="new-password" textContentType="newPassword" error={fields.confirm} onChangeText={(value) => update("confirm", value)} />
+    <Text style={themed(addressStyles.label)}>Register as</Text>
+    <View accessibilityRole="radiogroup" accessibilityLabel="Register as" style={{ flexDirection: "row", gap: 8, marginBottom: 16 }}>
+      {(["customer", "provider"] as const).map(value => <Pressable key={value} accessibilityRole="radio" accessibilityLabel={value === "customer" ? "Customer" : "Service Provider"} accessibilityState={{ checked: role === value, disabled: busy }} disabled={busy} onPress={() => setRole(value)} style={themed({ flex: 1, minHeight: 48, borderRadius: 14, alignItems: "center", justifyContent: "center", backgroundColor: role === value ? "#633CFF" : "#EDE7FF" })}>
+        <Text style={themed({ color: role === value ? "#FFFFFF" : "#303B55", fontSize: 12, fontWeight: "800" })}>{value === "customer" ? "Customer" : "Service Provider"}</Text>
+      </Pressable>)}
+    </View>
     <AuthLink title="Terms of service & privacy (coming soon)" disabled />
     <ErrorText>{error}</ErrorText>
     <AuthFooter><AuthButton title="Agree & create account" busy={busy} onPress={() => void submit()} /><AuthLink title="Already have an account? Sign in" disabled={busy} onPress={() => router.replace("/auth/login")} /></AuthFooter>

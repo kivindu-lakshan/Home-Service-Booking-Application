@@ -40,6 +40,8 @@ export default function HomeScreen() {
       </Card>
       {!user.emailVerified && <Button onPress={() => router.push("/auth/verify-email")}>Verify email</Button>}
       <View style={{ height: 12 }} />
+      <Button secondary onPress={() => router.push("/services")}>View available services</Button>
+      <View style={{ height: 12 }} />
       <Button secondary onPress={() => router.push("/profile")}>My profile</Button>
       <View style={{ height: 12 }} />
       <Button secondary onPress={() => router.push("/auth/change-password")}>Change password</Button>

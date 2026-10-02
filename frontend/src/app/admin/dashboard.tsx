@@ -86,7 +86,7 @@ export default function AdminDashboard() {
     ["Available providers", data.availableProviders, UsersRound],
   ] as const;
   return (
-    <View style={{ flex: 1, backgroundColor: C.white }}>
+    <View style={{ flex: 1, backgroundColor: "#F7F7FD" }}>
       <ScrollView
         showsVerticalScrollIndicator={false}
         refreshControl={
@@ -125,6 +125,7 @@ export default function AdminDashboard() {
           </View>
         </View>
         <View style={styles.body}>
+          <Action title="Service Management" subtitle="Create, edit and organise your service catalogue." icon={<Wrench size={21} color={C.purple} />} onPress={() => router.push("/admin/services")} />
           <View style={styles.metricGrid}>
             {metrics.map(([label, value, Icon]) => (
               <View key={label} style={styles.metric}>
@@ -269,7 +270,7 @@ function Action({
   );
 }
 const styles = {
-  body: { padding: 20 },
+  body: { padding: 20, width: "100%" as const, maxWidth: 760, alignSelf: "center" as const },
   row: {
     flexDirection: "row" as const,
     alignItems: "center" as const,
@@ -306,15 +307,15 @@ const styles = {
     flexDirection: "row" as const,
     flexWrap: "wrap" as const,
     gap: 10,
-    marginTop: -8,
+    marginTop: 20,
   },
   metric: {
     width: "31%" as const,
-    minHeight: 112,
+    minHeight: 120,
     borderWidth: 1,
-    borderColor: C.border,
-    borderRadius: 16,
-    padding: 12,
+    borderColor: "#E8E5F2",
+    borderRadius: 18,
+    padding: 14,
     backgroundColor: C.white,
   },
   metricLabel: { color: C.muted, fontSize: 11, marginTop: 10 },
@@ -324,7 +325,7 @@ const styles = {
     fontWeight: "900" as const,
     marginTop: 5,
   },
-  tabs: { gap: 8, paddingVertical: 24 },
+  tabs: { gap: 8, paddingTop: 22, paddingBottom: 26 },
   tab: {
     borderWidth: 1,
     borderColor: C.border,
@@ -372,6 +373,7 @@ const styles = {
     borderRadius: 16,
     padding: 15,
     marginTop: 12,
+    backgroundColor: C.white,
   },
   actionIcon: {
     width: 40,

@@ -8,6 +8,8 @@ const {
   hashToken,
 } = require("../../utils/tokens");
 
+const allowedPublicRoles = ["customer", "provider"];
+
 const publicUser = (user) => ({
   id: user._id,
   fullName: user.fullName,
@@ -51,13 +53,15 @@ async function createVerificationCode(user) {
 
 exports.register = async (req, res, next) => {
   try {
-    const { fullName, email, phone, password } = req.body;
+    const { fullName, email, phone, password, role } = req.body;
+    if (!allowedPublicRoles.includes(role)) return fail(res, 400, "Choose customer or provider.");
     if (await User.exists({ email }))
       return fail(res, 409, "An account with that email already exists.", [{ path: "email", msg: "This email is already registered. Please sign in." }]);
     const user = await User.create({
       fullName,
       email,
       phone,
+      role,
       passwordHash: await bcrypt.hash(password, 12),
     });
     const verificationCode = await createVerificationCode(user);
@@ -85,13 +89,12 @@ exports.login = async (req, res, next) => {
     if (
       !user ||
       user.status !== "active" ||
-      (req.body.role && user.role !== req.body.role) ||
       !(await bcrypt.compare(req.body.password, user.passwordHash))
     )
       return fail(
         res,
         401,
-        "Invalid credentials for the selected account type.",
+        "Invalid email or password.",
       );
     return ok(
       res,
