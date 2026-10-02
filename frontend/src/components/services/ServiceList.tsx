@@ -1,7 +1,7 @@
 import { useCallback, useRef, useState } from 'react';
 import { router, useFocusEffect } from 'expo-router';
-import { Modal, Pressable, RefreshControl, ScrollView, TextInput, View } from 'react-native';
-import { ChevronLeft, Layers, Search, Sparkles } from 'lucide-react-native';
+import { Modal, RefreshControl, ScrollView, TextInput, View } from 'react-native';
+import { Layers, Search, Sparkles } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { AccountText as Text } from '@/components/settings/AccountText';
 import { useAccountStyles } from '@/context/AccountThemeContext';
@@ -12,6 +12,7 @@ import { deleteService, getServices, serviceError, type Service } from '@/api/se
 import { useAuth } from '@/context/AuthContext';
 import ProviderServiceCard from './ProviderServiceCard';
 import { ServiceCard, ServiceAction, serviceStyles } from './ServiceUI';
+import { ProfileBackButton, ProfileNavigation } from '@/components/profile/ProfileNavigation';
 export default function ServiceList({ admin = false }: { admin?: boolean }) {
   const themed = useAccountStyles();
   const { user } = useAuth();
@@ -56,7 +57,7 @@ export default function ServiceList({ admin = false }: { admin?: boolean }) {
   return <SafeAreaView style={themed(serviceStyles.safe)}>
     <ScrollView contentContainerStyle={serviceStyles.content} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void load(true)} />}>
       <View style={serviceStyles.topBar}>
-        <Pressable accessibilityRole='button' accessibilityLabel='Go back' onPress={() => admin ? router.replace('/admin/dashboard') : router.canGoBack() ? router.back() : router.replace('/')} style={themed(serviceStyles.back)}><ChevronLeft size={24} color='#633CFF' strokeWidth={2.4} /></Pressable>
+        <ProfileBackButton label='Go back' onPress={() => admin ? router.replace('/admin/dashboard') : router.canGoBack() ? router.back() : router.replace('/')} />
         <Text style={themed(serviceStyles.brand)}>HOMEHALO</Text>
         <View style={themed(serviceStyles.brandIcon)}><Layers size={20} color='#633CFF' /></View>
       </View>
@@ -81,6 +82,7 @@ export default function ServiceList({ admin = false }: { admin?: boolean }) {
       </ServiceCard>)}
       {!loading && <ServiceAction title='Refresh services' icon='refresh' disabled={refreshing} onPress={() => void load(true)} />}
     </ScrollView>
+    {!admin && user?.role === 'customer' && <ProfileNavigation active='home' />}
     <Modal visible={!!selected} transparent animationType='fade' onRequestClose={() => { if (!removing) setSelected(null); }}>
       <View style={{ flex: 1, backgroundColor: 'rgba(20,20,40,0.45)', justifyContent: 'center', alignItems: 'center', padding: 24 }}>
         <View accessibilityViewIsModal style={{ width: '100%', maxWidth: 420, backgroundColor: '#FFFFFF', borderRadius: 20, padding: 24 }}>

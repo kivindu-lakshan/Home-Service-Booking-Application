@@ -9,6 +9,7 @@ import { getMyProfile, type MyProfile } from "@/api/profile";
 import { useAuth } from "@/context/AuthContext";
 import { ProfileIcon, type ProfileIconName } from "@/components/profile/ProfileIcon";
 import { ProfileAvatar } from "@/components/profile/ProfileAvatar";
+import { ProfileBackButton, ProfileNavigation } from "@/components/profile/ProfileNavigation";
 
 const cards: { title: string; subtitle: string; icon: ProfileIconName }[] = [
   { title: "Personal information", subtitle: "Name, photo and contact details", icon: "person" },
@@ -62,11 +63,7 @@ export default function MyProfileScreen() {
     <SafeAreaView style={themed(styles.safeArea)}>
       <View style={themed(styles.page)}>
         <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-          <Pressable accessibilityRole="button" accessibilityLabel="Go back" hitSlop={6}
-            onPress={() => router.canGoBack() ? router.back() : router.replace("/")}
-            style={themed(({ pressed }) => [styles.back, pressed && styles.pressed])}>
-            <Text style={themed(styles.backArrow)}>‹</Text>
-          </Pressable>
+          <ProfileBackButton onPress={() => router.canGoBack() ? router.back() : router.replace("/")} />
           <Text style={themed(styles.title)} accessibilityRole="header">Your little corner.</Text>
           <Text style={themed(styles.subtitle)}>Everything for your account, in one place.</Text>
           {updated === "1" && (
@@ -121,20 +118,7 @@ export default function MyProfileScreen() {
           </View>
         </ScrollView>
 
-        <View style={themed(styles.bottomBar)}>
-          <Pressable accessibilityRole="button" accessibilityLabel="Home" style={themed(styles.navItem)} onPress={() => router.replace("/")}>
-            <ProfileIcon name="home" color={themed({ color: "#7E8AA4" }).color} /><Text style={themed(styles.navLabel)}>Home</Text>
-          </Pressable>
-          <Pressable disabled accessibilityRole="button" accessibilityState={{ disabled: true }} accessibilityLabel="Services. Coming soon." style={themed(styles.navItem)}>
-            <ProfileIcon name="grid" color={themed({ color: "#7E8AA4" }).color} /><Text style={themed(styles.navLabel)}>Services</Text>
-          </Pressable>
-          <Pressable accessibilityRole="button" accessibilityLabel="Bookings" style={themed(styles.navItem)} onPress={() => router.push("/bookings")}>
-            <ProfileIcon name="calendar" color={themed({ color: "#7E8AA4" }).color} /><Text style={themed(styles.navLabel)}>Bookings</Text>
-          </Pressable>
-          <View accessible accessibilityRole="tab" accessibilityState={{ selected: true }} accessibilityLabel="Profile" style={themed([styles.navItem, styles.activeNav])}>
-            <ProfileIcon name="person" /><Text style={themed([styles.navLabel, styles.activeLabel])}>Profile</Text>
-          </View>
-        </View>
+        <ProfileNavigation active="profile" />
       </View>
     </SafeAreaView>
   );
@@ -144,9 +128,6 @@ const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: "#F7F7FD" },
   page: { flex: 1, width: "100%", maxWidth: 520, alignSelf: "center" },
   content: { paddingHorizontal: 22, paddingTop: 12, paddingBottom: 20, flexGrow: 1 },
-  back: { width: 44, height: 44, borderRadius: 22, backgroundColor: "#FFFFFF", alignItems: "center", justifyContent: "center", marginBottom: 16 },
-  backArrow: { color: "#8157FF", fontSize: 32, lineHeight: 36, marginTop: -3 },
-  pressed: { opacity: 0.65 },
   title: { color: "#242E49", fontSize: 28, fontWeight: "800", letterSpacing: -0.8 },
   subtitle: { color: "#7C879F", fontSize: 15, lineHeight: 23, marginTop: 10, marginBottom: 44 },
   profileCard: { flexDirection: "row", alignItems: "center", gap: 14, backgroundColor: "#EDE7FF", borderRadius: 28, padding: 18, minHeight: 106, marginBottom: 16 },
@@ -170,9 +151,4 @@ const styles = StyleSheet.create({
   cardSubtitle: { fontSize: 12, color: "#7D89A1", lineHeight: 18 },
   chevron: { color: "#8B97AE", fontSize: 27, alignSelf: "flex-start", lineHeight: 27 },
   comingSoon: { color: "#7D89A1", fontSize: 11, textAlign: "center", marginTop: 16 },
-  bottomBar: { flexDirection: "row", backgroundColor: "#FFFFFF", borderRadius: 32, padding: 6, marginHorizontal: 14, marginBottom: 8, borderWidth: 1, borderColor: "#F0EEF8" },
-  navItem: { flex: 1, minHeight: 54, paddingVertical: 6, borderRadius: 26, alignItems: "center", justifyContent: "center", gap: 3 },
-  navLabel: { color: "#7E8AA4", fontSize: 10, fontWeight: "500" },
-  activeNav: { backgroundColor: "#EEE8FF" },
-  activeLabel: { color: "#8157FF", fontWeight: "700" },
 });

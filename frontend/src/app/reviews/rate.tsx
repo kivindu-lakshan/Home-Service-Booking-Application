@@ -1,6 +1,7 @@
 import { createReview } from "@/api/domain";
 import ErrorText from "@/components/ErrorText";
 import { Button, Card } from "@/components/ui";
+import { ProfileBackButton } from "@/components/profile/ProfileNavigation";
 import { router, useLocalSearchParams } from "expo-router";
 import { Star } from "lucide-react-native";
 import { useState } from "react";
@@ -32,6 +33,7 @@ export default function RateProvider() {
       style={{ backgroundColor: "#F7F7FB" }}
       contentContainerStyle={{ padding: 20 }}
     >
+      <ProfileBackButton onPress={() => router.canGoBack() ? router.back() : router.replace("/bookings")} />
       <Text style={{ fontSize: 30, fontWeight: "900", color: "#25213D" }}>
         Rate your provider
       </Text>

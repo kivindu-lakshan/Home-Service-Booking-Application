@@ -1,4 +1,4 @@
-import axios from "axios";
+import { create as createAxios } from "axios";
 import * as SecureStore from "expo-secure-store";
 import Constants from "expo-constants";
 import { Platform } from "react-native";
@@ -23,7 +23,7 @@ const apiUrl = Platform.OS === "web"
   : process.env.EXPO_PUBLIC_API_URL ||
     Constants.expoConfig?.extra?.apiUrl ||
     "http://localhost:3000/api";
-export const api = axios.create({ baseURL: apiUrl });
+export const api = createAxios({ baseURL: apiUrl });
 api.interceptors.request.use(async (config) => {
   const token = await getToken();
   if (token) config.headers.Authorization = `Bearer ${token}`;

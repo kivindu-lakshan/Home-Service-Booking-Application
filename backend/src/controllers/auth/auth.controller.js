@@ -53,7 +53,8 @@ async function createVerificationCode(user) {
 
 exports.register = async (req, res, next) => {
   try {
-    const { fullName, email, phone, password, role } = req.body;
+    const { fullName, email, phone, password } = req.body;
+    const role = req.body.role || "customer";
     if (!allowedPublicRoles.includes(role)) return fail(res, 400, "Choose customer or provider.");
     if (await User.exists({ email }))
       return fail(res, 409, "An account with that email already exists.", [{ path: "email", msg: "This email is already registered. Please sign in." }]);

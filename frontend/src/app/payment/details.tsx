@@ -1,6 +1,7 @@
 import { createPayment, getPayment, getPaymentMethods } from "@/api/domain";
 import { ErrorState, LoadingState } from "@/components/DataState";
 import { Button, Card, Input } from "@/components/ui";
+import { ProfileBackButton } from "@/components/profile/ProfileNavigation";
 import { router, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
@@ -49,6 +50,24 @@ export default function PaymentDetails() {
   const booking = data.booking;
   const payment = data.payment;
   const submit = async () => {
+    if (method === "card" && !selectedMethod) {
+      if (!cardholderName.trim()) {
+        setError("Enter the card owner's name.");
+        return;
+      }
+      if (!/^\d{16}$/.test(cardNumber)) {
+        setError("Card number must contain exactly 16 digits.");
+        return;
+      }
+      if (!/^(0[1-9]|1[0-2])\/\d{2}$/.test(expiryDate)) {
+        setError("Enter the expiry date in MM/YY format.");
+        return;
+      }
+      if (!/^\d{3,4}$/.test(cvv)) {
+        setError("CVV must contain 3 or 4 digits.");
+        return;
+      }
+    }
     setBusy(true);
     setError("");
     try {
@@ -78,6 +97,7 @@ export default function PaymentDetails() {
       style={{ backgroundColor: "#F7F7FB" }}
       contentContainerStyle={{ padding: 20 }}
     >
+      <ProfileBackButton onPress={() => router.canGoBack() ? router.back() : router.replace("/bookings")} />
       <Text style={{ fontSize: 30, fontWeight: "900", color: "#25213D" }}>
         Payment details
       </Text>
@@ -171,12 +191,14 @@ export default function PaymentDetails() {
             Card details
           </Text>
           <Input
+            accessibilityLabel="Card owner's name"
             placeholder="Card owner's name"
             value={cardholderName}
             onChangeText={setCardholderName}
             autoCapitalize="words"
           />
           <Input
+            accessibilityLabel="Card number, exactly 16 digits"
             placeholder="Card number (16 digits)"
             value={cardNumber}
             onChangeText={(value) =>
@@ -187,6 +209,7 @@ export default function PaymentDetails() {
           />
           <View style={{ flexDirection: "row", gap: 10 }}>
             <Input
+              accessibilityLabel="Card expiry date, MM slash YY"
               placeholder="MM/YY"
               value={expiryDate}
               onChangeText={(value) =>
@@ -197,6 +220,7 @@ export default function PaymentDetails() {
               style={{ flex: 1 }}
             />
             <Input
+              accessibilityLabel="Card CVV"
               placeholder="CVV"
               value={cvv}
               onChangeText={(value) =>
