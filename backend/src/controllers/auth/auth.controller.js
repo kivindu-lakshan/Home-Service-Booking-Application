@@ -41,9 +41,15 @@ exports.register = async (req, res, next) => {
   try {
     const { fullName, email, phone, password } = req.body;
     const role = req.body.role || "customer";
-    if (!allowedPublicRoles.includes(role)) return fail(res, 400, "Choose customer or provider.");
+    if (!allowedPublicRoles.includes(role))
+      return fail(res, 400, "Choose customer or provider.");
     if (await User.exists({ email }))
-      return fail(res, 409, "An account with that email already exists.", [{ path: "email", msg: "This email is already registered. Please sign in." }]);
+      return fail(res, 409, "An account with that email already exists.", [
+        {
+          path: "email",
+          msg: "This email is already registered. Please sign in.",
+        },
+      ]);
     const user = await User.create({
       fullName,
       email,
@@ -61,8 +67,16 @@ exports.register = async (req, res, next) => {
       "Account created.",
     );
   } catch (error) {
-    if (error.code === 11000 && (error.keyPattern?.email || error.keyValue?.email))
-      return fail(res, 409, "An account with that email already exists.", [{ path: "email", msg: "This email is already registered. Please sign in." }]);
+    if (
+      error.code === 11000 &&
+      (error.keyPattern?.email || error.keyValue?.email)
+    )
+      return fail(res, 409, "An account with that email already exists.", [
+        {
+          path: "email",
+          msg: "This email is already registered. Please sign in.",
+        },
+      ]);
     next(error);
   }
 };
@@ -77,11 +91,7 @@ exports.login = async (req, res, next) => {
       user.status !== "active" ||
       !(await bcrypt.compare(req.body.password, user.passwordHash))
     )
-      return fail(
-        res,
-        401,
-        "Invalid email or password.",
-      );
+      return fail(res, 401, "Invalid email or password.");
     return ok(
       res,
       { user: publicUser(user), token: signAccessToken(user) },
@@ -100,14 +110,20 @@ exports.updateMe = async (req, res) => {
   try {
     const changes = {};
     // Never pass the request body directly to MongoDB.
-    if (Object.hasOwn(req.body, "fullName")) changes.fullName = req.body.fullName;
+    if (Object.hasOwn(req.body, "fullName"))
+      changes.fullName = req.body.fullName;
     if (Object.hasOwn(req.body, "phone")) changes.phone = req.body.phone;
     const user = await User.findOneAndUpdate(
       { _id: req.user._id, status: "active" },
       { $set: changes },
       { new: true, runValidators: true },
     );
-    if (!user) return fail(res, 401, "Your session is no longer active. Please sign in again.");
+    if (!user)
+      return fail(
+        res,
+        401,
+        "Your session is no longer active. Please sign in again.",
+      );
     return ok(res, publicProfile(user), "Profile updated successfully.");
   } catch {
     return fail(res, 500, "Unable to save your profile. Please try again.");

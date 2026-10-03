@@ -1,11 +1,11 @@
 import { api, clearToken, getStoredToken, saveToken } from "@/api/client";
 import {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useState,
-  type ReactNode,
+    createContext,
+    useCallback,
+    useContext,
+    useEffect,
+    useState,
+    type ReactNode,
 } from "react";
 
 type User = {
@@ -20,10 +20,7 @@ type User = {
 type AuthValue = {
   user: User | null;
   loading: boolean;
-  login: (
-    email: string,
-    password: string,
-  ) => Promise<User>;
+  login: (email: string, password: string) => Promise<User>;
   register: (
     fullName: string,
     email: string,
@@ -64,10 +61,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .finally(() => setLoading(false));
   }, []);
 
-  const login = async (
-    email: string,
-    password: string,
-  ) => {
+  const login = async (email: string, password: string) => {
     const response = await api.post("/auth/login", { email, password });
     await saveToken(response.data.data.token);
     setUser(response.data.data.user);

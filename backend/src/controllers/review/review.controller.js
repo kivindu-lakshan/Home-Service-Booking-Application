@@ -93,7 +93,11 @@ exports.mine = async (req, res, next) => {
     return send(
       res,
       await Review.find({ customer: req.user._id })
-        .populate({ path: "provider", select: "user ratingAvg", populate: { path: "user", select: "fullName" } })
+        .populate({
+          path: "provider",
+          select: "user ratingAvg",
+          populate: { path: "user", select: "fullName" },
+        })
         .populate("booking", "bookingRef scheduledDate")
         .sort({ createdAt: -1 }),
     );
