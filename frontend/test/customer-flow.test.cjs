@@ -38,8 +38,8 @@ const flush = () => new Promise(resolve => setImmediate(resolve));
 test('customer home is shown at the existing post-login destination', () => {
   const h = harness(null); const tree = h.render(h.load('app/index.tsx').default); assert.equal(tree.type, '@/components/customer/CustomerHome');
 });
-for (const role of ['admin', 'provider']) test(`${role} retains existing home screen`, () => {
-  const h = harness(null, { auth: { user: { role, fullName: 'Test', email: 'test@example.invalid' } } }); const tree = h.render(h.load('app/index.tsx').default); assert.equal(tree.type, 'View');
+for (const role of ['admin', 'provider']) test(`${role} opens its role dashboard`, () => {
+  const h = harness(null, { auth: { user: { role, fullName: 'Test', email: 'test@example.invalid' } } }); const tree = h.render(h.load('app/index.tsx').default); assert.equal(tree.type, 'Redirect'); assert.equal(tree.props.href, role === 'admin' ? '/admin/home' : '/provider/dashboard');
 });
 test('category selection passes the database category ID', () => {
   const h = harness(null); const tree = h.render(h.load('components/customer/CustomerHome.tsx').CategoryTiles, { categories: [{ _id: 'database-category', name: 'Existing category' }] });

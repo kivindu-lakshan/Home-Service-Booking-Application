@@ -1,15 +1,12 @@
 import { router } from "expo-router";
 import { useRef, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
-import { useAccountStyles } from "@/context/AccountThemeContext";
-import { AccountText as Text } from "@/components/settings/AccountText";
-import { addressStyles } from "@/components/address/AddressUI";
 import { AuthPage, AuthField, AuthButton, AuthFooter, AuthLink } from "@/components/auth/AuthUI";
 import ErrorText from "@/components/ErrorText";
 import { validateLogin, type AuthErrors } from "@/validation/auth";
 import { authError } from "@/api/auth-error";
 export default function Login() {
-  const { login } = useAuth(); const themed = useAccountStyles();
+  const { login } = useAuth();
   const [email, setEmail] = useState(""); const [password, setPassword] = useState("");
   const [error, setError] = useState(""); const [fields, setFields] = useState<AuthErrors>({});
   const [busy, setBusy] = useState(false); const lock = useRef(false);
@@ -29,11 +26,8 @@ export default function Login() {
     <AuthLink title="Forgot password?" disabled={busy} onPress={() => router.push("/auth/forgot-password")} />
     <ErrorText>{error}</ErrorText>
     <AuthFooter>
-      <AuthButton title="Login As Admin" secondary disabled={busy} onPress={() => void submit()} />
-      <Text style={themed(addressStyles.hint)}>Administrators use their existing account credentials above.</Text>
-      <AuthButton title="Sign in" busy={busy} onPress={() => void submit()} />
+      <AuthButton title="Sign In" busy={busy} onPress={() => void submit()} />
       <AuthButton title="Create an account" secondary disabled={busy} onPress={() => router.push("/auth/register")} />
-      <Text style={themed(addressStyles.hint)}>Your password is used to sign you in. Never share it or your verification codes.</Text>
     </AuthFooter>
   </AuthPage>;
 }

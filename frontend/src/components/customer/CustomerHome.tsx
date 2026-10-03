@@ -20,6 +20,7 @@ export default function CustomerHome() {
   const state = useCatalogueData(useCallback(signal => getCategories(signal), []));
   const browse = () => router.push({ pathname: '/customer/services', params: { search: search.trim() } });
   return <CustomerPage home title={`Hello, ${state.user?.fullName.split(' ')[0] || 'there'} 👋`} refreshing={state.refreshing} onRefresh={() => void state.load(true)}>
+    <Text style={themed(css.heading)}>HomeHalo</Text>
     <Text style={themed(css.copy)}>A helping hand for your home.</Text>
     <View style={themed(css.banner)}><Text style={themed(css.bannerTitle)}>Your home, taken care of.</Text><Text style={themed(css.bannerCopy)}>Find a service, meet your provider and book a time that works for you.</Text><Button secondary onPress={() => router.push('/customer/services')}>Explore services</Button></View>
     <Input accessibilityLabel="Search for a service" placeholder="Search for a service..." value={search} onChangeText={setSearch} returnKeyType="search" onSubmitEditing={browse} />

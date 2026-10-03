@@ -25,6 +25,7 @@ type AuthValue = {
     email: string,
     phone: string,
     password: string,
+    role: "customer" | "provider",
   ) => Promise<void>;
   logout: () => Promise<void>;
   syncProfile: (profile: Pick<User, "id" | "fullName" | "phone">) => void;
@@ -63,12 +64,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     email: string,
     phone: string,
     password: string,
+    role: "customer" | "provider",
   ) => {
     const r = await api.post("/auth/register", {
       fullName,
       email,
       phone,
       password,
+      role,
     });
     await saveToken(r.data.data.token);
     setUser(r.data.data.user);
@@ -77,6 +80,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = async () => {
     await clearToken();
     setUser(null);
+    setVerificationToken(null);
   };
   const syncProfile = useCallback((profile: Pick<User, "id" | "fullName" | "phone">) => {
     setUser((current) => current?.id === profile.id

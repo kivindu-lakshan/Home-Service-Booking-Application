@@ -7,6 +7,9 @@ const {
   hashToken,
 } = require("../../utils/tokens");
 
+const allowedPublicRoles = ["customer", "provider"];
+exports.allowedPublicRoles = allowedPublicRoles;
+
 const publicUser = (user) => ({
   id: user._id,
   fullName: user.fullName,
@@ -37,13 +40,15 @@ async function createAuthToken(user, type, minutes) {
 
 exports.register = async (req, res, next) => {
   try {
-    const { fullName, email, phone, password } = req.body;
+    const { fullName, email, phone, password, role } = req.body;
+    if (!allowedPublicRoles.includes(role)) return fail(res, 400, "Choose customer or provider.");
     if (await User.exists({ email }))
       return fail(res, 409, "An account with that email already exists.");
     const user = await User.create({
       fullName,
       email,
       phone,
+      role,
       passwordHash: await bcrypt.hash(password, 12),
     });
     const verificationToken = await createAuthToken(
@@ -61,12 +66,14 @@ exports.register = async (req, res, next) => {
       "Account created.",
     );
   } catch (error) {
+    if (error.code === 11000) return fail(res, 409, "An account with that email already exists.");
     next(error);
   }
 };
 
 exports.login = async (req, res, next) => {
   try {
+    // Authentication always uses the stored account role, never a request role.
     const user = await User.findOne({ email: req.body.email }).select(
       "+passwordHash",
     );

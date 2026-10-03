@@ -9,13 +9,18 @@ const password = (field) =>
     .isLength({ min: 8 })
     .matches(/[A-Za-z]/)
     .matches(/[0-9]/)
-    .withMessage(controller.passwordError);
+    .withMessage(controller.passwordError).hide();
 router.post(
   "/register",
+  (req, res, next) => {
+    if (!controller.allowedPublicRoles.includes(req.body?.role))
+      return fail(res, 400, "Choose customer or provider.");
+    next();
+  },
   [
     body("fullName").trim().isLength({ min: 2 }),
     body("email").isEmail().normalizeEmail(),
-    body("phone").optional().trim(),
+    body("phone").isString().bail().trim().notEmpty().withMessage("Phone number is required."),
     password("password"),
   ],
   validate,
@@ -54,6 +59,13 @@ router.patch("/me/notification-preferences", auth, noStore, (req, res, next) => 
   next();
 }, notifications.update);
 router.get("/me", auth, controller.me);
+const authorizeRoles = require("../../middleware/role");
+for (const role of ["customer", "provider", "admin"]) {
+  router.get(`/dashboard/${role}`, auth, authorizeRoles(role), (req, res) => {
+    res.set("Cache-Control", "no-store");
+    res.json({ success: true, data: { role: req.user.role }, message: "Welcome to HomeHalo" });
+  });
+}
 router.patch(
   "/me",
   auth,
