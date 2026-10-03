@@ -38,7 +38,6 @@ exports.create = async (req, res, next) => {
       provider: booking.provider._id,
       rating: req.body.rating,
       comment: req.body.comment,
-      service: booking.service?._id,
     });
     const [summary] = await Review.aggregate([
       { $match: { provider: booking.provider._id } },
@@ -89,3 +88,68 @@ exports.byBooking = async (req, res, next) => {
     return next(error);
   }
 };
+<<<<<<< HEAD
+=======
+exports.mine = async (req, res, next) => {
+  try {
+    return send(
+      res,
+      await Review.find({ customer: req.user._id })
+        .populate({ path: "provider", select: "user ratingAvg", populate: { path: "user", select: "fullName" } })
+        .populate("booking", "bookingRef scheduledDate")
+        .sort({ createdAt: -1 }),
+    );
+  } catch (error) {
+    return next(error);
+  }
+};
+async function refreshProvider(providerId) {
+  const [summary] = await Review.aggregate([
+    { $match: { provider: providerId } },
+    {
+      $group: {
+        _id: "$provider",
+        ratingAvg: { $avg: "$rating" },
+        reviewCount: { $sum: 1 },
+      },
+    },
+  ]);
+  await Provider.findByIdAndUpdate(providerId, {
+    ratingAvg: summary?.ratingAvg || 0,
+    reviewCount: summary?.reviewCount || 0,
+  });
+}
+exports.update = async (req, res, next) => {
+  try {
+    const review = await Review.findOneAndUpdate(
+      { _id: req.params.id, customer: req.user._id },
+      { rating: req.body.rating, comment: req.body.comment },
+      { new: true, runValidators: true },
+    ).populate("provider booking");
+    if (!review)
+      return res
+        .status(404)
+        .json({ success: false, data: null, message: "Review not found" });
+    await refreshProvider(review.provider._id);
+    return send(res, review, "Review updated");
+  } catch (error) {
+    return next(error);
+  }
+};
+exports.remove = async (req, res, next) => {
+  try {
+    const review = await Review.findOneAndDelete({
+      _id: req.params.id,
+      customer: req.user._id,
+    });
+    if (!review)
+      return res
+        .status(404)
+        .json({ success: false, data: null, message: "Review not found" });
+    await refreshProvider(review.provider);
+    return send(res, null, "Review deleted");
+  } catch (error) {
+    return next(error);
+  }
+};
+>>>>>>> origin-02/feature/payment,review,admin

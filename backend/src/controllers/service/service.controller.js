@@ -1,10 +1,33 @@
 const mongoose = require('mongoose');
-const { Service, ServiceCategory } = require('../../models');
+const { Service, ServiceCategory, Provider } = require('../../models');
 const { ok, fail } = require('../../utils/response');
 const fields = ['name', 'category', 'description', 'basePrice', 'imageUrl', 'estDurationHours', 'serviceType', 'inclusions', 'isActive'];
 const isId = value => typeof value === 'string' && /^[a-f\d]{24}$/i.test(value);
 const categoryFields = 'name icon sortOrder isActive';
 const serviceFields = 'name category description basePrice imageUrl estDurationHours serviceType inclusions isActive createdAt updatedAt';
+const providerFields = 'user city ratingAvg reviewCount services';
+
+async function withProviders(services) {
+  const isList = Array.isArray(services);
+  const items = isList ? services : [services];
+  const ids = items.map(service => service._id);
+  const providers = Provider.db.readyState === 1
+    ? await Provider.find({ status: 'active', 'services.service': { $in: ids } })
+      .select(providerFields).populate('user', 'fullName')
+    : [];
+  const result = items.map(service => {
+    const assignedProviders = providers.filter(provider => provider.services.some(item => String(item.service) === String(service._id)))
+      .map(provider => ({
+        _id: provider._id,
+        user: provider.user,
+        city: provider.city,
+        ratingAvg: provider.ratingAvg,
+        reviewCount: provider.reviewCount,
+      }));
+    return { ...(typeof service.toObject === 'function' ? service.toObject() : service), assignedProviders };
+  });
+  return isList ? result : result[0];
+}
 
 exports.validateId = (req, res, next) => isId(req.params.id) ? next() : fail(res, 400, 'Invalid service ID.');
 exports.validateService = async (req, res, next) => {
@@ -81,7 +104,8 @@ exports.list = async (req, res) => {
       if (filter.category) filter.category.$in = filter.category.$in.filter(id => String(id) === category);
       else filter.category = category;
     }
-    return ok(res, await Service.find(filter).select(serviceFields).populate('category', categoryFields).sort({ name: 1, _id: 1 }));
+    const services = await Service.find(filter).select(serviceFields).populate('category', categoryFields).sort({ name: 1, _id: 1 });
+    return ok(res, await withProviders(services));
   } catch { return fail(res, 500, 'Unable to load services. Please try again.'); }
 };
 exports.read = async (req, res) => {
@@ -89,7 +113,7 @@ exports.read = async (req, res) => {
     res.set('Cache-Control', 'no-store');
     const service = await Service.findById(req.params.id).select(serviceFields).populate('category', categoryFields);
     if (!service) return fail(res, 404, 'Service not found.');
-    return ok(res, service);
+    return ok(res, await withProviders(service));
   } catch { return fail(res, 500, 'Unable to load this service.'); }
 };
 exports.create = async (req, res) => {
@@ -113,4 +137,30 @@ exports.remove = async (req, res) => {
     if (!service) return fail(res, 404, 'Service not found.');
     return ok(res, { id: service._id, isActive: false }, 'Service deactivated.');
   } catch { return fail(res, 500, 'Unable to deactivate this service.'); }
+};
+
+exports.providers = async (req, res) => {
+  try {
+    const service = await Service.findById(req.params.id).select('_id name');
+    if (!service) return fail(res, 404, 'Service not found.');
+    return ok(res, await Provider.find({ status: 'active' })
+      .select(providerFields).populate('user', 'fullName email')
+      .then(providers => providers.map(provider => ({
+        ...provider.toObject(),
+        assigned: provider.services.some(item => String(item.service) === String(service._id)),
+      }))));
+  } catch { return fail(res, 500, 'Unable to load service providers.'); }
+};
+
+exports.assignProviders = async (req, res) => {
+  try {
+    const service = await Service.findById(req.params.id).select('_id name');
+    const providerIds = Array.isArray(req.body.providerIds) ? req.body.providerIds : null;
+    if (!service || !providerIds || providerIds.some(id => !isId(id))) return fail(res, 400, 'Select valid providers.');
+    const providers = await Provider.find({ _id: { $in: providerIds }, status: 'active' }).select('_id');
+    if (providers.length !== providerIds.length) return fail(res, 400, 'Every selected provider must be active.');
+    await Provider.updateMany({ status: 'active' }, { $pull: { services: { service: service._id } } });
+    if (providerIds.length) await Provider.updateMany({ _id: { $in: providerIds } }, { $addToSet: { services: { service: service._id } } });
+    return ok(res, await withProviders(service), 'Service providers updated.');
+  } catch { return fail(res, 500, 'Unable to assign service providers.'); }
 };

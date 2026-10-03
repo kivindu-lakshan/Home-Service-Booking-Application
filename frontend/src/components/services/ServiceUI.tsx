@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { useState } from 'react';
-import { Redirect } from 'expo-router';
+import { Redirect, router } from 'expo-router';
 import { Image, Pressable, StyleSheet, View } from 'react-native';
 import { Archive, Clock, MapPin, Pencil, Plus, RotateCw, Trash2 } from 'lucide-react-native';
 import { useAuth } from '@/context/AuthContext';
@@ -42,6 +42,7 @@ export function ServiceCard({ service, children }: { service: Service; children?
       {!!service.serviceType && <View style={serviceStyles.detail}><MapPin size={14} color='#8A91A4' /><Text style={themed(serviceStyles.detailText)}>{service.serviceType === 'on_site' ? 'On site' : 'Workshop'}</Text></View>}
     </View>
     {!!service.inclusions?.length && <Text style={themed(serviceStyles.inclusions)}>Includes {service.inclusions.join(' · ')}</Text>}
+    {!!service.assignedProviders?.length && <View style={serviceStyles.providers}><Text style={themed(serviceStyles.providerLabel)}>AVAILABLE PROVIDERS</Text>{service.assignedProviders.map(provider => <Pressable key={provider._id} onPress={() => router.push({ pathname: '/reviews/provider', params: { providerId: provider._id } })}><Text style={themed(serviceStyles.providerName)}>{provider.user?.fullName || 'Provider'}{provider.city ? ` · ${provider.city}` : ''} · {Number(provider.ratingAvg || 0).toFixed(1)} stars</Text></Pressable>)}</View>}
     {service.category?.isActive === false && <Text style={themed(serviceStyles.copy)}>Category inactive</Text>}
     <View style={themed(serviceStyles.priceBlock)}>
       <Text style={themed(serviceStyles.priceLabel)}>STARTING FROM</Text>
@@ -78,4 +79,7 @@ export const serviceStyles = StyleSheet.create({
   primaryAction: { backgroundColor: '#633CFF' },
   dangerAction: { backgroundColor: '#FCEFF1' },
   image: { width: '100%', height: 170, borderRadius: 14, marginBottom: 16 },
+  providers: { borderTopWidth: 1, borderTopColor: '#F0EEF6', paddingTop: 14, marginTop: 8, marginBottom: 4 },
+  providerLabel: { color: '#949CAF', fontSize: 9, fontWeight: '700', letterSpacing: 1.3, marginBottom: 7 },
+  providerName: { color: '#633CFF', fontSize: 13, fontWeight: '700', marginBottom: 5 },
 });

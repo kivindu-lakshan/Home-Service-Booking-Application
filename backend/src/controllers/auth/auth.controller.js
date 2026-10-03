@@ -1,4 +1,3 @@
-const { randomInt } = require("node:crypto");
 const bcrypt = require("bcryptjs");
 const { User, AuthToken } = require("../../models");
 const { ok, fail } = require("../../utils/response");
@@ -39,19 +38,6 @@ async function createAuthToken(user, type, minutes) {
   return raw;
 }
 
-// Demo only: the code is displayed in the authenticated app, not emailed.
-async function createVerificationCode(user) {
-  const previous = await AuthToken.find({ user: user._id, type: "verify_email" });
-  let code;
-  do { code = String(randomInt(100000, 1000000)); }
-  while (previous.some((record) => record.tokenHash === hashToken(code)));
-  await AuthToken.updateMany({ user: user._id, type: "verify_email", usedAt: null },
-    { $set: { usedAt: new Date() } });
-  await AuthToken.create({ user: user._id, type: "verify_email", tokenHash: hashToken(code),
-    expiresAt: new Date(Date.now() + 24 * 60 * 60000) });
-  return code;
-}
-
 exports.register = async (req, res, next) => {
   try {
     const { fullName, email, phone, password } = req.body;
@@ -65,14 +51,13 @@ exports.register = async (req, res, next) => {
       phone,
       role,
       passwordHash: await bcrypt.hash(password, 12),
+      emailVerified: true,
     });
-    const verificationCode = await createVerificationCode(user);
     return ok(
       res,
       {
         user: publicUser(user),
         token: signAccessToken(user),
-        verificationCode,
       },
       "Account created.",
     );
@@ -163,37 +148,6 @@ exports.resetPassword = async (req, res, next) => {
     record.usedAt = new Date();
     await record.save();
     ok(res, null, "Password reset.");
-  } catch (error) {
-    next(error);
-  }
-};
-exports.verifyEmail = async (req, res, next) => {
-  try {
-    const record = await AuthToken.findOneAndUpdate({
-      user: req.user._id,
-      tokenHash: hashToken(req.body.code),
-      type: "verify_email",
-      usedAt: null,
-      expiresAt: { $gt: new Date() },
-    }, { $set: { usedAt: new Date() } });
-    if (!record) return fail(res, 400, "Incorrect or expired code. Please try again or resend a code.");
-    const user = await User.findByIdAndUpdate(req.user._id, { emailVerified: true }, { new: true });
-    res.set("Cache-Control", "no-store");
-    ok(res, publicProfile(user), "Demo email verification completed.");
-  } catch (error) {
-    next(error);
-  }
-};
-exports.resendVerification = async (req, res, next) => {
-  try {
-    const user = await User.findById(req.user._id);
-    if (user.emailVerified) return ok(res, null, "Email is already verified.");
-    const verificationCode = await createVerificationCode(user);
-    ok(
-      res,
-      { verificationCode },
-      "A new demo verification code was generated. No email was sent.",
-    );
   } catch (error) {
     next(error);
   }

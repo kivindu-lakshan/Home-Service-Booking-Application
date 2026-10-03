@@ -5,6 +5,7 @@ export type Service = {
   _id: string; name: string; category: ServiceCategory | null; description?: string;
   basePrice?: number; imageUrl?: string; estDurationHours?: string;
   serviceType?: 'on_site' | 'workshop'; inclusions?: string[]; isActive: boolean;
+  assignedProviders?: { _id: string; user?: { fullName?: string }; city?: string; ratingAvg?: number; reviewCount?: number }[];
 };
 export type ServiceInput = {
   name: string; category: string; description: string; basePrice: number; imageUrl: string;
@@ -22,6 +23,8 @@ export async function getServiceCategories(signal?: AbortSignal): Promise<Servic
 export const createService = (payload: ServiceInput) => api.post('/admin/services', payload);
 export const updateService = (id: string, payload: ServiceInput) => api.patch(`/admin/services/${encodeURIComponent(id)}`, payload);
 export const deleteService = (id: string) => api.delete(`/admin/services/${encodeURIComponent(id)}`);
+export const getServiceProviders = (id: string) => api.get(`/admin/services/${encodeURIComponent(id)}/providers`);
+export const assignServiceProviders = (id: string, providerIds: string[]) => api.put(`/admin/services/${encodeURIComponent(id)}/providers`, { providerIds });
 export function serviceError(error: unknown, fallback: string): string {
   if (!isAxiosError(error)) return fallback;
   if (error.response?.status === 401) return 'Your session has expired. Please sign in again.';
