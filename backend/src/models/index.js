@@ -291,6 +291,9 @@ const SupportTicket = make("SupportTicket", {
     default: "pending",
     required: true,
   },
+  adminResponse: { type: String, trim: true, maxlength: 4000 },
+  respondedAt: Date,
+  respondedBy: ref("User", false),
 });
 SupportTicket.schema.index({ user: 1, createdAt: -1 });
 const ProviderLocation = make(

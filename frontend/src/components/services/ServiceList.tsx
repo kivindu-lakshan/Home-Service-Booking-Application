@@ -304,6 +304,19 @@ export default function ServiceList({ admin = false }: { admin?: boolean }) {
                 key={`${service._id}:${service.imageUrl || ""}`}
                 service={service}
               >
+                {!admin && user?.role === "customer" && (
+                  <ServiceAction
+                    title="Book this service"
+                    icon="add"
+                    primary
+                    onPress={() =>
+                      router.push({
+                        pathname: "/booking/checkout",
+                        params: { serviceId: service._id },
+                      })
+                    }
+                  />
+                )}
                 {!admin && user?.role === "provider" && (
                   <ServiceAction
                     title="Apply for this Service"

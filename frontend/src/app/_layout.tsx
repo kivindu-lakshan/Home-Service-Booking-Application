@@ -88,6 +88,10 @@ export default function RootLayout() {
             options={{ title: "My bookings" }}
           />
           <Stack.Screen
+            name="booking/checkout"
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
             name="payment/details"
             options={{ title: "Payment details" }}
           />

@@ -1,6 +1,13 @@
 import { api } from "./client";
 
 export const getMyBookings = () => api.get("/payments/bookings");
+export const createBooking = (payload: {
+  serviceId: string;
+  providerId: string;
+  scheduledDate: string;
+  timePeriod: "morning" | "afternoon" | "evening";
+  scheduledTime: string;
+}) => api.post("/bookings", payload);
 export const getBooking = (bookingId: string) =>
   api.get(`/bookings/${bookingId}`);
 export const getPayment = (bookingId: string) =>
@@ -9,7 +16,7 @@ export const getPaymentMethods = () => api.get("/payments/methods");
 export const createPayment = (
   bookingId: string,
   payload: {
-    method: string;
+    method: "card" | "demo_card" | "cash_on_arrival" | "cash_on_completion";
     paymentMethodId?: string;
     card?: {
       cardholderName: string;

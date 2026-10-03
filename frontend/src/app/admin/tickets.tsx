@@ -5,9 +5,9 @@ import {
 } from "@/api/domain";
 import { EmptyState, ErrorState, LoadingState } from "@/components/DataState";
 import ErrorText from "@/components/ErrorText";
-import { Button, Card, Input } from "@/components/ui";
+import { Button, Input } from "@/components/ui";
 import { useCallback, useEffect, useState } from "react";
-import { Alert, ScrollView, Text, View } from "react-native";
+import { Alert, ScrollView, StyleSheet, Text, View } from "react-native";
 
 export default function AdminTickets() {
   const [tickets, setTickets] = useState<any[]>([]);
@@ -31,6 +31,10 @@ export default function AdminTickets() {
   useEffect(() => {
     const timer = setTimeout(() => void load(), 0);
     return () => clearTimeout(timer);
+  }, [load]);
+  useEffect(() => {
+    const timer = setInterval(() => void load(), 5000);
+    return () => clearInterval(timer);
   }, [load]);
   const save = async (id: string) => {
     if (!response.trim()) return setError("Write a response first.");
@@ -62,14 +66,9 @@ export default function AdminTickets() {
   if (error && !tickets.length)
     return <ErrorState onRetry={() => void load()} />;
   return (
-    <ScrollView
-      style={{ backgroundColor: "#F7F7FB" }}
-      contentContainerStyle={{ padding: 20 }}
-    >
-      <Text style={{ fontSize: 30, fontWeight: "900", color: "#25213D" }}>
-        Support tickets
-      </Text>
-      <Text style={{ color: "#747B90", marginVertical: 8 }}>
+    <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
+      <Text style={styles.heading}>Support tickets</Text>
+      <Text style={styles.subtitle}>
         Resolve customer issues from one focused queue.
       </Text>
       <ErrorText>{error}</ErrorText>
@@ -79,31 +78,22 @@ export default function AdminTickets() {
         tickets.map((ticket) => {
           const isEditing = editing === ticket._id;
           return (
-            <Card key={ticket._id}>
-              <View
-                style={{
-                  flexDirection: "row",
-                  justifyContent: "space-between",
-                }}
-              >
-                <Text style={{ color: "#25213D", fontWeight: "900", flex: 1 }}>
-                  {ticket.subject}
-                </Text>
+            <View key={ticket._id} style={styles.ticketCard}>
+              <View style={styles.ticketHeader}>
+                <Text style={styles.subject}>{ticket.subject}</Text>
                 <Text
-                  style={{
-                    color: ticket.status === "resolved" ? "#0F9D8A" : "#F29D38",
-                    fontWeight: "800",
-                  }}
+                  style={[
+                    styles.status,
+                    ticket.status === "resolved" && styles.resolved,
+                  ]}
                 >
                   {ticket.status.replace("_", " ")}
                 </Text>
               </View>
-              <Text style={{ color: "#747B90", marginTop: 6 }}>
+              <Text style={styles.customer}>
                 {ticket.customer?.fullName || "Customer"}
               </Text>
-              <Text style={{ color: "#25213D", marginTop: 12 }}>
-                {ticket.message}
-              </Text>
+              <Text style={styles.message}>{ticket.message}</Text>
               {isEditing ? (
                 <>
                   <Input
@@ -117,24 +107,22 @@ export default function AdminTickets() {
                       marginTop: 12,
                     }}
                   />
-                  <View
-                    style={{ flexDirection: "row", gap: 10, marginBottom: 12 }}
-                  >
+                  <View style={styles.editStatusRow}>
                     <Text
                       onPress={() => setStatus("in_progress")}
-                      style={{
-                        color: status === "in_progress" ? "#5B3DF5" : "#747B90",
-                        fontWeight: "800",
-                      }}
+                      style={[
+                        styles.action,
+                        status !== "in_progress" && styles.inactiveAction,
+                      ]}
                     >
                       In progress
                     </Text>
                     <Text
                       onPress={() => setStatus("resolved")}
-                      style={{
-                        color: status === "resolved" ? "#0F9D8A" : "#747B90",
-                        fontWeight: "800",
-                      }}
+                      style={[
+                        styles.resolvedAction,
+                        status !== "resolved" && styles.inactiveAction,
+                      ]}
                     >
                       Resolved
                     </Text>
@@ -144,15 +132,13 @@ export default function AdminTickets() {
                   </Button>
                 </>
               ) : ticket.adminResponse ? (
-                <Text style={{ color: "#25213D", marginTop: 12 }}>
+                <Text style={styles.response}>
                   Response: {ticket.adminResponse}
                 </Text>
               ) : (
-                <Text style={{ color: "#F29D38", marginTop: 12 }}>
-                  Awaiting response
-                </Text>
+                <Text style={styles.awaiting}>Awaiting response</Text>
               )}
-              <View style={{ flexDirection: "row", gap: 20, marginTop: 14 }}>
+              <View style={styles.actions}>
                 <Text
                   onPress={() => {
                     setEditing(isEditing ? null : ticket._id);
@@ -161,7 +147,7 @@ export default function AdminTickets() {
                       ticket.status === "resolved" ? "resolved" : "in_progress",
                     );
                   }}
-                  style={{ color: "#5B3DF5", fontWeight: "800" }}
+                  style={styles.action}
                 >
                   {isEditing
                     ? "Cancel"
@@ -172,16 +158,87 @@ export default function AdminTickets() {
                 {ticket.adminResponse ? (
                   <Text
                     onPress={() => remove(ticket._id)}
-                    style={{ color: "#C0392B", fontWeight: "800" }}
+                    style={styles.deleteAction}
                   >
                     Delete response
                   </Text>
                 ) : null}
               </View>
-            </Card>
+            </View>
           );
         })
       )}
     </ScrollView>
   );
 }
+
+const styles = StyleSheet.create({
+  screen: { flex: 1, backgroundColor: "#F7F7FB" },
+  content: {
+    width: "100%",
+    maxWidth: 1080,
+    alignSelf: "center",
+    paddingHorizontal: 26,
+    paddingTop: 30,
+    paddingBottom: 34,
+  },
+  heading: {
+    color: "#25213D",
+    fontSize: 34,
+    lineHeight: 42,
+    fontWeight: "900",
+    marginBottom: 7,
+  },
+  subtitle: {
+    color: "#747B90",
+    fontSize: 17,
+    lineHeight: 24,
+    marginBottom: 10,
+  },
+  ticketCard: {
+    backgroundColor: "#FFF",
+    borderRadius: 22,
+    padding: 23,
+    marginBottom: 18,
+    shadowColor: "#25213D",
+    shadowOpacity: 0.07,
+    shadowRadius: 18,
+    elevation: 2,
+  },
+  ticketHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    gap: 18,
+  },
+  subject: {
+    color: "#25213D",
+    fontSize: 17,
+    lineHeight: 22,
+    fontWeight: "900",
+    flex: 1,
+  },
+  status: {
+    color: "#F29D38",
+    fontSize: 16,
+    lineHeight: 22,
+    fontWeight: "800",
+    textTransform: "lowercase",
+  },
+  resolved: { color: "#0F9D8A" },
+  customer: { color: "#747B90", fontSize: 16, marginTop: 8 },
+  message: { color: "#25213D", fontSize: 16, lineHeight: 22, marginTop: 19 },
+  response: { color: "#25213D", fontSize: 16, lineHeight: 22, marginTop: 18 },
+  awaiting: { color: "#F29D38", fontSize: 16, lineHeight: 22, marginTop: 18 },
+  actions: { flexDirection: "row", gap: 25, marginTop: 18 },
+  action: { color: "#5B3DF5", fontSize: 16, fontWeight: "800" },
+  resolvedAction: { color: "#0F9D8A", fontSize: 16, fontWeight: "800" },
+  deleteAction: { color: "#C0392B", fontSize: 16, fontWeight: "800" },
+  inactiveAction: { color: "#747B90" },
+  editStatusRow: {
+    flexDirection: "row",
+    gap: 18,
+    marginTop: 14,
+    marginBottom: 12,
+  },
+});
