@@ -31,7 +31,9 @@ export default function RootLayout() {
           <Stack.Screen name="auth/reset-password" options={{ title: "Reset password" }} />
           <Stack.Screen name="auth/verify-email" options={{ headerShown: false }} />
           <Stack.Screen name="auth/change-password" options={{ title: "Change password" }} />
-          <Stack.Screen name="bookings/index" options={{ title: "My bookings" }} />
+          <Stack.Screen name="bookings/index" options={{ headerShown: false }} />
+          <Stack.Screen name="bookings/new" options={{ headerShown: false }} />
+          <Stack.Screen name="bookings/[id]" options={{ headerShown: false }} />
           <Stack.Screen name="payment/details" options={{ title: "Payment details" }} />
           <Stack.Screen name="payment/success" options={{ title: "Payment successful" }} />
           <Stack.Screen name="reviews/rate" options={{ title: "Rate provider" }} />
