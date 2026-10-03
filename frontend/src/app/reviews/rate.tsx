@@ -1,9 +1,11 @@
-import { useState } from "react";
-import { router, useLocalSearchParams } from "expo-router";
-import { ScrollView, Text, TextInput } from "react-native";
-import { Button, Card } from "@/components/ui";
 import { createReview } from "@/api/domain";
 import ErrorText from "@/components/ErrorText";
+import { Button, Card } from "@/components/ui";
+import { ProfileBackButton } from "@/components/profile/ProfileNavigation";
+import { router, useLocalSearchParams } from "expo-router";
+import { Star } from "lucide-react-native";
+import { useState } from "react";
+import { ScrollView, Text, TextInput } from "react-native";
 export default function RateProvider() {
   const { bookingId } = useLocalSearchParams<{ bookingId: string }>();
   const [rating, setRating] = useState(0);
@@ -31,6 +33,7 @@ export default function RateProvider() {
       style={{ backgroundColor: "#F7F7FB" }}
       contentContainerStyle={{ padding: 20 }}
     >
+      <ProfileBackButton onPress={() => router.canGoBack() ? router.back() : router.replace("/bookings")} />
       <Text style={{ fontSize: 30, fontWeight: "900", color: "#25213D" }}>
         Rate your provider
       </Text>
@@ -44,7 +47,11 @@ export default function RateProvider() {
         <Text style={{ color: "#F29D38", fontSize: 38, marginTop: 12 }}>
           {[1, 2, 3, 4, 5].map((value) => (
             <Text key={value} onPress={() => setRating(value)}>
-              {value <= rating ? "★" : "☆"}
+              <Star
+                size={30}
+                color="#FBBF24"
+                fill={value <= rating ? "#FBBF24" : "#FFFFFF"}
+              />
             </Text>
           ))}
         </Text>

@@ -1,3 +1,4 @@
+const { randomInt } = require("node:crypto");
 const bcrypt = require("bcryptjs");
 const { User, AuthToken } = require("../../models");
 const { ok, fail } = require("../../utils/response");
@@ -7,6 +8,8 @@ const {
   hashToken,
 } = require("../../utils/tokens");
 
+const allowedPublicRoles = ["customer", "provider"];
+
 const publicUser = (user) => ({
   id: user._id,
   fullName: user.fullName,
@@ -15,6 +18,10 @@ const publicUser = (user) => ({
   role: user.role,
   emailVerified: user.emailVerified,
   status: user.status,
+});
+const publicProfile = (user) => ({
+  ...publicUser(user),
+  avatarUrl: user.avatarUrl || null,
 });
 const passwordError =
   "Password must be at least 8 characters and include a letter and a number.";
@@ -31,32 +38,46 @@ async function createAuthToken(user, type, minutes) {
   return raw;
 }
 
+// Demo only: the code is displayed in the authenticated app, not emailed.
+async function createVerificationCode(user) {
+  const previous = await AuthToken.find({ user: user._id, type: "verify_email" });
+  let code;
+  do { code = String(randomInt(100000, 1000000)); }
+  while (previous.some((record) => record.tokenHash === hashToken(code)));
+  await AuthToken.updateMany({ user: user._id, type: "verify_email", usedAt: null },
+    { $set: { usedAt: new Date() } });
+  await AuthToken.create({ user: user._id, type: "verify_email", tokenHash: hashToken(code),
+    expiresAt: new Date(Date.now() + 24 * 60 * 60000) });
+  return code;
+}
+
 exports.register = async (req, res, next) => {
   try {
     const { fullName, email, phone, password } = req.body;
+    const role = req.body.role || "customer";
+    if (!allowedPublicRoles.includes(role)) return fail(res, 400, "Choose customer or provider.");
     if (await User.exists({ email }))
-      return fail(res, 409, "An account with that email already exists.");
+      return fail(res, 409, "An account with that email already exists.", [{ path: "email", msg: "This email is already registered. Please sign in." }]);
     const user = await User.create({
       fullName,
       email,
       phone,
+      role,
       passwordHash: await bcrypt.hash(password, 12),
     });
-    const verificationToken = await createAuthToken(
-      user,
-      "verify_email",
-      60 * 24,
-    );
+    const verificationCode = await createVerificationCode(user);
     return ok(
       res,
       {
         user: publicUser(user),
         token: signAccessToken(user),
-        ...(process.env.NODE_ENV !== "production" && { verificationToken }),
+        verificationCode,
       },
       "Account created.",
     );
   } catch (error) {
+    if (error.code === 11000 && (error.keyPattern?.email || error.keyValue?.email))
+      return fail(res, 409, "An account with that email already exists.", [{ path: "email", msg: "This email is already registered. Please sign in." }]);
     next(error);
   }
 };
@@ -71,7 +92,11 @@ exports.login = async (req, res, next) => {
       user.status !== "active" ||
       !(await bcrypt.compare(req.body.password, user.passwordHash))
     )
-      return fail(res, 401, "Invalid email or password.");
+      return fail(
+        res,
+        401,
+        "Invalid email or password.",
+      );
     return ok(
       res,
       { user: publicUser(user), token: signAccessToken(user) },
@@ -81,7 +106,28 @@ exports.login = async (req, res, next) => {
     next(error);
   }
 };
-exports.me = (req, res) => ok(res, publicUser(req.user));
+exports.me = (req, res) => {
+  res.set("Cache-Control", "no-store");
+  return ok(res, publicProfile(req.user));
+};
+exports.updateMe = async (req, res) => {
+  res.set("Cache-Control", "no-store");
+  try {
+    const changes = {};
+    // Never pass the request body directly to MongoDB.
+    if (Object.hasOwn(req.body, "fullName")) changes.fullName = req.body.fullName;
+    if (Object.hasOwn(req.body, "phone")) changes.phone = req.body.phone;
+    const user = await User.findOneAndUpdate(
+      { _id: req.user._id, status: "active" },
+      { $set: changes },
+      { new: true, runValidators: true },
+    );
+    if (!user) return fail(res, 401, "Your session is no longer active. Please sign in again.");
+    return ok(res, publicProfile(user), "Profile updated successfully.");
+  } catch {
+    return fail(res, 500, "Unable to save your profile. Please try again.");
+  }
+};
 exports.changePassword = async (req, res, next) => {
   try {
     const user = await User.findById(req.user._id).select("+passwordHash");
@@ -125,18 +171,17 @@ exports.resetPassword = async (req, res, next) => {
 };
 exports.verifyEmail = async (req, res, next) => {
   try {
-    const record = await AuthToken.findOne({
-      tokenHash: hashToken(req.body.token),
+    const record = await AuthToken.findOneAndUpdate({
+      user: req.user._id,
+      tokenHash: hashToken(req.body.code),
       type: "verify_email",
       usedAt: null,
       expiresAt: { $gt: new Date() },
-    });
-    if (!record)
-      return fail(res, 400, "Invalid or expired verification token.");
-    await User.findByIdAndUpdate(record.user, { emailVerified: true });
-    record.usedAt = new Date();
-    await record.save();
-    ok(res, null, "Email verified.");
+    }, { $set: { usedAt: new Date() } });
+    if (!record) return fail(res, 400, "Incorrect or expired code. Please try again or resend a code.");
+    const user = await User.findByIdAndUpdate(req.user._id, { emailVerified: true }, { new: true });
+    res.set("Cache-Control", "no-store");
+    ok(res, publicProfile(user), "Demo email verification completed.");
   } catch (error) {
     next(error);
   }
@@ -145,15 +190,11 @@ exports.resendVerification = async (req, res, next) => {
   try {
     const user = await User.findById(req.user._id);
     if (user.emailVerified) return ok(res, null, "Email is already verified.");
-    const verificationToken = await createAuthToken(
-      user,
-      "verify_email",
-      60 * 24,
-    );
+    const verificationCode = await createVerificationCode(user);
     ok(
       res,
-      process.env.NODE_ENV !== "production" ? { verificationToken } : null,
-      "A verification token was generated.",
+      { verificationCode },
+      "A new demo verification code was generated. No email was sent.",
     );
   } catch (error) {
     next(error);

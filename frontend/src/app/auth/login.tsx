@@ -1,95 +1,57 @@
-import { router } from "expo-router";
-import { useState } from "react";
-import {
-  ActivityIndicator,
-  KeyboardAvoidingView,
-  Platform,
-  Text,
-} from "react-native";
-import { Button, Input } from "@/components/ui";
+import { authError } from "@/api/auth-error";
+import { AuthButton, AuthField, AuthFooter, AuthLink, AuthPage } from "@/components/auth/AuthUI";
 import ErrorText from "@/components/ErrorText";
 import { useAuth } from "@/context/AuthContext";
+import { router } from "expo-router";
+import { useRef, useState } from "react";
+
 export default function Login() {
   const { login } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [fields, setFields] = useState<{ email?: string; password?: string }>({});
   const [busy, setBusy] = useState(false);
+  const lock = useRef(false);
+
   const submit = async () => {
+    if (lock.current) return;
+    const nextFields: typeof fields = {};
+    if (!email.trim()) nextFields.email = "Email is required.";
+    if (!password) nextFields.password = "Password is required.";
+    setFields(nextFields);
     setError("");
-    if (!email || !password)
-      return setError("Email and password are required.");
+    if (Object.keys(nextFields).length) return;
+    lock.current = true;
     setBusy(true);
     try {
-      await login(email, password);
-      router.replace("/");
-    } catch (e: any) {
-      setError(e.response?.data?.message || "Unable to sign in.");
+      const user = await login(email.trim(), password);
+      router.replace(user.role === "admin" ? "/admin/dashboard" : "/");
+    } catch (failure) {
+      const details = authError(failure, "Unable to sign in. Please try again.");
+      setError(details.message);
+      setFields(details.fields);
     } finally {
+      lock.current = false;
       setBusy(false);
     }
   };
+
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
-      style={styles.page}
+    <AuthPage
+      title={"Welcome\nhome again."}
+      subtitle="Your next helping hand is a tap away."
+      back="/onboarding/landing"
+      busy={busy}
     >
-      <Text style={styles.eyebrow}>HOME SERVICE</Text>
-      <Text style={styles.title}>Welcome back</Text>
-      <Text style={styles.subtitle}>Sign in to manage your account.</Text>
+      <AuthField label="Email address" value={email} editable={!busy} autoCapitalize="none" keyboardType="email-address" autoComplete="email" textContentType="emailAddress" error={fields.email} onChangeText={(value) => { setEmail(value); setFields((current) => ({ ...current, email: undefined })); }} />
+      <AuthField label="Password" value={password} editable={!busy} password autoComplete="current-password" textContentType="password" error={fields.password} onChangeText={(value) => { setPassword(value); setFields((current) => ({ ...current, password: undefined })); }} />
+      <AuthLink title="Forgot password?" disabled={busy} onPress={() => router.push("/auth/forgot-password")} />
       <ErrorText>{error}</ErrorText>
-      <Input
-        accessibilityLabel="Email"
-        placeholder="Email"
-        autoCapitalize="none"
-        keyboardType="email-address"
-        value={email}
-        onChangeText={setEmail}
-      />
-      <Input
-        accessibilityLabel="Password"
-        placeholder="Password"
-        secureTextEntry
-        value={password}
-        onChangeText={setPassword}
-      />
-      <Text
-        style={styles.link}
-        onPress={() => router.push("/auth/forgot-password")}
-      >
-        Forgot password?
-      </Text>
-      <Button
-        onPress={() => {
-          void submit();
-        }}
-      >
-        {busy ? <ActivityIndicator color="#FFF" /> : "Sign in"}
-      </Button>
-      <Text style={styles.footer}>
-        New here?{" "}
-        <Text style={styles.link} onPress={() => router.push("/auth/register")}>
-          Create account
-        </Text>
-      </Text>
-    </KeyboardAvoidingView>
+      <AuthFooter>
+        <AuthButton title="Sign In" busy={busy} onPress={() => void submit()} />
+        <AuthButton title="Create an account" secondary disabled={busy} onPress={() => router.push("/auth/register")} />
+      </AuthFooter>
+    </AuthPage>
   );
 }
-const styles = {
-  page: {
-    flex: 1,
-    backgroundColor: "#F7F7FB",
-    padding: 24,
-    justifyContent: "center" as const,
-  },
-  eyebrow: { color: "#0F9D8A", fontWeight: "900" as const, letterSpacing: 1.5 },
-  title: {
-    color: "#25213D",
-    fontSize: 32,
-    fontWeight: "900" as const,
-    marginTop: 8,
-  },
-  subtitle: { color: "#747B90", marginVertical: 10 },
-  link: { color: "#5B3DF5", fontWeight: "800" as const, marginBottom: 18 },
-  footer: { color: "#747B90", textAlign: "center" as const, marginTop: 20 },
-};

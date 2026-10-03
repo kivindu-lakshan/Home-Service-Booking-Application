@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useState } from "react";
-import { router } from "expo-router";
-import { Pressable, ScrollView, Text, TextInput } from "react-native";
-import { Card, Chip } from "@/components/ui";
 import { getAdminBookings } from "@/api/domain";
 import { EmptyState, ErrorState, LoadingState } from "@/components/DataState";
+import { Card, Chip } from "@/components/ui";
+import { router } from "expo-router";
+import { ChevronRight } from "lucide-react-native";
+import { useCallback, useEffect, useState } from "react";
+import { Pressable, ScrollView, Text, TextInput } from "react-native";
 export default function AdminBookings() {
   const [bookings, setBookings] = useState<any[]>([]);
   const [status, setStatus] = useState("all");
@@ -25,7 +26,8 @@ export default function AdminBookings() {
     }
   }, [status, search]);
   useEffect(() => {
-    void load();
+    const timer = setTimeout(() => void load(), 0);
+    return () => clearTimeout(timer);
   }, [load]);
   return (
     <ScrollView
@@ -105,7 +107,7 @@ export default function AdminBookings() {
               <Text
                 style={{ color: "#5B3DF5", fontWeight: "900", marginTop: 12 }}
               >
-                Assign provider ›
+                Assign provider <ChevronRight size={16} color="#5B3DF5" />
               </Text>
             </Pressable>
           </Card>

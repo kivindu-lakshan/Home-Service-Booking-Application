@@ -89,3 +89,66 @@ exports.byBooking = async (req, res, next) => {
     return next(error);
   }
 };
+exports.mine = async (req, res, next) => {
+  try {
+    return send(
+      res,
+      await Review.find({ customer: req.user._id })
+        .populate("provider", "user ratingAvg")
+        .populate("service", "name")
+        .populate("booking", "bookingRef scheduledDate")
+        .sort({ createdAt: -1 }),
+    );
+  } catch (error) {
+    return next(error);
+  }
+};
+async function refreshProvider(providerId) {
+  const [summary] = await Review.aggregate([
+    { $match: { provider: providerId } },
+    {
+      $group: {
+        _id: "$provider",
+        ratingAvg: { $avg: "$rating" },
+        reviewCount: { $sum: 1 },
+      },
+    },
+  ]);
+  await Provider.findByIdAndUpdate(providerId, {
+    ratingAvg: summary?.ratingAvg || 0,
+    reviewCount: summary?.reviewCount || 0,
+  });
+}
+exports.update = async (req, res, next) => {
+  try {
+    const review = await Review.findOneAndUpdate(
+      { _id: req.params.id, customer: req.user._id },
+      { rating: req.body.rating, comment: req.body.comment },
+      { new: true, runValidators: true },
+    ).populate("provider service booking");
+    if (!review)
+      return res
+        .status(404)
+        .json({ success: false, data: null, message: "Review not found" });
+    await refreshProvider(review.provider._id);
+    return send(res, review, "Review updated");
+  } catch (error) {
+    return next(error);
+  }
+};
+exports.remove = async (req, res, next) => {
+  try {
+    const review = await Review.findOneAndDelete({
+      _id: req.params.id,
+      customer: req.user._id,
+    });
+    if (!review)
+      return res
+        .status(404)
+        .json({ success: false, data: null, message: "Review not found" });
+    await refreshProvider(review.provider);
+    return send(res, null, "Review deleted");
+  } catch (error) {
+    return next(error);
+  }
+};

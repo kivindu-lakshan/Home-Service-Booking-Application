@@ -1,40 +1,53 @@
-import {
-  Platform,
-  Pressable,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from "react-native";
+import { useAccountStyles } from "@/context/AccountThemeContext";
+import { AccountText as Text } from "@/components/settings/AccountText";
 import type { ReactNode } from "react";
+import { Platform, Pressable, StyleSheet, TextInput, View } from "react-native";
+
 export function Button({
   children,
   onPress,
   secondary = false,
+  disabled = false,
 }: {
   children: ReactNode;
   onPress: () => void;
   secondary?: boolean;
+  disabled?: boolean;
 }) {
+  const themed = useAccountStyles();
   return (
     <Pressable
       onPress={onPress}
-      style={[styles.button, secondary && styles.secondary]}
+      disabled={disabled}
+      style={themed([
+        styles.button,
+        secondary && styles.secondary,
+        disabled && styles.disabled,
+      ])}
     >
-      <Text style={[styles.buttonText, secondary && styles.secondaryText]}>
+      <Text style={themed([styles.buttonText, secondary && styles.secondaryText])}>
         {children}
       </Text>
     </Pressable>
   );
 }
+
 export function Card({ children }: { children: ReactNode }) {
-  return <View style={styles.card}>{children}</View>;
+  const themed = useAccountStyles();
+  return <View style={themed(styles.card)}>{children}</View>;
 }
+
 export function Input(props: React.ComponentProps<typeof TextInput>) {
+  const themed = useAccountStyles();
   return (
-    <TextInput placeholderTextColor="#8890A5" style={styles.input} {...props} />
+    <TextInput
+      placeholderTextColor={themed({ placeholderTextColor: "#8890A5" }).placeholderTextColor}
+      style={themed(styles.input)}
+      {...props}
+    />
   );
 }
+
 export function Chip({
   children,
   active = false,
@@ -42,21 +55,25 @@ export function Chip({
   children: ReactNode;
   active?: boolean;
 }) {
+  const themed = useAccountStyles();
   return (
-    <View style={[styles.chip, active && styles.activeChip]}>
-      <Text style={[styles.chipText, active && styles.activeChipText]}>
+    <View style={themed([styles.chip, active && styles.activeChip])}>
+      <Text style={themed([styles.chipText, active && styles.activeChipText])}>
         {children}
       </Text>
     </View>
   );
 }
+
 export function StatusBadge({ status }: { status: string }) {
+  const themed = useAccountStyles();
   return (
-    <View style={styles.status}>
-      <Text style={styles.statusText}>{status.replace("_", " ")}</Text>
+    <View style={themed(styles.status)}>
+      <Text style={themed(styles.statusText)}>{status.replace("_", " ")}</Text>
     </View>
   );
 }
+
 export const styles = StyleSheet.create({
   button: {
     minHeight: 48,
@@ -69,6 +86,7 @@ export const styles = StyleSheet.create({
   buttonText: { color: "#FFF", fontWeight: "800", fontSize: 15 },
   secondary: { backgroundColor: "#EDEBFF" },
   secondaryText: { color: "#5B3DF5" },
+  disabled: { opacity: 0.45 },
   card: {
     backgroundColor: "#FFF",
     borderRadius: 18,

@@ -1,17 +1,21 @@
-import { useCallback, useEffect, useState } from "react";
-import { router } from "expo-router";
-import {
-  Pressable,
-  RefreshControl,
-  ScrollView,
-  Text,
-  View,
-} from "react-native";
-import { Card } from "@/components/ui";
-import { EmptyState, ErrorState, LoadingState } from "@/components/DataState";
 import { getMyBookings } from "@/api/domain";
+import { EmptyState, ErrorState, LoadingState } from "@/components/DataState";
+import { Card } from "@/components/ui";
+import { ProfileNavigation } from "@/components/profile/ProfileNavigation";
+import { useAuth } from "@/context/AuthContext";
+import { router } from "expo-router";
+import { useCallback, useEffect, useState } from "react";
+import {
+    Pressable,
+    RefreshControl,
+    ScrollView,
+    Text,
+    View,
+} from "react-native";
+  import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function BookingsScreen() {
+  const { user } = useAuth();
   const [bookings, setBookings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -31,26 +35,25 @@ export default function BookingsScreen() {
     }
   }, []);
   useEffect(() => {
-    void load();
-  }, [load]);
-  if (loading) return <LoadingState label="Loading bookings..." />;
-  if (error) return <ErrorState onRetry={() => void load()} />;
+    if (user?.role === "admin") {
+      router.replace("/admin/dashboard");
+      return;
+    }
+    const timer = setTimeout(() => void load(), 0);
+    return () => clearTimeout(timer);
+  }, [load, user?.role]);
   return (
-    <ScrollView
-      style={{ backgroundColor: "#F7F7FB" }}
-      contentContainerStyle={{ padding: 20 }}
-      refreshControl={
-        <RefreshControl
-          refreshing={refreshing}
-          onRefresh={() => void load(true)}
-        />
-      }
-    >
-      <Text style={{ fontSize: 30, fontWeight: "900", color: "#25213D" }}>
-        My bookings
-      </Text>
-      {bookings.length === 0 ? (
-        <EmptyState label="No bookings found." />
+    <SafeAreaView style={{ flex: 1, backgroundColor: "#F7F7FD" }}>
+      <View style={{ flex: 1, maxWidth: 520, width: "100%", alignSelf: "center" }}>
+        <ScrollView
+          style={{ flex: 1 }}
+          contentContainerStyle={{ padding: 22, paddingTop: 12, paddingBottom: 24 }}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void load(true)} />}
+        >
+          <Text style={{ fontSize: 28, fontWeight: "800", color: "#242E49" }}>My bookings</Text>
+          <Text style={{ color: "#7C879F", marginTop: 8, marginBottom: 22 }}>Keep track of every service in one place.</Text>
+          {loading ? <LoadingState label="Loading bookings..." /> : error ? <ErrorState onRetry={() => void load()} /> : bookings.length === 0 ? (
+            <EmptyState label="No bookings found." />
       ) : (
         bookings.map((booking) => (
           <Card key={booking._id}>
@@ -110,8 +113,10 @@ export default function BookingsScreen() {
               )}
             </View>
           </Card>
-        ))
-      )}
-    </ScrollView>
+        )))}
+        </ScrollView>
+        <ProfileNavigation active="bookings" />
+      </View>
+    </SafeAreaView>
   );
 }

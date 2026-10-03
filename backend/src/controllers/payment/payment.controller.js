@@ -62,10 +62,43 @@ exports.create = async (req, res, next) => {
         message: "Invalid payment method",
       });
     if (method === "card") {
-      const paymentMethod = await PaymentMethod.findOne({
-        _id: req.body.paymentMethodId,
-        user: req.user._id,
-      });
+      let paymentMethod;
+      if (req.body.card) {
+        const { cardholderName, cardNumber, expiryDate, cvv } = req.body.card;
+        if (
+          !cardholderName?.trim() ||
+          !/^\d{16}$/.test(cardNumber || "") ||
+          !/^(0[1-9]|1[0-2])\/(\d{2})$/.test(expiryDate || "") ||
+          !/^\d{3,4}$/.test(cvv || "")
+        )
+          return res.status(422).json({
+            success: false,
+            data: null,
+            message:
+              "Enter a cardholder name, a 16-digit card number, a valid MM/YY expiry, and a 3 or 4 digit CVV",
+          });
+        const [month, year] = expiryDate.split("/").map(Number);
+        const expiry = new Date(2000 + year, month, 0, 23, 59, 59);
+        if (expiry < new Date())
+          return res.status(422).json({
+            success: false,
+            data: null,
+            message: "The card expiry date has passed",
+          });
+        paymentMethod = await PaymentMethod.create({
+          user: req.user._id,
+          type: "card",
+          brand: "Card",
+          last4: cardNumber.slice(-4),
+          gatewayToken: `sim_${crypto.randomBytes(16).toString("hex")}`,
+          isDefault: false,
+        });
+      } else {
+        paymentMethod = await PaymentMethod.findOne({
+          _id: req.body.paymentMethodId,
+          user: req.user._id,
+        });
+      }
       if (!paymentMethod)
         return res.status(422).json({
           success: false,
@@ -78,7 +111,7 @@ exports.create = async (req, res, next) => {
       { booking: booking._id },
       {
         booking: booking._id,
-        paymentMethod: req.body.paymentMethodId || undefined,
+        paymentMethod: paymentMethod?._id,
         method,
         amount: booking.totalPrice,
         status: paid ? "paid" : "pending",
