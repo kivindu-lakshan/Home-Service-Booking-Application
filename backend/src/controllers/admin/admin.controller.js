@@ -4,6 +4,7 @@ const {
   BookingAssignment,
   AdminActivityLog,
   User,
+  ProviderApplication,
 } = require("../../models");
 const send = (res, data, message = "Success") =>
   res.json({ success: true, data, message });
@@ -29,7 +30,9 @@ exports.dashboard = async (req, res, next) => {
         .sort({ createdAt: -1 })
         .limit(10),
     ]);
+    const pendingProviderApplications = await ProviderApplication.countDocuments({ status: "pending" });
     return send(res, {
+      pendingProviderApplications,
       totalBookings,
       pending,
       ongoing,

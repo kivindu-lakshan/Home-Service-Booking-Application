@@ -12,6 +12,7 @@ export default function RoleDashboard({ role }: { role: "admin" | "provider" }) 
     <Button secondary onPress={() => router.push("/profile")}>My profile</Button>
     <Button secondary onPress={() => router.push("/auth/change-password")}>Change password</Button>
     <Button secondary onPress={() => router.push("/bookings")}>My bookings</Button>
+    {role === "admin" && <Button secondary onPress={() => router.push("/admin/provider-applications")}>Provider Applications</Button>}
     {role === "admin" && <Button secondary onPress={() => router.push("/admin/dashboard")}>Existing admin tools</Button>}
     <Button onPress={async () => { await logout(); router.replace("/auth/login"); }}>Log out</Button>
   </ScrollView>;

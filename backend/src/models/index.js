@@ -260,6 +260,9 @@ const ProviderApplication = make("ProviderApplication", {
   skills: { type: String, required: true, maxlength: 1000 },
   priceFrom: { type: Number, min: 0, max: 10000000 },
   location: ref("ProviderLocation"),
+  reviewedAt: Date,
+  reviewedBy: ref("User", false),
+  rejectionReason: { type: String, maxlength: 2000 },
   documents: [{ name: String, mimeType: String, size: Number, storageKey: { type: String, select: false } }],
   status: { type: String, enum: ["pending", "approved", "rejected"], default: "pending", required: true },
 }, { collection: "providerapplications" });

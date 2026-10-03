@@ -4,14 +4,14 @@ const { once } = require('node:events');
 const { randomBytes } = require('node:crypto');
 const express = require('express');
 const jwt = require('jsonwebtoken');
-const { User, ServiceCategory, Service, Provider, Review, Booking } = require('../src/models');
+const { User, ServiceCategory, Service, Provider, Review, Booking, ProviderApplication } = require('../src/models');
 const { distance } = require('../src/controllers/catalogue/catalogue.controller');
 const ids = { user: '507f1f77bcf86cd799439011', category: '507f1f77bcf86cd799439012', service: '507f1f77bcf86cd799439013', provider: '507f1f77bcf86cd799439014', address: '507f1f77bcf86cd799439015', booking: '507f1f77bcf86cd799439016' };
 const secret = randomBytes(32).toString('hex'), oldSecret = process.env.JWT_SECRET;
 const originals = [];
 function replace(model, key, fn) { originals.push([model, key, model[key]]); model[key] = fn; }
 function query(value) { return { populate() { return this; }, select() { return this; }, sort() { return this; }, lean: async () => value }; }
-let server, base, role, user, service, provider, rows, created, serviceQuery, providerQuery, failed, duplicate;
+let server, base, role, user, service, provider, rows, created, serviceQuery, providerQuery, failed, duplicate, applicationQuery, approved;
 const payload = () => ({ serviceId: ids.service, providerId: ids.provider, addressId: ids.address, scheduledDate: '2099-10-05', scheduledTime: '10:00' });
 before(async () => {
   process.env.JWT_SECRET = secret;
@@ -22,6 +22,11 @@ before(async () => {
   replace(Service, 'findOne', () => query(service));
   replace(Provider, 'find', q => { providerQuery = q; if (failed) throw Error('private database detail'); return query(rows); });
   replace(Provider, 'findOne', () => query(provider));
+  replace(ProviderApplication, 'exists', async () => approved ? { _id: ids.booking } : null);
+  replace(ProviderApplication, 'find', filter => {
+    applicationQuery = filter; if (failed) throw Error('private database detail');
+    return query(approved ? rows.map(p => ({ provider: p, service: p.services[0].service, professionalName: p.user.fullName, aboutMe: p.aboutMe, yearsExperience: p.yearsExperience, priceFrom: p.services[0].priceFrom, location: { address: p.city, latitude: p.latitude, longitude: p.longitude } })) : []);
+  });
   replace(Review, 'aggregate', async () => []);
   replace(Booking, 'create', async value => { if (duplicate) throw Object.assign(Error('duplicate'), { code: 11000 }); created = value; return { ...value, _id: ids.booking }; });
   replace(Booking, 'findOne', () => ({ populate: async () => null }));
@@ -31,10 +36,10 @@ before(async () => {
   server = app.listen(0, '127.0.0.1'); await once(server, 'listening'); base = `http://127.0.0.1:${server.address().port}/api`;
 });
 beforeEach(() => {
-  role = 'customer'; created = null; failed = false; duplicate = false;
+  role = 'customer'; approved = true; created = null; failed = false; duplicate = false;
   user = { _id: ids.user, status: 'active', addresses: [{ _id: ids.address, line1: 'Saved street', areaCity: 'Colombo', isDefault: true }] };
   service = { _id: ids.service, name: 'Existing service', isActive: true, basePrice: 2500, category: { _id: ids.category, isActive: true }, estDurationHours: '1-3 hours' };
-  provider = { _id: ids.provider, user: { _id: ids.user, fullName: 'Existing provider', status: 'active', email: 'private@example.com' }, status: 'active', city: 'Colombo', isAvailable: true, services: [{ service, priceFrom: 2000 }], availability: [] };
+  provider = { _id: ids.provider, user: { _id: ids.user, fullName: 'Existing provider', role: 'provider', status: 'active', email: 'private@example.com' }, status: 'active', city: 'Colombo', isAvailable: true, services: [{ service, priceFrom: 2000 }], availability: [] };
   rows = [provider];
 });
 after(async () => { originals.forEach(([m,k,v]) => { m[k] = v; }); if (oldSecret === undefined) delete process.env.JWT_SECRET; else process.env.JWT_SECRET = oldSecret; await new Promise(resolve => server.close(resolve)); });
@@ -52,7 +57,7 @@ test('invalid category, service and provider IDs return 400', async () => { for 
 test('inactive category hides service details', async () => { service.category.isActive = false; assert.equal((await request(`/catalogue/services/${ids.service}`)).status, 404); });
 test('provider list uses service membership, safe user fields and stored location', async () => {
   const result = await request(`/catalogue/services/${ids.service}/providers`);
-  assert.equal(providerQuery['services.service'], ids.service); assert.equal(providerQuery.status, 'active'); assert.equal(result.body.data.providers[0].user.email, undefined); assert.equal(result.body.data.providers[0].location.city, 'Colombo'); assert.equal(result.body.data.providers[0].priceFrom, 2000);
+  assert.equal(applicationQuery.service, ids.service); assert.equal(applicationQuery.status, 'approved'); assert.equal(result.body.data.providers[0].user.email, undefined); assert.equal(result.body.data.providers[0].location.city, 'Colombo'); assert.equal(result.body.data.providers[0].priceFrom, 2000);
 });
 test('search providers by name and city', async () => { assert.equal((await request(`/catalogue/services/${ids.service}/providers?search=missing`)).body.data.providers.length, 0); });
 test('lowest price sorts missing values last without inventing prices', async () => {
@@ -66,7 +71,7 @@ test('nearest sorts using customer and provider coordinates', async () => {
   const result = await request(`/catalogue/services/${ids.service}/providers?filter=nearest`); assert.equal(result.body.data.nearestSupported, true); assert.ok(result.body.data.providers[0].distanceKm < result.body.data.providers[1].distanceKm); assert.equal(distance({ latitude: 0, longitude: 0 }, { latitude: 0, longitude: 0 }), 0);
 });
 test('provider details rejects a service the provider does not offer', async () => { assert.equal((await request(`/catalogue/providers/${ids.provider}?serviceId=${ids.category}`)).status, 404); });
-test('provider location comes from existing provider fields', async () => { const result = await request(`/catalogue/providers/${ids.provider}/location`); assert.equal(result.body.data.city, 'Colombo'); });
+test('provider location comes from approved application location', async () => { const result = await request(`/catalogue/providers/${ids.provider}/location`); assert.equal(result.body.data.city, 'Colombo'); });
 test('inactive provider user is hidden', async () => { provider.user.status = 'suspended'; assert.equal((await request(`/catalogue/services/${ids.service}/providers`)).body.data.providers.length, 0); });
 test('service ratings are omitted when no reviews exist', async () => { assert.equal((await request(`/catalogue/services/${ids.service}`)).body.data.ratingAvg, undefined); });
 test('booking uses customer owner, provider price and saved address, then returns existing booking ID', async () => {
@@ -83,3 +88,11 @@ test('booking enforces published availability', async () => { provider.availabil
 test('unique slot conflict returns actionable 409', async () => { duplicate = true; provider.services[0].service = ids.service; assert.equal((await request('/bookings', 'POST', payload())).status, 409); });
 test('booking details is scoped to current customer', async () => { let filter; Booking.findOne = q => { filter = q; return { populate: async () => null }; }; assert.equal((await request(`/bookings/${ids.booking}`)).status, 404); assert.equal(filter.customer, ids.user); });
 test('database errors do not expose internals', async () => { failed = true; const result = await request(`/catalogue/services/${ids.service}/providers`); assert.equal(result.status, 500); assert.ok(!JSON.stringify(result).includes('private database')); });
+
+test('unapproved provider is hidden from catalogue and cannot receive new bookings', async () => {
+  approved = false;
+  assert.equal((await request(`/catalogue/services/${ids.service}/providers`)).body.data.providers.length, 0);
+  assert.equal((await request(`/catalogue/providers/${ids.provider}`)).status, 404);
+  assert.equal((await request('/bookings', 'POST', payload())).status, 409);
+  assert.equal(created, null);
+});

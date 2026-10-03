@@ -5,25 +5,16 @@ const fields = ['name', 'category', 'description', 'basePrice', 'imageUrl', 'est
 const isId = value => typeof value === 'string' && /^[a-f\d]{24}$/i.test(value);
 const categoryFields = 'name icon sortOrder isActive';
 const serviceFields = 'name category description basePrice imageUrl estDurationHours serviceType inclusions isActive createdAt updatedAt';
+const { approvedApplications, publicProvider } = require('../../utils/approved-providers');
 const providerFields = 'user city ratingAvg reviewCount services';
 
 async function withProviders(services) {
   const isList = Array.isArray(services);
   const items = isList ? services : [services];
   const ids = items.map(service => service._id);
-  const providers = Provider.db.readyState === 1
-    ? await Provider.find({ status: 'active', 'services.service': { $in: ids } })
-      .select(providerFields).populate('user', 'fullName')
-    : [];
+  const applications = Provider.db.readyState === 1 ? await approvedApplications({ service: { $in: ids } }) : [];
   const result = items.map(service => {
-    const assignedProviders = providers.filter(provider => provider.services.some(item => String(item.service) === String(service._id)))
-      .map(provider => ({
-        _id: provider._id,
-        user: provider.user,
-        city: provider.city,
-        ratingAvg: provider.ratingAvg,
-        reviewCount: provider.reviewCount,
-      }));
+    const assignedProviders = applications.filter(a => String(a.service?._id) === String(service._id)).map(a => publicProvider(a)).filter(Boolean).map(p => ({ _id: p._id, user: p.user, city: p.location.city, ratingAvg: p.ratingAvg, reviewCount: p.reviewCount }));
     return { ...(typeof service.toObject === 'function' ? service.toObject() : service), assignedProviders };
   });
   return isList ? result : result[0];
@@ -73,7 +64,7 @@ exports.validateService = async (req, res, next) => {
     }
     if (Object.hasOwn(body, 'inclusions')) {
       if (!Array.isArray(body.inclusions) || body.inclusions.length > 30 || body.inclusions.some(value => typeof value !== 'string' || !value.trim() || value.trim().length > 200))
-        errors.push({ path: 'inclusions', msg: 'Provide up to 30 inclusions, each 1–200 characters.' });
+        errors.push({ path: 'inclusions', msg: 'Provide up to 30 inclusions, each 1â€“200 characters.' });
       else changes.inclusions = body.inclusions.map(value => value.trim());
     }
     if (errors.length) return fail(res, 400, 'Please correct the highlighted fields.', errors);
