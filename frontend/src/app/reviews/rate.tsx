@@ -4,6 +4,7 @@ import { ScrollView, Text, TextInput } from "react-native";
 import { Button, Card } from "@/components/ui";
 import { createReview } from "@/api/domain";
 import ErrorText from "@/components/ErrorText";
+import { ProfileBackButton } from "@/components/profile/ProfileNavigation";
 export default function RateProvider() {
   const { bookingId } = useLocalSearchParams<{ bookingId: string }>();
   const [rating, setRating] = useState(0);
@@ -31,6 +32,7 @@ export default function RateProvider() {
       style={{ backgroundColor: "#F7F7FB" }}
       contentContainerStyle={{ padding: 20 }}
     >
+      <ProfileBackButton onPress={() => router.canGoBack() ? router.back() : router.replace("/bookings")} />
       <Text style={{ fontSize: 30, fontWeight: "900", color: "#25213D" }}>
         Rate your provider
       </Text>

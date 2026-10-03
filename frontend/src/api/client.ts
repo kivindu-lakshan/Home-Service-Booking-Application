@@ -1,4 +1,4 @@
-import axios from "axios";
+import { create as createAxios } from "axios";
 import * as SecureStore from "expo-secure-store";
 import Constants from "expo-constants";
 import { Platform } from "react-native";
@@ -18,10 +18,19 @@ const removeToken = async () => {
 };
 
 // Web runs on the backend computer; physical devices use the configured LAN URL.
+<<<<<<< HEAD
 const apiUrl = process.env.EXPO_PUBLIC_API_URL ||
   Constants.expoConfig?.extra?.apiUrl ||
   "http://localhost:3000/api";
 export const api = axios.create({ baseURL: apiUrl });
+=======
+const apiUrl = Platform.OS === "web"
+  ? "http://localhost:3000/api"
+  : process.env.EXPO_PUBLIC_API_URL ||
+    Constants.expoConfig?.extra?.apiUrl ||
+    "http://localhost:3000/api";
+export const api = createAxios({ baseURL: apiUrl });
+>>>>>>> e07b2d19a462abb5e166d11afa83484c101d9e26
 api.interceptors.request.use(async (config) => {
   const token = await getToken();
   if (token) config.headers.Authorization = `Bearer ${token}`;

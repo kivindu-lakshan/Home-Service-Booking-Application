@@ -18,12 +18,27 @@ router.post(
     next();
   },
   [
-    body("fullName").trim().isLength({ min: 2 }),
-    body("email").isEmail().normalizeEmail(),
-    body("phone").isString().bail().trim().notEmpty().withMessage("Phone number is required."),
-    password("password"),
+    body("fullName").isString().withMessage("Full name is required.").bail().trim()
+      .notEmpty().withMessage("Full name is required.").bail()
+      .isLength({ min: 2, max: 100 }).withMessage("Full name must be between 2 and 100 characters.").bail()
+      .matches(/^\p{L}[\p{L}\p{M} ]*$/u).withMessage("Full name must contain only letters and spaces.").hide(),
+    body("email").isString().withMessage("Email address is required.").bail().trim()
+      .notEmpty().withMessage("Email address is required.").bail()
+      .isLength({ max: 254 }).isEmail().withMessage("Enter a valid email address.").bail().normalizeEmail().hide(),
+    body("phone").isString().withMessage("Phone number is required.").bail().trim()
+      .notEmpty().withMessage("Phone number is required.").bail()
+      .matches(/^07[0-9]{8}$/).withMessage("Enter a 10-digit Sri Lankan mobile number starting with 07.").hide(),
+    body("password").isString().withMessage("Password is required.").bail()
+      .notEmpty().withMessage("Password is required.").bail()
+      .custom(value => value.length >= 8 && /[A-Za-z]/.test(value) && /[0-9]/.test(value))
+      .withMessage(controller.passwordError).hide(),
   ],
-  validate,
+  (req, res, next) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) return fail(res, 400, "Please correct the highlighted fields.",
+      errors.array().map(({ path, msg }) => ({ path, msg })));
+    next();
+  },
   controller.register,
 );
 router.post(
@@ -121,7 +136,8 @@ router.post(
 );
 router.post(
   "/verify-email",
-  [body("token").notEmpty()],
+  auth,
+  [body("code").isString().bail().trim().matches(/^[0-9]{6}$/).withMessage("Enter a 6-digit verification code.").hide()],
   validate,
   controller.verifyEmail,
 );

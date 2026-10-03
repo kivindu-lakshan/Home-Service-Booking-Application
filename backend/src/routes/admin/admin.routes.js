@@ -3,6 +3,7 @@ const auth = require("../../middleware/auth");
 const role = require("../../middleware/role");
 const controller = require("../../controllers/admin/admin.controller");
 router.use(auth, role("admin"));
+router.use("/services", require("../service/service.routes").adminRouter);
 router.get("/dashboard", controller.dashboard);
 router.get("/bookings", controller.bookings);
 router.get("/bookings/:id/available-providers", controller.availableProviders);

@@ -4,22 +4,56 @@ import { RefreshControl, ScrollView, Text, View } from "react-native";
 import { Card } from "@/components/ui";
 import { getAdminDashboard } from "@/api/domain";
 import { EmptyState, ErrorState, LoadingState } from "@/components/DataState";
+
+type DashboardData = {
+  totalBookings: number;
+  pending: number;
+  ongoing: number;
+  completed: number;
+  availableProviders: number;
+  complaints: number;
+  recentActivity?: { _id: string; action: string; createdAt: string }[];
+};
+
 export default function AdminDashboard() {
-  const [data, setData] = useState<any>();
+  const [data, setData] = useState<DashboardData | null>(null);
   const [error, setError] = useState(false);
+
   const load = useCallback(async () => {
     try {
-      setData((await getAdminDashboard()).data.data);
+      const response = await getAdminDashboard();
+      setData(response.data.data);
+      setError(false);
     } catch {
       setError(true);
     }
   }, []);
+
   useEffect(() => {
-    void load();
+    void Promise.resolve().then(load);
   }, [load]);
-  if (!data && !error)
-    return <LoadingState label="Loading admin dashboard..." />;
-  if (error) return <ErrorState onRetry={() => void load()} />;
+
+  if (!data && !error) return <LoadingState label="Loading admin dashboard..." />;
+  if (!data && error)
+    return (
+      <ErrorState
+        onRetry={() => {
+          setError(false);
+          void load();
+        }}
+      />
+    );
+  if (!data) return null;
+
+  const metrics: [string, number][] = [
+    ["Total bookings", data.totalBookings],
+    ["Pending", data.pending],
+    ["Ongoing", data.ongoing],
+    ["Completed", data.completed],
+    ["Available providers", data.availableProviders],
+    ["Complaints", data.complaints],
+  ];
+
   return (
     <ScrollView
       style={{ backgroundColor: "#F7F7FB" }}
@@ -39,15 +73,8 @@ export default function AdminDashboard() {
           marginVertical: 18,
         }}
       >
-        {[
-          ["Total bookings", data.totalBookings],
-          ["Pending", data.pending],
-          ["Ongoing", data.ongoing],
-          ["Completed", data.completed],
-          ["Available providers", data.availableProviders],
-          ["Complaints", data.complaints],
-        ].map(([label, value]) => (
-          <Card key={label as string}>
+        {metrics.map(([label, value]) => (
+          <Card key={label}>
             <Text style={{ color: "#747B90" }}>{label}</Text>
             <Text
               style={{
@@ -85,7 +112,7 @@ export default function AdminDashboard() {
         Recent activities
       </Text>
       {data.recentActivity?.length ? (
-        data.recentActivity.map((activity: any) => (
+        data.recentActivity.map((activity) => (
           <Card key={activity._id}>
             <Text style={{ color: "#25213D", fontWeight: "800" }}>
               {activity.action}

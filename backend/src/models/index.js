@@ -244,7 +244,32 @@ const SupportTicket = make("SupportTicket", {
   status: { type: String, enum: ["pending", "in_progress", "resolved", "cancelled"], default: "pending", required: true },
 });
 SupportTicket.schema.index({ user: 1, createdAt: -1 });
+const ProviderLocation = make("ProviderLocation", {
+  provider: ref("Provider"),
+  address: { type: String, required: true, trim: true, maxlength: 300 },
+  latitude: { type: Number, required: true, min: -90, max: 90 },
+  longitude: { type: Number, required: true, min: -180, max: 180 },
+}, { collection: "providerlocations" });
+const ProviderApplication = make("ProviderApplication", {
+  provider: ref("Provider"),
+  service: ref("Service"),
+  professionalName: { type: String, required: true, maxlength: 120 },
+  phone: { type: String, required: true, maxlength: 30 },
+  yearsExperience: { type: Number, required: true, min: 0, max: 80 },
+  aboutMe: { type: String, required: true, maxlength: 2000 },
+  qualifications: { type: String, required: true, maxlength: 2000 },
+  skills: { type: String, required: true, maxlength: 1000 },
+  priceFrom: { type: Number, min: 0, max: 10000000 },
+  location: ref("ProviderLocation"),
+  documents: [{ name: String, mimeType: String, size: Number, storageKey: { type: String, select: false } }],
+  status: { type: String, enum: ["pending", "approved", "rejected"], default: "pending", required: true },
+}, { collection: "providerapplications" });
+ProviderApplication.schema.index({ provider: 1, service: 1 }, { unique: true, partialFilterExpression: { status: { $in: ["pending", "approved"] } } });
+ProviderApplication.schema.index({ provider: 1, createdAt: -1 });
+
 const models = {
+  ProviderLocation,
+  ProviderApplication,
   SupportTicket,
   User,
   AuthToken,

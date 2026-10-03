@@ -8,11 +8,26 @@ import { AddressPage, addressStyles } from "@/components/address/AddressUI";
 import { LoadingState } from "@/components/DataState";
 import ErrorText from "@/components/ErrorText";
 export { AddressButton as AuthButton } from "@/components/address/AddressUI";
-export function AuthPage({ title, subtitle, back, busy, children }: { title: string; subtitle: string; back: Href; busy?: boolean; children: ReactNode }) {
+export function AuthPage({ title, subtitle, back, busy, children, afterAuth = "/" }: { afterAuth?: Href; title: string; subtitle: string; back: Href; busy?: boolean; children: ReactNode }) {
   const { user, loading } = useAuth();
   if (loading) return <AddressPage title={title} subtitle={subtitle} onBack={() => {}} busy><LoadingState label="Checking your session..." /></AddressPage>;
-  if (user) return <Redirect href="/" />;
-  return <AddressPage title={title} subtitle={subtitle} busy={busy} onBack={() => router.canGoBack() ? router.back() : router.replace(back)}><Image source={require("../../../assets/images/homehalo-logo.png")} accessibilityLabel="HomeHalo logo" resizeMode="contain" style={{ width: 180, height: 100, alignSelf: "center", marginBottom: 20 }} />{children}</AddressPage>;
+  if (user) return <Redirect href={afterAuth} />;
+  return (
+    <AddressPage
+      title={title}
+      subtitle={subtitle}
+      busy={busy}
+      onBack={() => router.canGoBack() ? router.back() : router.replace(back)}
+    >
+      <Image
+        source={require("../../../assets/images/homehalo-logo.png")}
+        accessibilityLabel="HomeHalo logo"
+        resizeMode="contain"
+        style={{ width: 180, height: 100, alignSelf: "center", marginBottom: 20 }}
+      />
+      {children}
+    </AddressPage>
+  );
 }
 export function AuthLink({ title, onPress, disabled = false }: { title: string; onPress?: () => void; disabled?: boolean }) {
   const themed = useAccountStyles();
