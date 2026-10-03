@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { serviceImageUri } from '@/utils/service-image';
 import { useState } from 'react';
 import { Redirect, router } from 'expo-router';
 import { Image, Pressable, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
@@ -44,7 +45,8 @@ export function CatalogueState({ loading, error, retry }: { loading: boolean; er
 }
 export function CatalogueImage({ uri, label, avatar = false }: { uri?: string; label: string; avatar?: boolean }) {
   const themed = useAccountStyles(); const [failed, setFailed] = useState(false);
-  if (uri && !failed) return <Image accessibilityLabel={label} source={{ uri }} onError={() => setFailed(true)} style={avatar ? css.avatar : css.image} />;
+  const imageUri = avatar ? uri : serviceImageUri(uri);
+  if (imageUri && !failed) return <Image accessibilityLabel={label} source={{ uri: imageUri }} resizeMode='cover' onError={() => setFailed(true)} style={avatar ? css.avatar : css.image} />;
   return <View style={themed([avatar ? css.avatar : css.image, css.placeholder])}><Text style={themed(css.placeholderText)}>{avatar ? label.slice(0, 1).toUpperCase() : '⌂'}</Text></View>;
 }
 export const priceLabel = (price?: number) => Number.isFinite(price) ? `LKR ${price!.toLocaleString()}` : 'Price on request';
@@ -58,6 +60,7 @@ export function ProviderCard({ provider, serviceId }: { provider: Provider; serv
       {provider.yearsExperience !== undefined && <Text style={themed(css.copy)}>{provider.yearsExperience} years experience</Text>}
       {!!provider.location.city && <Text style={themed(css.copy)}>{provider.location.city}</Text>}
       {provider.distanceKm !== undefined && <Text style={themed(css.copy)}>{provider.distanceKm.toFixed(1)} km away</Text>}
+      {provider.isAvailable !== undefined && <Text style={themed(css.copy)}>{provider.isAvailable ? 'Accepting bookings' : 'Currently unavailable'}</Text>}
     </View></View><Text style={themed(css.link)}>From {priceLabel(provider.priceFrom)}  ›</Text>
   </Card></Pressable>;
 }

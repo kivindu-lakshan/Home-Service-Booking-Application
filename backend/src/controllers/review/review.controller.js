@@ -1,3 +1,6 @@
+const mongoose = require("mongoose");
+const { completedReviews } = require("../../utils/completed-reviews");
+const { approvedApplications, publicProvider } = require("../../utils/approved-providers");
 const { Booking, Review, Provider } = require("../../models");
 const send = (res, data, message = "Success") =>
   res.json({ success: true, data, message });
@@ -38,7 +41,6 @@ exports.create = async (req, res, next) => {
       provider: booking.provider._id,
       rating: req.body.rating,
       comment: req.body.comment,
-      service: booking.service?._id,
     });
     const [summary] = await Review.aggregate([
       { $match: { provider: booking.provider._id } },
@@ -64,18 +66,24 @@ exports.create = async (req, res, next) => {
   }
 };
 exports.byProvider = async (req, res, next) => {
-  try {
-    const reviews = await Review.find({ provider: req.params.providerId })
-      .populate("customer", "fullName avatarUrl")
-      .populate("booking", "bookingRef scheduledDate")
-      .sort({ createdAt: -1 });
-    const provider = await Provider.findById(req.params.providerId).select(
-      "ratingAvg reviewCount",
-    );
-    return send(res, { provider, reviews });
-  } catch (error) {
-    return next(error);
-  }
+ try {
+  const validId = value => typeof value === 'string' && /^[a-f\d]{24}$/i.test(value);
+  if (!validId(req.params.providerId) || (req.query.serviceId && !validId(req.query.serviceId))) return res.status(400).json({ success: false, data: null, message: 'Invalid provider or service ID' });
+  const applications = await approvedApplications({ provider: req.params.providerId, ...(req.query.serviceId ? { service: req.query.serviceId } : {}) });
+  if (!applications.some(a => publicProvider(a))) return res.status(404).json({ success: false, data: null, message: 'Approved provider not found for this service' });
+  const page = Number(req.query.page || 1);
+  if (!Number.isInteger(page) || page < 1 || page > 100000) return res.status(400).json({ success: false, data: null, message: 'Invalid review page' });
+  const pipeline = completedReviews({ provider: new mongoose.Types.ObjectId(req.params.providerId) });
+  const [result] = await Review.aggregate([...pipeline, { $facet: {
+   summary: [{ $group: { _id: null, ratingAvg: { $avg: '$rating' }, reviewCount: { $sum: 1 } } }],
+   reviews: [{ $sort: { createdAt: -1, _id: -1 } }, { $skip: (page - 1) * 20 }, { $limit: 20 },
+    { $lookup: { from: 'users', localField: 'customer', foreignField: '_id', as: 'author' } },
+    { $project: { _id: 1, rating: 1, comment: 1, createdAt: 1, customer: { fullName: { $arrayElemAt: ['$author.fullName', 0] }, avatarUrl: { $arrayElemAt: ['$author.avatarUrl', 0] } } } }],
+  } }]);
+  const summary = result?.summary[0];
+  res.set('Cache-Control', 'private, no-store');
+  return send(res, { provider: { ratingAvg: summary?.ratingAvg || 0, reviewCount: summary?.reviewCount || 0 }, reviews: result?.reviews || [], page, pageSize: 20, total: summary?.reviewCount || 0 });
+ } catch (error) { next(error); }
 };
 exports.byBooking = async (req, res, next) => {
   try {
@@ -85,6 +93,68 @@ exports.byBooking = async (req, res, next) => {
         "customer provider",
       ),
     );
+  } catch (error) {
+    return next(error);
+  }
+};
+exports.mine = async (req, res, next) => {
+  try {
+    return send(
+      res,
+      await Review.find({ customer: req.user._id })
+        .populate({ path: "provider", select: "user ratingAvg", populate: { path: "user", select: "fullName" } })
+        .populate("booking", "bookingRef scheduledDate")
+        .sort({ createdAt: -1 }),
+    );
+  } catch (error) {
+    return next(error);
+  }
+};
+async function refreshProvider(providerId) {
+  const [summary] = await Review.aggregate([
+    { $match: { provider: providerId } },
+    {
+      $group: {
+        _id: "$provider",
+        ratingAvg: { $avg: "$rating" },
+        reviewCount: { $sum: 1 },
+      },
+    },
+  ]);
+  await Provider.findByIdAndUpdate(providerId, {
+    ratingAvg: summary?.ratingAvg || 0,
+    reviewCount: summary?.reviewCount || 0,
+  });
+}
+exports.update = async (req, res, next) => {
+  try {
+    const review = await Review.findOneAndUpdate(
+      { _id: req.params.id, customer: req.user._id },
+      { rating: req.body.rating, comment: req.body.comment },
+      { new: true, runValidators: true },
+    ).populate("provider booking");
+    if (!review)
+      return res
+        .status(404)
+        .json({ success: false, data: null, message: "Review not found" });
+    await refreshProvider(review.provider._id);
+    return send(res, review, "Review updated");
+  } catch (error) {
+    return next(error);
+  }
+};
+exports.remove = async (req, res, next) => {
+  try {
+    const review = await Review.findOneAndDelete({
+      _id: req.params.id,
+      customer: req.user._id,
+    });
+    if (!review)
+      return res
+        .status(404)
+        .json({ success: false, data: null, message: "Review not found" });
+    await refreshProvider(review.provider);
+    return send(res, null, "Review deleted");
   } catch (error) {
     return next(error);
   }

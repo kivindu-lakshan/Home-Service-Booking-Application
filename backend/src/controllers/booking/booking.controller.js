@@ -1,5 +1,5 @@
 const crypto = require('crypto');
-const { Booking, Provider, User } = require('../../models');
+const { Booking, Provider, User, ProviderApplication } = require('../../models');
 const { activeService, validId } = require('../catalogue/catalogue.controller');
 const { ok, fail } = require('../../utils/response');
 exports.create = async (req, res, next) => {
@@ -14,6 +14,7 @@ exports.create = async (req, res, next) => {
     if (!Number.isFinite(appointment.getTime()) || new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Colombo', year: 'numeric', month: '2-digit', day: '2-digit' }).format(day) !== body.scheduledDate || appointment <= new Date()) return fail(res, 400, 'Choose a future appointment date and time');
     if (body.notes !== undefined && (typeof body.notes !== 'string' || body.notes.length > 2000)) return fail(res, 400, 'Notes must be under 2000 characters');
     const [service, provider] = await Promise.all([activeService(body.serviceId), Provider.findOne({ _id: body.providerId, status: 'active', isAvailable: { $ne: false }, 'services.service': body.serviceId }).lean()]);
+    if (!await ProviderApplication.exists({ provider: body.providerId, service: body.serviceId, status: 'approved' })) return fail(res, 409, 'This provider is not approved for the selected service');
     if (!service || !provider || !await User.exists({ _id: provider.user, status: 'active' })) return fail(res, 409, 'The selected provider or service is no longer available');
     const address = req.user.addresses?.find(a => String(a._id) === body.addressId);
     if (!address || !address.line1) return fail(res, 400, 'Choose one of your saved addresses');

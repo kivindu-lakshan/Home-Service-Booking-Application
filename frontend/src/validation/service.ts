@@ -9,7 +9,7 @@ export function validateService(draft: ServiceDraft): ServiceErrors {
   if (!draft.basePrice.trim() || !/^\d+(\.\d+)?$/.test(draft.basePrice.trim()) || !Number.isFinite(Number(draft.basePrice)) || Number(draft.basePrice) > 100000000) errors.basePrice = 'Enter a starting price between 0 and 100,000,000.';
   if (draft.description.length > 4000) errors.description = 'Description must be at most 4,000 characters.';
   if (draft.estDurationHours.length > 100) errors.estDurationHours = 'Duration must be at most 100 characters.';
-  if (draft.imageUrl.trim()) {
+  if (draft.imageUrl.trim() && !/^\/api\/services\/images\/[a-f\d]{8}-[a-f\d]{4}-[a-f\d]{4}-[a-f\d]{4}-[a-f\d]{12}\.(png|jpg)$/i.test(draft.imageUrl.trim())) {
     try { const url = new URL(draft.imageUrl.trim()); if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password || draft.imageUrl.length > 2048) throw new Error(); }
     catch { errors.imageUrl = 'Enter a valid HTTP or HTTPS image URL.'; }
   }

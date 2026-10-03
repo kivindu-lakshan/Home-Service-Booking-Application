@@ -40,10 +40,6 @@ export default function RootLayout() {
           options={{ title: "Reset password" }}
         />
         <Stack.Screen
-          name="auth/verify-email"
-          options={{ headerShown: false }}
-        />
-        <Stack.Screen
           name="auth/change-password"
           options={{ title: "Change password" }}
         />

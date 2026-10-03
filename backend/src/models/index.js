@@ -225,7 +225,6 @@ const Review = make("Review", {
   booking: { ...ref("Booking"), unique: true },
   customer: ref("User"),
   provider: ref("Provider"),
-  service: ref("Service", false),
   rating: { type: Number, min: 1, max: 5, required: true },
   comment: String,
 });
@@ -261,6 +260,9 @@ const ProviderApplication = make("ProviderApplication", {
   skills: { type: String, required: true, maxlength: 1000 },
   priceFrom: { type: Number, min: 0, max: 10000000 },
   location: ref("ProviderLocation"),
+  reviewedAt: Date,
+  reviewedBy: ref("User", false),
+  rejectionReason: { type: String, maxlength: 2000 },
   documents: [{ name: String, mimeType: String, size: Number, storageKey: { type: String, select: false } }],
   status: { type: String, enum: ["pending", "approved", "rejected"], default: "pending", required: true },
 }, { collection: "providerapplications" });

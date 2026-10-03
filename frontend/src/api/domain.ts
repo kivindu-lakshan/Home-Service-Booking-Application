@@ -10,8 +10,8 @@ export const createPayment = (
   bookingId: string,
   payload: { method: string; paymentMethodId?: string },
 ) => api.post(`/payments/booking/${bookingId}`, payload);
-export const getProviderReviews = (providerId: string) =>
-  api.get(`/reviews/provider/${providerId}`);
+export const getProviderReviews = (providerId: string, serviceId?: string, signal?: AbortSignal, page = 1) =>
+  api.get(`/reviews/provider/${encodeURIComponent(providerId)}`, { params: { serviceId, page }, signal, timeout: 15000 });
 export const getBookingReview = (bookingId: string) =>
   api.get(`/reviews/booking/${bookingId}`);
 export const createReview = (payload: {
