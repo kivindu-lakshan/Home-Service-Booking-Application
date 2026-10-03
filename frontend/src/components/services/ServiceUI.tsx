@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import { useState } from 'react';
 import { Redirect } from 'expo-router';
 import { Image, Pressable, StyleSheet, View } from 'react-native';
-import { Archive, Clock, MapPin, Pencil, Plus, RotateCw, Trash2 } from 'lucide-react-native';
+import { Archive, Calendar, Clock, MapPin, Pencil, Plus, RotateCw, Trash2 } from 'lucide-react-native';
 import { useAuth } from '@/context/AuthContext';
 import { LoadingState } from '@/components/DataState';
 import { AccountText as Text } from '@/components/settings/AccountText';
@@ -17,10 +17,10 @@ export function ServiceGuard({ admin = false, children }: { admin?: boolean; chi
   return <>{children}</>;
 }
 export function ServiceAction({ title, label = title, icon, onPress, primary = false, danger = false, disabled = false }: {
-  title: string; label?: string; icon: 'add' | 'edit' | 'delete' | 'archive' | 'refresh'; onPress: () => void; primary?: boolean; danger?: boolean; disabled?: boolean;
+  title: string; label?: string; icon: 'add' | 'edit' | 'delete' | 'archive' | 'refresh' | 'calendar'; onPress: () => void; primary?: boolean; danger?: boolean; disabled?: boolean;
 }) {
   const themed = useAccountStyles();
-  const Icon = { add: Plus, edit: Pencil, delete: Trash2, archive: Archive, refresh: RotateCw }[icon];
+  const Icon = { add: Plus, edit: Pencil, delete: Trash2, archive: Archive, refresh: RotateCw, calendar: Calendar }[icon];
   const color = primary ? '#FFFFFF' : danger ? '#B73248' : '#633CFF';
   return <Pressable accessibilityRole='button' accessibilityLabel={title} accessibilityState={{ disabled }} disabled={disabled} onPress={onPress} style={({ pressed }) => themed([serviceStyles.action, primary && serviceStyles.primaryAction, danger && serviceStyles.dangerAction, (pressed || disabled) && { opacity: 0.65 }])}>
     <Icon size={16} color={color} strokeWidth={2} /><Text style={themed({ color, fontSize: 13, fontWeight: '700' })}>{label}</Text>

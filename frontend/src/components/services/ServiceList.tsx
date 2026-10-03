@@ -75,6 +75,7 @@ export default function ServiceList({ admin = false }: { admin?: boolean }) {
       {!!error && <AddressButton title='Try again' secondary onPress={() => void load(true)} />}
       {loading ? <LoadingState label='Loading services...' /> : !error && !filteredServices.length ? <EmptyState label={provider && query.trim() ? 'No services match your search.' : showInactive ? 'No inactive services.' : 'No active services are available yet.'} /> : filteredServices.map(service => provider ? <ProviderServiceCard key={`${service._id}:${service.imageUrl || ''}`} service={service} /> : <ServiceCard key={`${service._id}:${service.imageUrl || ''}`} service={service}>
         {!admin && user?.role === 'provider' && <ServiceAction title='Apply for this Service' icon='add' primary onPress={() => router.push({ pathname: '/provider/apply', params: { serviceId: service._id } })} />}
+        {!admin && user?.role === 'customer' && service.isActive && <ServiceAction title='Book and schedule this service' label='Book Service' icon='calendar' primary onPress={() => router.push({ pathname: '/bookings/new', params: { serviceId: service._id } })} />}
         {admin && <View style={serviceStyles.row}>
           <View style={{ flex: 1 }}><ServiceAction title='Edit' icon='edit' onPress={() => router.push({ pathname: '/admin/service-form', params: { id: service._id } })} /></View>
           {service.isActive && <View style={{ flex: 1 }}><ServiceAction title='Delete' icon='delete' danger onPress={() => { setDeleteError(''); setSelected(service); }} /></View>}
