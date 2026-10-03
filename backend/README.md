@@ -27,8 +27,14 @@ Payment, review, and admin management endpoints are now backed by MongoDB:
 | POST            | `/api/admin/bookings/:id/assign`              | Persist provider assignment                        |
 | GET             | `/api/admin/jobs`                             | Admin-only active job monitor                      |
 | PATCH           | `/api/admin/jobs/:id/status`                  | Persist job status changes                         |
+| GET/POST        | `/api/bookings`                               | List own bookings or create new scheduled booking  |
+| GET             | `/api/bookings/slots`                         | Get available scheduling time slots                |
+| GET             | `/api/bookings/:id`                           | Get single booking details & payment state         |
+| PATCH           | `/api/bookings/:id/reschedule`                | Reschedule booking date/time slot                  |
+| PATCH           | `/api/bookings/:id/cancel`                    | Cancel booking with reason                         |
+| PATCH           | `/api/bookings/:id/status`                    | Provider/Admin live job status progress            |
 
-The frontend refreshes data when these screens open and after mutations; bookings and jobs also support pull-to-refresh. The current repository has no booking/service creation flow, so these APIs intentionally require real booking/service/provider records already present in Atlas rather than generating demo data.
+The frontend refreshes data when these screens open and after mutations; bookings and jobs also support pull-to-refresh. Customers can schedule new bookings directly from services, choose dates/slots, reschedule, cancel, or track live service status.
 
 | Method | Endpoint                        | Auth   |
 | ------ | ------------------------------- | ------ |
