@@ -134,14 +134,6 @@ router.post(
   validate,
   controller.resetPassword,
 );
-router.post(
-  "/verify-email",
-  auth,
-  [body("code").isString().bail().trim().matches(/^[0-9]{6}$/).withMessage("Enter a 6-digit verification code.").hide()],
-  validate,
-  controller.verifyEmail,
-);
-router.post("/resend-verification", auth, controller.resendVerification);
 router.delete(
   "/me",
   auth,

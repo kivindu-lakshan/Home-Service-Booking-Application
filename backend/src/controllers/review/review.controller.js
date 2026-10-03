@@ -88,8 +88,6 @@ exports.byBooking = async (req, res, next) => {
     return next(error);
   }
 };
-<<<<<<< HEAD
-=======
 exports.mine = async (req, res, next) => {
   try {
     return send(
@@ -152,4 +150,3 @@ exports.remove = async (req, res, next) => {
     return next(error);
   }
 };
->>>>>>> origin-02/feature/payment,review,admin

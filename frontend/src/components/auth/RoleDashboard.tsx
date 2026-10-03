@@ -10,7 +10,6 @@ export default function RoleDashboard({ role }: { role: "admin" | "provider" }) 
     <Text>Welcome, {user?.fullName}</Text>
     <Card><Text>{role === "admin" ? "Admin" : "Provider"} navigation â€” more tools coming soon.</Text></Card>
     <Button secondary onPress={() => router.push("/profile")}>My profile</Button>
-    {!user?.emailVerified && <Button secondary onPress={() => router.push("/auth/verify-email")}>Verify email</Button>}
     <Button secondary onPress={() => router.push("/auth/change-password")}>Change password</Button>
     <Button secondary onPress={() => router.push("/bookings")}>My bookings</Button>
     {role === "admin" && <Button secondary onPress={() => router.push("/admin/dashboard")}>Existing admin tools</Button>}

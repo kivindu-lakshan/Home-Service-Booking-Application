@@ -20,15 +20,10 @@ type User = {
 type AuthValue = {
   user: User | null;
   loading: boolean;
-<<<<<<< HEAD
-  verificationCode: string | null;
-  login: (email: string, password: string) => Promise<User>;
-=======
   login: (
     email: string,
     password: string,
   ) => Promise<User>;
->>>>>>> origin-02/feature/payment,review,admin
   register: (
     fullName: string,
     email: string,
@@ -43,12 +38,6 @@ type AuthValue = {
 const AuthContext = createContext<AuthValue>({
   user: null,
   loading: true,
-<<<<<<< HEAD
-  verificationCode: null,
-  login: async () => {
-    throw new Error("AuthProvider is not available.");
-  },
-=======
   login: async () => ({
     id: "",
     fullName: "",
@@ -56,7 +45,6 @@ const AuthContext = createContext<AuthValue>({
     role: "customer",
     emailVerified: false,
   }),
->>>>>>> origin-02/feature/payment,review,admin
   register: async () => {},
   logout: async () => {},
   syncProfile: () => {},
@@ -79,15 +67,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = async (email: string, password: string): Promise<User> => {
     const response = await api.post("/auth/login", { email, password });
     await saveToken(response.data.data.token);
-<<<<<<< HEAD
-    setVerificationCode(null);
-    const signedInUser: User = response.data.data.user;
-    setUser(signedInUser);
-    return signedInUser;
-=======
     setUser(response.data.data.user);
     return response.data.data.user;
->>>>>>> origin-02/feature/payment,review,admin
   };
 
   const register = async (
@@ -111,7 +92,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = async () => {
     await clearToken();
     setUser(null);
-    setVerificationCode(null);
   };
 
   const syncProfile = useCallback(
@@ -127,21 +107,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   return (
     <AuthContext.Provider
-<<<<<<< HEAD
-      value={{
-        user,
-        loading,
-        verificationCode,
-        login,
-        register,
-        verifyEmail,
-        resendVerification,
-        logout,
-        syncProfile,
-      }}
-=======
       value={{ user, loading, login, register, logout, syncProfile }}
->>>>>>> origin-02/feature/payment,review,admin
     >
       {children}
     </AuthContext.Provider>

@@ -80,12 +80,12 @@ export default function Register() {
       lock.current = false;
       setBusy(false);
     }
-    router.replace("/auth/verify-email");
+    router.replace("/");
   };
 
   return (
     <AuthPage
-      afterAuth="/auth/verify-email"
+      afterAuth="/"
       title={"Your home journey\nstarts here."}
       subtitle="Create your HomeHalo account."
       back="/onboarding/account-type"
