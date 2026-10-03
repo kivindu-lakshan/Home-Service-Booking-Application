@@ -2,7 +2,7 @@ import { isAxiosError } from 'axios';
 import { api } from './client';
 export type Category = { _id: string; name: string; icon?: string };
 export type Service = { _id: string; name: string; category: Category; description?: string; imageUrl?: string; basePrice?: number; estDurationHours?: string; serviceType?: string; inclusions?: string[]; ratingAvg?: number; reviewCount?: number };
-export type Provider = { _id: string; user: { _id: string; fullName: string; avatarUrl?: string } | null; aboutMe?: string; yearsExperience?: number; isVerified?: boolean; ratingAvg?: number; reviewCount?: number; isAvailable?: boolean; priceFrom?: number; distanceKm?: number; location: { city?: string; latitude?: number; longitude?: number }; services: { service: Service; priceFrom?: number }[]; availability?: { dayOfWeek: number; startTime: string; endTime: string; isAvailable: boolean }[] };
+export type Provider = { _id: string; user: { _id: string; fullName: string; avatarUrl?: string } | null; aboutMe?: string; skills?: string; yearsExperience?: number; isVerified?: boolean; ratingAvg?: number; reviewCount?: number; isAvailable?: boolean; priceFrom?: number; distanceKm?: number; location: { address?: string; city?: string; latitude?: number; longitude?: number }; services: { service: Service; priceFrom?: number }[]; availability?: { dayOfWeek: number; startTime: string; endTime: string; isAvailable: boolean }[] };
 export type ProviderFilter = 'all' | 'top_rated' | 'nearest' | 'lowest_price';
 type Envelope<T> = { data: T; message: string };
 const get = async <T>(path: string, signal?: AbortSignal, params?: object) => (await api.get<Envelope<T>>(`/catalogue${path}`, { signal, params, timeout: 15000 })).data.data;

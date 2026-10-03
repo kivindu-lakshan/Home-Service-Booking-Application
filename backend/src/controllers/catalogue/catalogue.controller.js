@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const { completedReviews, providerRatings } = require('../../utils/completed-reviews');
 const { approvedApplications, publicProvider } = require('../../utils/approved-providers');
 const { ServiceCategory, Service, Provider, Review } = require('../../models');
 const { ok, fail } = require('../../utils/response');
@@ -29,11 +30,11 @@ exports.service = async (req, res, next) => {
     if (!validId(req.params.id)) return fail(res, 400, 'Invalid service ID');
     const service = await activeService(req.params.id);
     if (!service) return fail(res, 404, 'Service not found');
-    const [rating] = await Review.aggregate([{ $match: { service: new mongoose.Types.ObjectId(req.params.id) } }, { $group: { _id: null, ratingAvg: { $avg: '$rating' }, reviewCount: { $sum: 1 } } }]);
+    const [rating] = await Review.aggregate([...completedReviews({}), { $match: { 'completedBooking.service': new mongoose.Types.ObjectId(req.params.id) } }, { $group: { _id: null, ratingAvg: { $avg: '$rating' }, reviewCount: { $sum: 1 } } }]);
     return ok(res, { ...service, ...(rating ? { ratingAvg: rating.ratingAvg, reviewCount: rating.reviewCount } : {}) });
   } catch (e) { next(e); }
 };
-// This repository stores location on Provider. No separate location schema exists.
+// Legacy mapper retained for compatibility; discovery uses approved ProviderLocation records.
 const location = provider => ({ city: provider.city, latitude: provider.latitude, longitude: provider.longitude });
 const coordinates = p => Number.isFinite(p?.latitude) && Math.abs(p.latitude) <= 90 && Number.isFinite(p?.longitude) && Math.abs(p.longitude) <= 180;
 function distance(a, b) {
@@ -63,7 +64,7 @@ exports.providers = async (req, res, next) => {
     if (!['all', 'top_rated', 'nearest', 'lowest_price'].includes(filter)) return fail(res, 400, 'Invalid provider filter');
     // Only saved customer coordinates are used; never infer a device location.
     const origin = req.user.addresses?.find(a => a.isDefault) || req.user.addresses?.[0];
-    let rows = (await approvedApplications({ service: id })).map(a => publicProvider(a)).filter(Boolean);
+    let rows = await providerRatings((await approvedApplications({ service: id })).map(a => publicProvider(a)).filter(Boolean));
     rows = rows.map(p => ({ ...p, ...(coordinates(origin) && coordinates(p.location) ? { distanceKm: distance(origin, p.location) } : {}) }));
     const search = text(req.query.search).toLowerCase();
     if (search) rows = rows.filter(p => `${p.user?.fullName || ''} ${p.location.city || ''}`.toLowerCase().includes(search));
@@ -82,7 +83,8 @@ exports.provider = async (req, res, next) => {
   const applications = await approvedApplications({ provider: req.params.id });
   const selected = req.query.serviceId ? applications.find(a => String(a.service?._id) === req.query.serviceId) : applications.find(a => publicProvider(a));
   const result = selected && publicProvider(selected, applications);
-  return result ? ok(res, result) : fail(res, 404, 'Approved provider not found for this service');
+  if (result) return ok(res, (await providerRatings([result]))[0]);
+  return fail(res, 404, 'Approved provider not found for this service');
  } catch (e) { next(e); }
 };
 exports.providerLocation = async (req, res, next) => {

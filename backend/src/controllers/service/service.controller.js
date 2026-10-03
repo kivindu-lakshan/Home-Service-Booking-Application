@@ -39,7 +39,7 @@ exports.validateService = async (req, res, next) => {
       }
       changes[key] = body[key].trim();
       if (key === 'name' && changes[key].length < 2) errors.push({ path: key, msg: 'Service name must contain at least 2 characters.' });
-      if (key === 'imageUrl' && changes[key]) {
+      if (key === 'imageUrl' && changes[key] && !/^\/api\/services\/images\/[a-f\d]{8}-[a-f\d]{4}-[a-f\d]{4}-[a-f\d]{4}-[a-f\d]{12}\.(png|jpg)$/i.test(changes[key])) {
         try { const url = new URL(changes[key]); if (!['https:', 'http:'].includes(url.protocol) || url.username || url.password) throw new Error(); }
         catch { errors.push({ path: key, msg: 'Enter a valid HTTP or HTTPS image URL.' }); }
       }

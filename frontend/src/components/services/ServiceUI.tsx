@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { serviceImageUri } from '@/utils/service-image';
 import { useState } from 'react';
 import { Redirect, router } from 'expo-router';
 import { Image, Pressable, StyleSheet, View } from 'react-native';
@@ -29,8 +30,9 @@ export function ServiceAction({ title, label = title, icon, onPress, primary = f
 export function ServiceCard({ service, children }: { service: Service; children?: ReactNode }) {
   const themed = useAccountStyles();
   const [failedImage, setFailedImage] = useState(false);
+  const imageUri = serviceImageUri(service.imageUrl);
   return <Card>
-    {!!service.imageUrl && !failedImage && <Image accessibilityLabel={service.name} source={{ uri: service.imageUrl }} onError={() => setFailedImage(true)} resizeMode='cover' style={serviceStyles.image} />}
+    {!!imageUri && !failedImage && <Image accessibilityLabel={service.name} source={{ uri: imageUri }} onError={() => setFailedImage(true)} resizeMode='cover' style={serviceStyles.image} />}
     <View style={serviceStyles.cardTop}>
       <Text style={themed(serviceStyles.category)}>{service.category?.name || 'Category unavailable'}</Text>
       <View style={[serviceStyles.status, !service.isActive && { backgroundColor: '#F0F1F6' }]}><View style={[serviceStyles.dot, !service.isActive && { backgroundColor: '#9298A8' }]} /><Text style={{ color: service.isActive ? '#217A62' : '#727A8D', fontSize: 11, fontWeight: '700' }}>{service.isActive ? 'Active' : 'Inactive'}</Text></View>

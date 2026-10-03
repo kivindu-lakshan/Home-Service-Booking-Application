@@ -1,4 +1,6 @@
 import { api } from './client';
+import { Platform } from 'react-native';
+import type { DocumentPickerAsset } from 'expo-document-picker';
 import { isAxiosError } from 'axios';
 export type ServiceCategory = { _id: string; name: string; isActive: boolean; icon?: string };
 export type Service = {
@@ -19,6 +21,14 @@ export async function getService(id: string, signal?: AbortSignal): Promise<Serv
 }
 export async function getServiceCategories(signal?: AbortSignal): Promise<ServiceCategory[]> {
   return (await api.get('/services/categories', { signal })).data.data;
+}
+export async function uploadServiceImage(image: DocumentPickerAsset): Promise<string> {
+  const form = new FormData();
+  if (Platform.OS === 'web') {
+    if (!image.file) throw new Error('Select your image again.');
+    form.append('image', image.file, image.name);
+  } else form.append('image', { uri: image.uri, name: image.name, type: image.mimeType } as unknown as Blob);
+  return (await api.post('/admin/services/images', form, { timeout: 60000, headers: { 'Content-Type': 'multipart/form-data' } })).data.data.imageUrl;
 }
 export const createService = (payload: ServiceInput) => api.post('/admin/services', payload);
 export const updateService = (id: string, payload: ServiceInput) => api.patch(`/admin/services/${encodeURIComponent(id)}`, payload);

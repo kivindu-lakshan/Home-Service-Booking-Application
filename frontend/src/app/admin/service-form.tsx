@@ -1,14 +1,16 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { isAxiosError } from 'axios';
 import { router, useLocalSearchParams } from 'expo-router';
-import { Pressable, Switch, TextInput, View } from 'react-native';
+import * as DocumentPicker from 'expo-document-picker';
+import { serviceImageUri } from '@/utils/service-image';
+import { Image, Pressable, Switch, TextInput, View } from 'react-native';
 import { AccountText as Text } from '@/components/settings/AccountText';
 import { useAccountStyles } from '@/context/AccountThemeContext';
 import { AddressPage, AddressButton, addressStyles } from '@/components/address/AddressUI';
 import { LoadingState } from '@/components/DataState';
 import ErrorText from '@/components/ErrorText';
 import { ServiceGuard } from '@/components/services/ServiceUI';
-import { createService, updateService, getService, getServiceCategories, serviceError, type ServiceCategory } from '@/api/services';
+import { uploadServiceImage, createService, updateService, getService, getServiceCategories, serviceError, type ServiceCategory } from '@/api/services';
 import { emptyService, servicePayload, validateService, type ServiceDraft, type ServiceErrors } from '@/validation/service';
 
 export default function ServiceFormRoute() { return <ServiceGuard admin><ServiceForm /></ServiceGuard>; }
@@ -22,6 +24,9 @@ function ServiceForm() {
   const [error, setError] = useState('');
   const [loadFailed, setLoadFailed] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [image, setImage] = useState<DocumentPicker.DocumentPickerAsset | null>(null);
+  const [imageFailed, setImageFailed] = useState(false);
+  const preview = image?.uri || serviceImageUri(form.imageUrl);
   const lock = useRef(false);
   const request = useRef<AbortController | null>(null);
   const load = useCallback(async () => {
@@ -38,7 +43,18 @@ function ServiceForm() {
   }, [id]);
   useEffect(() => { const timer = setTimeout(() => void load(), 0); return () => { clearTimeout(timer); request.current?.abort(); }; }, [load]);
   const update = <K extends keyof ServiceDraft>(key: K, value: ServiceDraft[K]) => {
+    if (key === 'imageUrl') { setImage(null); setImageFailed(false); }
     setForm(current => ({ ...current, [key]: value })); setFields(current => ({ ...current, [key]: undefined }));
+  };
+  const selectImage = async () => {
+    try {
+      const selected = await DocumentPicker.getDocumentAsync({ type: ['image/png', 'image/jpeg'], multiple: false, copyToCacheDirectory: true, base64: false });
+      if (selected.canceled) return;
+      const asset = selected.assets[0];
+      const mimeType = asset.mimeType || (/\.png$/i.test(asset.name) ? 'image/png' : /\.jpe?g$/i.test(asset.name) ? 'image/jpeg' : '');
+      if (asset.size === 0 || (asset.size !== undefined && asset.size > 5 * 1024 * 1024) || !['image/png', 'image/jpeg'].includes(mimeType)) { setError('Select one PNG or JPEG image, maximum 5 MB.'); return; }
+      setImage({ ...asset, mimeType }); setImageFailed(false); setError('');
+    } catch { setError('Unable to select an image. Please try again.'); }
   };
   const save = async () => {
     if (lock.current) return;
@@ -47,6 +63,7 @@ function ServiceForm() {
     lock.current = true; setBusy(true);
     try {
       const payload = servicePayload(form);
+      if (image) { payload.imageUrl = await uploadServiceImage(image); update('imageUrl', payload.imageUrl); setImage(null); setImageFailed(false); }
       if (id) await updateService(id, payload); else await createService(payload);
       router.replace('/admin/services');
     } catch (failure) {
@@ -77,6 +94,14 @@ function ServiceForm() {
       {textField('description', 'Description', true)}
       {textField('basePrice', 'Starting price (LKR)')}
       {textField('estDurationHours', 'Estimated duration')}
+      <View style={addressStyles.field}>
+        <Text style={themed(addressStyles.label)}>Service Image</Text>
+        {!!preview && !imageFailed && <Image key={preview} accessibilityLabel='Service image preview' source={{ uri: preview }} resizeMode='cover' onError={() => setImageFailed(true)} style={{ width: '100%', height: 170, borderRadius: 14, marginBottom: 12 }} />}
+        {imageFailed && <Text style={themed(addressStyles.hint)}>Image preview unavailable. Select another image or check the URL.</Text>}
+        <AddressButton title={preview ? 'Replace Service Image' : 'Select Service Image'} secondary disabled={busy} onPress={() => void selectImage()} />
+        <Text style={themed(addressStyles.hint)}>PNG or JPEG, maximum 5 MB. The image uploads when you save the service.</Text>
+        {!!preview && <AddressButton title='Remove Service Image' secondary disabled={busy} onPress={() => { setImage(null); setImageFailed(false); update('imageUrl', ''); }} />}
+      </View>
       {textField('imageUrl', 'Service image URL')}
       <Text style={themed(addressStyles.label)}>Service type</Text>
       <View accessibilityRole='radiogroup' accessibilityLabel='Service type' style={{ flexDirection: 'row', gap: 8, marginBottom: 18 }}>
