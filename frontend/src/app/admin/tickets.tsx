@@ -1,29 +1,41 @@
-import {
-    deleteTicketResponse,
-    getAdminTickets,
-    respondToTicket,
-} from "@/api/domain";
+import { getAdminTickets } from "@/api/domain";
 import { EmptyState, ErrorState, LoadingState } from "@/components/DataState";
-import ErrorText from "@/components/ErrorText";
-import { Button, Input } from "@/components/ui";
+import { router } from "expo-router";
+import { Mail, MoreVertical } from "lucide-react-native";
 import { useCallback, useEffect, useState } from "react";
-import { Alert, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+
+function initials(name?: string) {
+  return (name || "Customer")
+    .split(" ")
+    .map((part) => part[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
+}
+function priority(status: string) {
+  if (status === "resolved") return "Low";
+  if (status === "in_progress") return "High";
+  return "Medium";
+}
+function due(status: string) {
+  if (status === "resolved") return "Resolved";
+  if (status === "in_progress") return "Response due in 5 hours";
+  return "Response due in 24 hours";
+}
 
 export default function AdminTickets() {
   const [tickets, setTickets] = useState<any[]>([]);
-  const [editing, setEditing] = useState<string | null>(null);
-  const [response, setResponse] = useState("");
-  const [status, setStatus] = useState<"in_progress" | "resolved">(
-    "in_progress",
-  );
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const load = useCallback(async () => {
     try {
       setTickets((await getAdminTickets()).data.data);
       setError("");
-    } catch (e: any) {
-      setError(e.response?.data?.message || "Unable to load support tickets.");
+    } catch (failure: any) {
+      setError(
+        failure.response?.data?.message || "Unable to load support tickets.",
+      );
     } finally {
       setLoading(false);
     }
@@ -36,209 +48,133 @@ export default function AdminTickets() {
     const timer = setInterval(() => void load(), 5000);
     return () => clearInterval(timer);
   }, [load]);
-  const save = async (id: string) => {
-    if (!response.trim()) return setError("Write a response first.");
-    try {
-      await respondToTicket(id, { adminResponse: response, status });
-      setEditing(null);
-      await load();
-    } catch (e: any) {
-      setError(e.response?.data?.message || "Unable to save response.");
-    }
-  };
-  const remove = (id: string) =>
-    Alert.alert(
-      "Delete response?",
-      "The customer will see the ticket as open again.",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Delete",
-          style: "destructive",
-          onPress: async () => {
-            await deleteTicketResponse(id);
-            await load();
-          },
-        },
-      ],
-    );
   if (loading) return <LoadingState label="Loading support tickets..." />;
   if (error && !tickets.length)
     return <ErrorState onRetry={() => void load()} />;
   return (
-    <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
-      <Text style={styles.heading}>Support tickets</Text>
-      <Text style={styles.subtitle}>
-        Resolve customer issues from one focused queue.
-      </Text>
-      <ErrorText>{error}</ErrorText>
-      {!tickets.length ? (
-        <EmptyState label="No customer tickets found." />
-      ) : (
-        tickets.map((ticket) => {
-          const isEditing = editing === ticket._id;
-          return (
-            <View key={ticket._id} style={styles.ticketCard}>
-              <View style={styles.ticketHeader}>
-                <Text style={styles.subject}>{ticket.subject}</Text>
-                <Text
-                  style={[
-                    styles.status,
-                    ticket.status === "resolved" && styles.resolved,
-                  ]}
-                >
-                  {ticket.status.replace("_", " ")}
-                </Text>
-              </View>
-              <Text style={styles.customer}>
-                {ticket.customer?.fullName || "Customer"}
-              </Text>
-              <Text style={styles.message}>{ticket.message}</Text>
-              {isEditing ? (
-                <>
-                  <Input
-                    placeholder="Write your response"
-                    value={response}
-                    onChangeText={setResponse}
-                    multiline
-                    style={{
-                      minHeight: 90,
-                      textAlignVertical: "top",
-                      marginTop: 12,
-                    }}
-                  />
-                  <View style={styles.editStatusRow}>
-                    <Text
-                      onPress={() => setStatus("in_progress")}
-                      style={[
-                        styles.action,
-                        status !== "in_progress" && styles.inactiveAction,
-                      ]}
-                    >
-                      In progress
-                    </Text>
-                    <Text
-                      onPress={() => setStatus("resolved")}
-                      style={[
-                        styles.resolvedAction,
-                        status !== "resolved" && styles.inactiveAction,
-                      ]}
-                    >
-                      Resolved
-                    </Text>
-                  </View>
-                  <Button onPress={() => void save(ticket._id)}>
-                    Save response
-                  </Button>
-                </>
-              ) : ticket.adminResponse ? (
-                <Text style={styles.response}>
-                  Response: {ticket.adminResponse}
-                </Text>
-              ) : (
-                <Text style={styles.awaiting}>Awaiting response</Text>
-              )}
-              <View style={styles.actions}>
-                <Text
-                  onPress={() => {
-                    setEditing(isEditing ? null : ticket._id);
-                    setResponse(ticket.adminResponse || "");
-                    setStatus(
-                      ticket.status === "resolved" ? "resolved" : "in_progress",
-                    );
-                  }}
-                  style={styles.action}
-                >
-                  {isEditing
-                    ? "Cancel"
-                    : ticket.adminResponse
-                      ? "Edit response"
-                      : "Reply"}
-                </Text>
-                {ticket.adminResponse ? (
-                  <Text
-                    onPress={() => remove(ticket._id)}
-                    style={styles.deleteAction}
-                  >
-                    Delete response
+    <View style={styles.screen}>
+      <ScrollView contentContainerStyle={styles.content}>
+        {error ? <Text style={styles.error}>{error}</Text> : null}
+        {!tickets.length ? (
+          <EmptyState label="No customer tickets found." />
+        ) : (
+          tickets.map((ticket) => (
+            <Pressable
+              key={ticket._id}
+              onPress={() =>
+                router.push({
+                  pathname: "/admin/ticket-details",
+                  params: { id: ticket._id },
+                })
+              }
+              style={({ pressed }) => [
+                styles.ticket,
+                pressed && styles.pressed,
+              ]}
+            >
+              <View style={styles.ticketTop}>
+                <View style={styles.avatar}>
+                  <Text style={styles.avatarText}>
+                    {initials(ticket.customer?.fullName)}
                   </Text>
-                ) : null}
+                </View>
+                <View style={styles.ticketCopy}>
+                  <View style={styles.customerRow}>
+                    <Mail size={15} color="#747B90" />
+                    <Text style={styles.customer}>
+                      {ticket.customer?.fullName || "Customer"}
+                    </Text>
+                    <MoreVertical size={16} color="#747B90" />
+                  </View>
+                  <Text numberOfLines={1} style={styles.subject}>
+                    {ticket.subject}{" "}
+                    <Text style={styles.id}>
+                      #{String(ticket._id).slice(-4)}
+                    </Text>
+                  </Text>
+                  <Text style={styles.meta}>
+                    {new Date(ticket.createdAt).toLocaleDateString("en-US", {
+                      month: "short",
+                      day: "numeric",
+                    })}{" "}
+                    -{" "}
+                    {ticket.adminResponse
+                      ? "Response sent"
+                      : due(ticket.status)}
+                  </Text>
+                </View>
               </View>
-            </View>
-          );
-        })
-      )}
-    </ScrollView>
+              <View style={styles.divider} />
+              <View
+                style={[
+                  styles.priority,
+                  priority(ticket.status) === "High" && styles.high,
+                  priority(ticket.status) === "Medium" && styles.medium,
+                ]}
+              >
+                <View style={styles.priorityDot} />
+                <Text style={styles.priorityText}>
+                  {priority(ticket.status)}
+                </Text>
+              </View>
+            </Pressable>
+          ))
+        )}
+      </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: "#F7F7FB" },
-  content: {
-    width: "100%",
-    maxWidth: 1080,
-    alignSelf: "center",
-    paddingHorizontal: 26,
-    paddingTop: 30,
-    paddingBottom: 34,
-  },
-  heading: {
-    color: "#25213D",
-    fontSize: 34,
-    lineHeight: 42,
-    fontWeight: "900",
-    marginBottom: 7,
-  },
-  subtitle: {
-    color: "#747B90",
-    fontSize: 17,
-    lineHeight: 24,
-    marginBottom: 10,
-  },
-  ticketCard: {
+  content: { padding: 16, paddingTop: 9, paddingBottom: 22 },
+  ticket: {
     backgroundColor: "#FFF",
-    borderRadius: 22,
-    padding: 23,
-    marginBottom: 18,
-    shadowColor: "#25213D",
-    shadowOpacity: 0.07,
-    shadowRadius: 18,
-    elevation: 2,
-  },
-  ticketHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-    gap: 18,
-  },
-  subject: {
-    color: "#25213D",
-    fontSize: 17,
-    lineHeight: 22,
-    fontWeight: "900",
-    flex: 1,
-  },
-  status: {
-    color: "#F29D38",
-    fontSize: 16,
-    lineHeight: 22,
-    fontWeight: "800",
-    textTransform: "lowercase",
-  },
-  resolved: { color: "#0F9D8A" },
-  customer: { color: "#747B90", fontSize: 16, marginTop: 8 },
-  message: { color: "#25213D", fontSize: 16, lineHeight: 22, marginTop: 19 },
-  response: { color: "#25213D", fontSize: 16, lineHeight: 22, marginTop: 18 },
-  awaiting: { color: "#F29D38", fontSize: 16, lineHeight: 22, marginTop: 18 },
-  actions: { flexDirection: "row", gap: 25, marginTop: 18 },
-  action: { color: "#5B3DF5", fontSize: 16, fontWeight: "800" },
-  resolvedAction: { color: "#0F9D8A", fontSize: 16, fontWeight: "800" },
-  deleteAction: { color: "#C0392B", fontSize: 16, fontWeight: "800" },
-  inactiveAction: { color: "#747B90" },
-  editStatusRow: {
-    flexDirection: "row",
-    gap: 18,
-    marginTop: 14,
+    borderRadius: 15,
+    padding: 13,
     marginBottom: 12,
   },
+  pressed: { opacity: 0.75 },
+  ticketTop: { flexDirection: "row", gap: 11 },
+  avatar: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: "#EDEBFF",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  avatarText: { color: "#5B3DF5", fontSize: 13, fontWeight: "900" },
+  ticketCopy: { flex: 1, minWidth: 0 },
+  customerRow: { flexDirection: "row", alignItems: "center", gap: 5 },
+  customer: { color: "#747B90", fontSize: 13, flex: 1 },
+  subject: { color: "#25213D", fontSize: 13, fontWeight: "900", marginTop: 4 },
+  id: { color: "#747B90", fontWeight: "500" },
+  meta: { color: "#747B90", fontSize: 11, marginTop: 5 },
+  divider: {
+    height: 1,
+    backgroundColor: "#E6EAF3",
+    marginTop: 12,
+    marginBottom: 10,
+  },
+  priority: {
+    alignSelf: "flex-start",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: "#E6F5EE",
+    borderRadius: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  medium: { backgroundColor: "#EDEBFF" },
+  high: { backgroundColor: "#FCEFF1" },
+  priorityDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+    backgroundColor: "#0F9D8A",
+  },
+  priorityText: { color: "#25213D", fontSize: 12, fontWeight: "800" },
+  error: { color: "#C0392B", marginBottom: 10 },
 });

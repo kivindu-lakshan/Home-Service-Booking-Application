@@ -114,7 +114,11 @@ export default function RootLayout() {
           <Stack.Screen name="reviews/mine" options={{ title: "My reviews" }} />
           <Stack.Screen
             name="admin/tickets"
-            options={{ title: "Support tickets" }}
+            options={{ title: "All Tickets" }}
+          />
+          <Stack.Screen
+            name="admin/ticket-details"
+            options={{ headerShown: false }}
           />
           <Stack.Screen
             name="services/index"
