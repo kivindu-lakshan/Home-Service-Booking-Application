@@ -29,7 +29,6 @@ export default function RootLayout() {
           <Stack.Screen name="auth/register" options={{ headerShown: false }} />
           <Stack.Screen name="auth/forgot-password" options={{ title: "Forgot password" }} />
           <Stack.Screen name="auth/reset-password" options={{ title: "Reset password" }} />
-          <Stack.Screen name="auth/verify-email" options={{ headerShown: false }} />
           <Stack.Screen name="auth/change-password" options={{ title: "Change password" }} />
           <Stack.Screen name="bookings/index" options={{ title: "My bookings" }} />
           <Stack.Screen name="payment/details" options={{ title: "Payment details" }} />
@@ -46,6 +45,7 @@ export default function RootLayout() {
           <Stack.Screen name="admin/profile" options={{ title: "Admin profile" }} />
           <Stack.Screen name="admin/bookings" options={{ title: "Manage bookings" }} />
           <Stack.Screen name="admin/assign-provider" options={{ title: "Assign provider" }} />
+          <Stack.Screen name="admin/assign-service-provider" options={{ title: "Assign service providers" }} />
           <Stack.Screen name="admin/jobs" options={{ title: "Job monitor" }} />
         </Stack>
       </AccountThemeProvider>

@@ -77,6 +77,7 @@ export default function ServiceList({ admin = false }: { admin?: boolean }) {
         {!admin && user?.role === 'provider' && <ServiceAction title='Apply for this Service' icon='add' primary onPress={() => router.push({ pathname: '/provider/apply', params: { serviceId: service._id } })} />}
         {admin && <View style={serviceStyles.row}>
           <View style={{ flex: 1 }}><ServiceAction title='Edit' icon='edit' onPress={() => router.push({ pathname: '/admin/service-form', params: { id: service._id } })} /></View>
+          <View style={{ flex: 1 }}><ServiceAction title='Assign providers' icon='add' onPress={() => router.push({ pathname: '/admin/assign-service-provider', params: { serviceId: service._id } })} /></View>
           {service.isActive && <View style={{ flex: 1 }}><ServiceAction title='Delete' icon='delete' danger onPress={() => { setDeleteError(''); setSelected(service); }} /></View>}
         </View>}
       </ServiceCard>)}

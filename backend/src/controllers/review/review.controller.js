@@ -38,7 +38,6 @@ exports.create = async (req, res, next) => {
       provider: booking.provider._id,
       rating: req.body.rating,
       comment: req.body.comment,
-      service: booking.service?._id,
     });
     const [summary] = await Review.aggregate([
       { $match: { provider: booking.provider._id } },
@@ -94,8 +93,7 @@ exports.mine = async (req, res, next) => {
     return send(
       res,
       await Review.find({ customer: req.user._id })
-        .populate("provider", "user ratingAvg")
-        .populate("service", "name")
+        .populate({ path: "provider", select: "user ratingAvg", populate: { path: "user", select: "fullName" } })
         .populate("booking", "bookingRef scheduledDate")
         .sort({ createdAt: -1 }),
     );
@@ -125,7 +123,7 @@ exports.update = async (req, res, next) => {
       { _id: req.params.id, customer: req.user._id },
       { rating: req.body.rating, comment: req.body.comment },
       { new: true, runValidators: true },
-    ).populate("provider service booking");
+    ).populate("provider booking");
     if (!review)
       return res
         .status(404)

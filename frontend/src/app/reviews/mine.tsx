@@ -73,7 +73,7 @@ export default function MyReviews() {
               <Text
                 style={{ color: "#25213D", fontWeight: "900", fontSize: 17 }}
               >
-                {review.service?.name || "Completed service"}
+                {review.provider?.user?.fullName || "Your provider"}
               </Text>
               <Text style={{ color: "#F29D38", fontSize: 22, marginTop: 8 }}>
                 {"★".repeat(review.rating)}

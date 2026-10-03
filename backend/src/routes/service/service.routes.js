@@ -13,6 +13,8 @@ router.delete('/:id', role('admin'), controller.validateId, controller.remove);
 const adminRouter = Router();
 adminRouter.use(auth, role('admin'), (req, res, next) => { req.adminServices = true; next(); });
 adminRouter.get('/', controller.list);
+adminRouter.get('/:id/providers', controller.validateId, controller.providers);
+adminRouter.put('/:id/providers', controller.validateId, controller.assignProviders);
 adminRouter.get('/:id', controller.validateId, controller.read);
 adminRouter.post('/', controller.validateService, controller.create);
 adminRouter.patch('/:id', controller.validateId, controller.validateService, controller.update);

@@ -48,7 +48,6 @@ export default function HomeScreen() {
             <Text style={themed(styles.greeting)}>Welcome back, {user.fullName.trim().split(/\s+/)[0]}</Text>
             <Text accessibilityRole="header" style={themed(styles.title)}>What can we help with?</Text>
             <Text style={themed(styles.subtitle)}>Everything for a happier home, in one place.</Text>
-            {!user.emailVerified && <Pressable onPress={() => router.push("/auth/verify-email")} style={themed(styles.notice)}><Text style={themed(styles.noticeText)}>Verify your email to unlock every feature</Text><Text style={themed(styles.noticeLink)}>Verify now</Text></Pressable>}
             <View style={themed(styles.actionList)}>
               {actions.map((action) => <Pressable key={action.title} accessibilityRole="button" accessibilityLabel={action.title} onPress={() => router.push(action.route as never)} style={themed(({ pressed }) => [styles.action, pressed && styles.pressed])}>
                 <View style={themed(styles.iconTile)}><ProfileIcon name={action.icon} /></View>
