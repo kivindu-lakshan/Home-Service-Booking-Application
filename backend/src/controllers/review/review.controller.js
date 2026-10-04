@@ -59,6 +59,13 @@ exports.create = async (req, res, next) => {
       "Review submitted",
     );
   } catch (error) {
+    if (error?.code === 11000 && error?.keyPattern?.booking) {
+      return res.status(409).json({
+        success: false,
+        data: null,
+        message: "This booking already has a review",
+      });
+    }
     return next(error);
   }
 };
