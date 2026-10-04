@@ -1,20 +1,14 @@
 const router = require("express").Router();
-const c = require("../../controllers/booking/booking.controller");
-router.use(
-  require("../../middleware/auth"),
-  require("../../middleware/role")("customer"),
-);
-router.post("/", c.create);
-router.get("/:id", c.details);
-router.use((error, req, res, next) => {
-  console.error("Booking request failed:", error.name);
-  return res
-    .status(500)
-    .json({
-      success: false,
-      data: null,
-      message:
-        "Unable to complete the booking request. Check your bookings before retrying.",
-    });
-});
+const auth = require("../../middleware/auth");
+const controller = require("../../controllers/booking/booking.controller");
+
+router.use(auth);
+
+router.post("/", controller.create);
+router.get("/", controller.list);
+router.get("/slots", controller.getAvailableSlots);
+router.get("/:id", controller.getById);
+router.patch("/:id/reschedule", controller.reschedule);
+router.patch("/:id/cancel", controller.cancel);
+router.patch("/:id/status", controller.updateStatus);
 module.exports = router;

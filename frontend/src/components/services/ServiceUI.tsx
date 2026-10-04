@@ -8,6 +8,7 @@ import { serviceImageUri } from "@/utils/service-image";
 import { Redirect, router } from "expo-router";
 import {
     Archive,
+    Calendar,
     Clock,
     MapPin,
     Pencil,
@@ -42,7 +43,7 @@ export function ServiceAction({
 }: {
   title: string;
   label?: string;
-  icon: "add" | "edit" | "delete" | "archive" | "refresh";
+  icon: "add" | "edit" | "delete" | "archive" | "refresh" | "calendar";
   onPress: () => void;
   primary?: boolean;
   danger?: boolean;
@@ -55,6 +56,7 @@ export function ServiceAction({
     delete: Trash2,
     archive: Archive,
     refresh: RotateCw,
+    calendar: Calendar,
   }[icon];
   const color = primary ? "#FFFFFF" : danger ? "#B73248" : "#633CFF";
   return (
@@ -259,6 +261,20 @@ export const serviceStyles = StyleSheet.create({
     marginBottom: 12,
   },
   sectionLabel: { color: "#727D94", fontSize: 13, fontWeight: "600" },
+  searchBox: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    borderWidth: 1,
+    borderColor: "#EBE8F5",
+    marginTop: 16,
+    marginBottom: 14,
+    minHeight: 48,
+  },
+  searchInput: { flex: 1, minWidth: 0, fontSize: 13, color: "#242E49" },
   cardTop: {
     flexDirection: "row",
     alignItems: "center",
