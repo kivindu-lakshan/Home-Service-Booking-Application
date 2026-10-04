@@ -44,13 +44,13 @@ export const createReview = (payload: {
   rating: number;
   comment?: string;
 }) => api.post("/reviews", payload);
-export const getAdminTickets = () => api.get("/support/tickets");
+export const getAdminTickets = () => api.get("/admin/tickets");
 export const respondToTicket = (
   id: string,
   payload: { adminResponse: string; status: string },
-) => api.patch(`/support/tickets/${encodeURIComponent(id)}`, payload);
+) => api.patch(`/admin/tickets/${encodeURIComponent(id)}`, payload);
 export const deleteTicketResponse = (id: string) =>
-  api.patch(`/support/tickets/${encodeURIComponent(id)}`, {
+  api.patch(`/admin/tickets/${encodeURIComponent(id)}`, {
     adminResponse: "",
     status: "pending",
   });
