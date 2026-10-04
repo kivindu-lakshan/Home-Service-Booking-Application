@@ -24,14 +24,11 @@ const address = new Schema(
   },
   { _id: true },
 );
-const notificationPreferences = new Schema(
-  {
-    bookingConfirmations: { type: Boolean, default: true },
-    arrivalStatusUpdates: { type: Boolean, default: true },
-    bookingReminders: { type: Boolean, default: true },
-  },
-  { _id: false },
-);
+const notificationPreferences = new Schema({
+  bookingConfirmations: { type: Boolean, default: true },
+  arrivalStatusUpdates: { type: Boolean, default: true },
+  bookingReminders: { type: Boolean, default: true },
+}, { _id: false });
 const settings = new Schema(
   {
     notifications: { type: notificationPreferences, default: () => ({}) },
@@ -44,16 +41,14 @@ const settings = new Schema(
   },
   { _id: false },
 );
-const serviceLocation = new Schema(
-  {
-    areaCity: { type: String, required: true, trim: true, maxlength: 120 },
-    latitude: { type: Number, min: -90, max: 90 },
-    longitude: { type: Number, min: -180, max: 180 },
-    source: { type: String, enum: ["manual", "current"], required: true },
-  },
-  { _id: false },
-);
+const serviceLocation = new Schema({
+  areaCity: { type: String, required: true, trim: true, maxlength: 120 },
+  latitude: { type: Number, min: -90, max: 90 },
+  longitude: { type: Number, min: -180, max: 180 },
+  source: { type: String, enum: ["manual", "current"], required: true },
+}, { _id: false });
 const User = make("User", {
+  serviceLocation: { type: serviceLocation, default: null },
   fullName: { type: String, required: true, trim: true },
   email: {
     type: String,
@@ -237,8 +232,22 @@ const Review = make("Review", {
   booking: { ...ref("Booking"), unique: true },
   customer: ref("User"),
   provider: ref("Provider"),
+  service: ref("Service", false),
   rating: { type: Number, min: 1, max: 5, required: true },
   comment: String,
+});
+const Ticket = make("Ticket", {
+  customer: ref("User"),
+  subject: { type: String, required: true, trim: true, maxlength: 120 },
+  message: { type: String, required: true, trim: true, maxlength: 4000 },
+  status: {
+    type: String,
+    enum: ["open", "in_progress", "resolved"],
+    default: "open",
+  },
+  adminResponse: { type: String, trim: true, maxlength: 4000 },
+  respondedAt: Date,
+  respondedBy: ref("User", false),
 });
 const AdminActivityLog = make("AdminActivityLog", {
   actor: ref("User"),
@@ -246,92 +255,36 @@ const AdminActivityLog = make("AdminActivityLog", {
   entityType: String,
   entityId: String,
 });
-const supportCategories = [
-  "Booking issue",
-  "Payment issue",
-  "Service provider issue",
-  "Account issue",
-  "Technical issue",
-  "Other",
-];
+const supportCategories = ["Booking issue", "Payment issue", "Service provider issue", "Account issue", "Technical issue", "Other"];
 const SupportTicket = make("SupportTicket", {
   user: ref("User"),
   category: { type: String, required: true, enum: supportCategories },
-  subject: {
-    type: String,
-    required: true,
-    trim: true,
-    minlength: 3,
-    maxlength: 120,
-  },
-  description: {
-    type: String,
-    required: true,
-    trim: true,
-    minlength: 10,
-    maxlength: 2000,
-  },
-  status: {
-    type: String,
-    enum: ["pending", "in_progress", "resolved", "cancelled"],
-    default: "pending",
-    required: true,
-  },
-  adminResponse: { type: String, trim: true, maxlength: 4000 },
-  respondedAt: Date,
-  respondedBy: ref("User", false),
+  subject: { type: String, required: true, trim: true, minlength: 3, maxlength: 120 },
+  description: { type: String, required: true, trim: true, minlength: 10, maxlength: 2000 },
+  status: { type: String, enum: ["pending", "in_progress", "resolved", "cancelled"], default: "pending", required: true },
 });
 SupportTicket.schema.index({ user: 1, createdAt: -1 });
-const ProviderLocation = make(
-  "ProviderLocation",
-  {
-    provider: ref("Provider"),
-    address: { type: String, required: true, trim: true, maxlength: 300 },
-    latitude: { type: Number, required: true, min: -90, max: 90 },
-    longitude: { type: Number, required: true, min: -180, max: 180 },
-  },
-  { collection: "providerlocations" },
-);
-const ProviderApplication = make(
-  "ProviderApplication",
-  {
-    provider: ref("Provider"),
-    service: ref("Service"),
-    professionalName: { type: String, required: true, maxlength: 120 },
-    phone: { type: String, required: true, maxlength: 30 },
-    yearsExperience: { type: Number, required: true, min: 0, max: 80 },
-    aboutMe: { type: String, required: true, maxlength: 2000 },
-    qualifications: { type: String, required: true, maxlength: 2000 },
-    skills: { type: String, required: true, maxlength: 1000 },
-    priceFrom: { type: Number, min: 0, max: 10000000 },
-    location: ref("ProviderLocation"),
-    reviewedAt: Date,
-    reviewedBy: ref("User", false),
-    rejectionReason: { type: String, maxlength: 2000 },
-    documents: [
-      {
-        name: String,
-        mimeType: String,
-        size: Number,
-        storageKey: { type: String, select: false },
-      },
-    ],
-    status: {
-      type: String,
-      enum: ["pending", "approved", "rejected"],
-      default: "pending",
-      required: true,
-    },
-  },
-  { collection: "providerapplications" },
-);
-ProviderApplication.schema.index(
-  { provider: 1, service: 1 },
-  {
-    unique: true,
-    partialFilterExpression: { status: { $in: ["pending", "approved"] } },
-  },
-);
+const ProviderLocation = make("ProviderLocation", {
+  provider: ref("Provider"),
+  address: { type: String, required: true, trim: true, maxlength: 300 },
+  latitude: { type: Number, required: true, min: -90, max: 90 },
+  longitude: { type: Number, required: true, min: -180, max: 180 },
+}, { collection: "providerlocations" });
+const ProviderApplication = make("ProviderApplication", {
+  provider: ref("Provider"),
+  service: ref("Service"),
+  professionalName: { type: String, required: true, maxlength: 120 },
+  phone: { type: String, required: true, maxlength: 30 },
+  yearsExperience: { type: Number, required: true, min: 0, max: 80 },
+  aboutMe: { type: String, required: true, maxlength: 2000 },
+  qualifications: { type: String, required: true, maxlength: 2000 },
+  skills: { type: String, required: true, maxlength: 1000 },
+  priceFrom: { type: Number, min: 0, max: 10000000 },
+  location: ref("ProviderLocation"),
+  documents: [{ name: String, mimeType: String, size: Number, storageKey: { type: String, select: false } }],
+  status: { type: String, enum: ["pending", "approved", "rejected"], default: "pending", required: true },
+}, { collection: "providerapplications" });
+ProviderApplication.schema.index({ provider: 1, service: 1 }, { unique: true, partialFilterExpression: { status: { $in: ["pending", "approved"] } } });
 ProviderApplication.schema.index({ provider: 1, createdAt: -1 });
 
 const models = {
@@ -348,6 +301,7 @@ const models = {
   PaymentMethod,
   Payment,
   Review,
+  Ticket,
   AdminActivityLog,
 };
 module.exports = { ...models, models, supportCategories };

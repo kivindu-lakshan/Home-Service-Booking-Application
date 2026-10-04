@@ -18,19 +18,30 @@ exports.create = async (req, res, next) => {
   try {
     const body = req.body || {};
     if (!body.providerId && body.addressSnapshot) {
-      if (!validId(body.serviceId)) return fail(res, 400, "Service ID is required");
+      if (!validId(body.serviceId))
+        return fail(res, 400, "Service ID is required");
       if (typeof body.scheduledDate !== "string")
         return fail(res, 400, "Scheduled date is required");
-      const service = await Service.findOne({ _id: body.serviceId, isActive: true });
-      if (!service) return fail(res, 404, "Selected service is no longer available");
+      const service = await Service.findOne({
+        _id: body.serviceId,
+        isActive: true,
+      });
+      if (!service)
+        return fail(res, 404, "Selected service is no longer available");
       const bookingDate = new Date(body.scheduledDate);
-      if (!Number.isFinite(bookingDate.getTime())) return fail(res, 400, "Invalid scheduled date");
+      if (!Number.isFinite(bookingDate.getTime()))
+        return fail(res, 400, "Invalid scheduled date");
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       const dateOnly = new Date(bookingDate);
       dateOnly.setHours(0, 0, 0, 0);
-      if (dateOnly < today) return fail(res, 400, "Scheduled date cannot be in the past");
-      const timePeriod = ["morning", "afternoon", "evening"].includes(body.timePeriod) ? body.timePeriod : "morning";
+      if (dateOnly < today)
+        return fail(res, 400, "Scheduled date cannot be in the past");
+      const timePeriod = ["morning", "afternoon", "evening"].includes(
+        body.timePeriod,
+      )
+        ? body.timePeriod
+        : "morning";
       const basePrice = Number(service.basePrice) || 0;
       const booking = await Booking.create({
         bookingRef: `BK-${crypto.randomUUID().toUpperCase()}`,
@@ -39,19 +50,40 @@ exports.create = async (req, res, next) => {
         addressSnapshot: body.addressSnapshot.trim(),
         scheduledDate: bookingDate,
         timePeriod,
-        scheduledTime: body.scheduledTime || (timePeriod === "morning" ? "09:00 AM" : timePeriod === "afternoon" ? "02:00 PM" : "06:00 PM"),
+        scheduledTime:
+          body.scheduledTime ||
+          (timePeriod === "morning"
+            ? "09:00 AM"
+            : timePeriod === "afternoon"
+              ? "02:00 PM"
+              : "06:00 PM"),
         durationHours: service.estDurationHours || "1-2 hours",
         serviceFee: basePrice,
         bookingCharge: 350,
         tax: Math.round(basePrice * 0.05),
         totalPrice: basePrice + 350 + Math.round(basePrice * 0.05),
-        paymentMode: body.paymentMode === "pay_now" ? "pay_now" : "pay_on_completion",
+        paymentMode:
+          body.paymentMode === "pay_now" ? "pay_now" : "pay_on_completion",
         status: "pending",
         notes: typeof body.notes === "string" ? body.notes.trim() : "",
-        statusHistory: [{ status: "pending", changedBy: req.user._id, note: "Booking submitted by customer" }],
+        statusHistory: [
+          {
+            status: "pending",
+            changedBy: req.user._id,
+            note: "Booking submitted by customer",
+          },
+        ],
       });
-      const populated = await Booking.findById(booking._id).populate("service").populate("customer", "fullName email phone avatarUrl");
-      return res.status(201).json({ success: true, data: populated, message: "Booking scheduled successfully" });
+      const populated = await Booking.findById(booking._id)
+        .populate("service")
+        .populate("customer", "fullName email phone avatarUrl");
+      return res
+        .status(201)
+        .json({
+          success: true,
+          data: populated,
+          message: "Booking scheduled successfully",
+        });
     }
     const allowed = [
       "serviceId",
@@ -276,12 +308,16 @@ exports.getById = async (req, res, next) => {
     }
 
     // Authorization check
-    const isCustomer = booking.customer?._id?.toString() === req.user._id.toString();
+    const isCustomer =
+      booking.customer?._id?.toString() === req.user._id.toString();
     const isAdmin = req.user.role === "admin";
     let isAssignedProvider = false;
     if (req.user.role === "provider" && booking.provider) {
       const providerProfile = await Provider.findOne({ user: req.user._id });
-      if (providerProfile && booking.provider._id?.toString() === providerProfile._id.toString()) {
+      if (
+        providerProfile &&
+        booking.provider._id?.toString() === providerProfile._id.toString()
+      ) {
         isAssignedProvider = true;
       }
     }
@@ -291,7 +327,9 @@ exports.getById = async (req, res, next) => {
     }
 
     // Also fetch associated payment record if exists
-    const payment = await Payment.findOne({ booking: booking._id }).populate("paymentMethod");
+    const payment = await Payment.findOne({ booking: booking._id }).populate(
+      "paymentMethod",
+    );
 
     return send(res, { booking, payment });
   } catch (error) {
@@ -317,7 +355,11 @@ exports.reschedule = async (req, res, next) => {
     const isCustomer = booking.customer.toString() === req.user._id.toString();
     const isAdmin = req.user.role === "admin";
     if (!isCustomer && !isAdmin) {
-      return fail(res, "You do not have permission to reschedule this booking", 403);
+      return fail(
+        res,
+        "You do not have permission to reschedule this booking",
+        403,
+      );
     }
 
     // Check if status allows rescheduling
@@ -343,7 +385,9 @@ exports.reschedule = async (req, res, next) => {
     }
 
     const validPeriods = ["morning", "afternoon", "evening"];
-    const period = validPeriods.includes(timePeriod) ? timePeriod : booking.timePeriod;
+    const period = validPeriods.includes(timePeriod)
+      ? timePeriod
+      : booking.timePeriod;
     const time = scheduledTime || booking.scheduledTime;
 
     const previousDateStr = booking.scheduledDate
@@ -394,7 +438,11 @@ exports.cancel = async (req, res, next) => {
     const isCustomer = booking.customer.toString() === req.user._id.toString();
     const isAdmin = req.user.role === "admin";
     if (!isCustomer && !isAdmin) {
-      return fail(res, "You do not have permission to cancel this booking", 403);
+      return fail(
+        res,
+        "You do not have permission to cancel this booking",
+        403,
+      );
     }
 
     if (booking.status === "completed") {
@@ -404,7 +452,8 @@ exports.cancel = async (req, res, next) => {
       return fail(res, "Booking is already cancelled");
     }
 
-    const cancellationReason = reason && reason.trim() ? reason.trim() : "Cancelled by customer";
+    const cancellationReason =
+      reason && reason.trim() ? reason.trim() : "Cancelled by customer";
 
     booking.status = "cancelled";
     booking.cancelledReason = cancellationReason;
@@ -448,13 +497,20 @@ exports.updateStatus = async (req, res, next) => {
     let isProvider = false;
     if (req.user.role === "provider" && booking.provider) {
       const providerProfile = await Provider.findOne({ user: req.user._id });
-      if (providerProfile && booking.provider.toString() === providerProfile._id.toString()) {
+      if (
+        providerProfile &&
+        booking.provider.toString() === providerProfile._id.toString()
+      ) {
         isProvider = true;
       }
     }
 
     if (!isAdmin && !isProvider) {
-      return fail(res, "You do not have permission to update this booking status", 403);
+      return fail(
+        res,
+        "You do not have permission to update this booking status",
+        403,
+      );
     }
 
     booking.status = status;
@@ -492,9 +548,30 @@ exports.getAvailableSlots = async (req, res, next) => {
     const targetDate = date ? new Date(date) : new Date();
 
     const slots = [
-      { id: "morning", period: "morning", label: "Morning", timeRange: "08:00 AM - 12:00 PM", defaultTime: "09:00 AM", available: true },
-      { id: "afternoon", period: "afternoon", label: "Afternoon", timeRange: "12:00 PM - 04:00 PM", defaultTime: "02:00 PM", available: true },
-      { id: "evening", period: "evening", label: "Evening", timeRange: "04:00 PM - 08:00 PM", defaultTime: "06:00 PM", available: true },
+      {
+        id: "morning",
+        period: "morning",
+        label: "Morning",
+        timeRange: "08:00 AM - 12:00 PM",
+        defaultTime: "09:00 AM",
+        available: true,
+      },
+      {
+        id: "afternoon",
+        period: "afternoon",
+        label: "Afternoon",
+        timeRange: "12:00 PM - 04:00 PM",
+        defaultTime: "02:00 PM",
+        available: true,
+      },
+      {
+        id: "evening",
+        period: "evening",
+        label: "Evening",
+        timeRange: "04:00 PM - 08:00 PM",
+        defaultTime: "06:00 PM",
+        available: true,
+      },
     ];
 
     return send(res, { date: targetDate.toISOString().split("T")[0], slots });
