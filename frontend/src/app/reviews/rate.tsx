@@ -1,21 +1,10 @@
-<<<<<<< HEAD
-import { useState } from "react";
-import { router, useLocalSearchParams } from "expo-router";
-import { ScrollView, Text, TextInput } from "react-native";
-import { Button, Card } from "@/components/ui";
-import { createReview } from "@/api/domain";
-import ErrorText from "@/components/ErrorText";
-import { ProfileBackButton } from "@/components/profile/ProfileNavigation";
-=======
-import { createReview, getBookingReview, updateReview } from "@/api/domain";
+import { createReview, getBookingReview } from "@/api/domain";
 import ErrorText from "@/components/ErrorText";
 import { ProfileBackButton } from "@/components/profile/ProfileNavigation";
 import { Button, Card } from "@/components/ui";
 import { router, useLocalSearchParams } from "expo-router";
-import { Star } from "lucide-react-native";
 import { useEffect, useState } from "react";
 import { ScrollView, Text, TextInput } from "react-native";
->>>>>>> origin/origin-02/feature/payment,review,admin
 export default function RateProvider() {
   const { bookingId } = useLocalSearchParams<{ bookingId: string }>();
   const [rating, setRating] = useState(0);
@@ -50,9 +39,8 @@ export default function RateProvider() {
     setBusy(true);
     setError("");
     try {
-      const response = reviewId
-        ? await updateReview(reviewId, { rating, comment })
-        : await createReview({ bookingId, rating, comment });
+      if (reviewId) return;
+      const response = await createReview({ bookingId, rating, comment });
       router.replace({
         pathname: "/reviews/submitted",
         params: { rating: response.data.data.rating },

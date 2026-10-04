@@ -1,11 +1,6 @@
-<<<<<<< HEAD
-import { api } from './client';
-import { Platform } from 'react-native';
-import type { DocumentPickerAsset } from 'expo-document-picker';
-import { isAxiosError } from 'axios';
-export type ServiceCategory = { _id: string; name: string; isActive: boolean; icon?: string };
-=======
 import { isAxiosError } from "axios";
+import type { DocumentPickerAsset } from "expo-document-picker";
+import { Platform } from "react-native";
 import { api } from "./client";
 export type ServiceCategory = {
   _id: string;
@@ -13,7 +8,6 @@ export type ServiceCategory = {
   isActive: boolean;
   icon?: string;
 };
->>>>>>> origin/origin-02/feature/payment,review,admin
 export type Service = {
   _id: string;
   name: string;
@@ -64,21 +58,26 @@ export async function getServiceCategories(
 ): Promise<ServiceCategory[]> {
   return (await api.get("/services/categories", { signal })).data.data;
 }
-<<<<<<< HEAD
-export async function uploadServiceImage(image: DocumentPickerAsset): Promise<string> {
+export async function uploadServiceImage(
+  image: DocumentPickerAsset,
+): Promise<string> {
   const form = new FormData();
-  if (Platform.OS === 'web') {
-    if (!image.file) throw new Error('Select your image again.');
-    form.append('image', image.file, image.name);
-  } else form.append('image', { uri: image.uri, name: image.name, type: image.mimeType } as unknown as Blob);
-  return (await api.post('/admin/services/images', form, { timeout: 60000, headers: { 'Content-Type': 'multipart/form-data' } })).data.data.imageUrl;
+  if (Platform.OS === "web") {
+    if (!image.file) throw new Error("Select your image again.");
+    form.append("image", image.file, image.name);
+  } else
+    form.append("image", {
+      uri: image.uri,
+      name: image.name,
+      type: image.mimeType,
+    } as unknown as Blob);
+  return (
+    await api.post("/admin/services/images", form, {
+      timeout: 60000,
+      headers: { "Content-Type": "multipart/form-data" },
+    })
+  ).data.data.imageUrl;
 }
-export const createService = (payload: ServiceInput) => api.post('/admin/services', payload);
-export const updateService = (id: string, payload: ServiceInput) => api.patch(`/admin/services/${encodeURIComponent(id)}`, payload);
-export const deleteService = (id: string) => api.delete(`/admin/services/${encodeURIComponent(id)}`);
-export const getServiceProviders = (id: string) => api.get(`/admin/services/${encodeURIComponent(id)}/providers`);
-export const assignServiceProviders = (id: string, providerIds: string[]) => api.put(`/admin/services/${encodeURIComponent(id)}/providers`, { providerIds });
-=======
 export const createService = (payload: ServiceInput) =>
   api.post("/admin/services", payload);
 export const updateService = (id: string, payload: ServiceInput) =>
@@ -91,7 +90,6 @@ export const assignServiceProviders = (id: string, providerIds: string[]) =>
   api.put(`/admin/services/${encodeURIComponent(id)}/providers`, {
     providerIds,
   });
->>>>>>> origin/origin-02/feature/payment,review,admin
 export function serviceError(error: unknown, fallback: string): string {
   if (!isAxiosError(error)) return fallback;
   if (error.response?.status === 401)
