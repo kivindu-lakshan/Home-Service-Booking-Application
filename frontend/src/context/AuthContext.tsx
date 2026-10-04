@@ -27,7 +27,7 @@ type AuthValue = {
     phone: string,
     password: string,
     role: "customer" | "provider",
-  ) => Promise<void>;
+  ) => Promise<string | undefined>;
   logout: () => Promise<void>;
   syncProfile: (profile: Pick<User, "id" | "fullName" | "phone">) => void;
 };
@@ -84,6 +84,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
     await saveToken(response.data.data.token);
     setUser(response.data.data.user);
+    return response.data.data.verificationCode;
   };
 
   const logout = async () => {

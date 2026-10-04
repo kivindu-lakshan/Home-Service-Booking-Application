@@ -13,6 +13,9 @@ export const login = (
 ) => api.post("/auth/login", payload);
 export const register = (payload: RegisterPayload) =>
   api.post("/auth/register", payload);
+export const verifyEmail = (code: string) =>
+  api.post("/auth/verify-email", { code });
+export const resendVerification = () => api.post("/auth/resend-verification");
 export const me = () => api.get("/auth/me");
 export const forgotPassword = (email: string) =>
   api.post("/auth/forgot-password", { email });

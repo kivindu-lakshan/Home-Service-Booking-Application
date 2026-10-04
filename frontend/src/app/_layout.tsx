@@ -72,6 +72,10 @@ export default function RootLayout() {
           <Stack.Screen name="auth/login" options={{ headerShown: false }} />
           <Stack.Screen name="auth/register" options={{ headerShown: false }} />
           <Stack.Screen
+            name="auth/verify-email"
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
             name="auth/forgot-password"
             options={{ title: "Forgot password" }}
           />

@@ -91,6 +91,18 @@ router.post(
   validate,
   controller.login,
 );
+router.post(
+  "/verify-email",
+  auth,
+  [
+    body("code")
+      .isString()
+      .matches(/^\d{6}$/),
+  ],
+  validate,
+  controller.verifyEmail,
+);
+router.post("/resend-verification", auth, controller.resendVerification);
 const notifications = require("../../controllers/auth/notification-preferences.controller");
 const notificationFields = [
   "bookingConfirmations",

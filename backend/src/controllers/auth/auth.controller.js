@@ -37,6 +37,18 @@ async function createAuthToken(user, type, minutes) {
   return raw;
 }
 
+async function createVerificationCode(user) {
+  const code = String(Math.floor(100000 + Math.random() * 900000));
+  await AuthToken.create({
+    user: user._id,
+    type: "verify_email",
+    tokenHash: hashToken(code),
+    expiresAt: new Date(Date.now() + 30 * 60000),
+  });
+  console.log(`[SIMULATED EMAIL] verify_email code for ${user.email}: ${code}`);
+  return code;
+}
+
 exports.register = async (req, res, next) => {
   try {
     const { fullName, email, phone, password } = req.body;
@@ -56,13 +68,15 @@ exports.register = async (req, res, next) => {
       phone,
       role,
       passwordHash: await bcrypt.hash(password, 12),
-      emailVerified: true,
+      emailVerified: false,
     });
+    const verificationCode = await createVerificationCode(user);
     return ok(
       res,
       {
         user: publicUser(user),
         token: signAccessToken(user),
+        verificationCode,
       },
       "Account created.",
     );
@@ -78,6 +92,47 @@ exports.register = async (req, res, next) => {
         },
       ]);
     next(error);
+  }
+};
+
+exports.resendVerification = async (req, res, next) => {
+  try {
+    const user = await User.findById(req.user._id);
+    if (!user) return fail(res, 404, "Account not found.");
+    if (user.emailVerified) return fail(res, 400, "Email is already verified.");
+    await AuthToken.updateMany(
+      { user: user._id, type: "verify_email", usedAt: null },
+      { $set: { usedAt: new Date() } },
+    );
+    const verificationCode = await createVerificationCode(user);
+    return ok(res, { verificationCode }, "Verification code sent.");
+  } catch (error) {
+    return next(error);
+  }
+};
+
+exports.verifyEmail = async (req, res, next) => {
+  try {
+    const record = await AuthToken.findOneAndUpdate(
+      {
+        user: req.user._id,
+        type: "verify_email",
+        tokenHash: hashToken(req.body.code),
+        usedAt: null,
+        expiresAt: { $gt: new Date() },
+      },
+      { $set: { usedAt: new Date() } },
+      { new: true },
+    );
+    if (!record) return fail(res, 400, "Invalid or expired verification code.");
+    const user = await User.findByIdAndUpdate(
+      req.user._id,
+      { emailVerified: true },
+      { new: true },
+    );
+    return ok(res, publicUser(user), "Email verified.");
+  } catch (error) {
+    return next(error);
   }
 };
 
