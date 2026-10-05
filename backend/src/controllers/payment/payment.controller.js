@@ -65,6 +65,13 @@ exports.create = async (req, res, next) => {
         data: null,
         message: "Invalid payment method",
       });
+<<<<<<< HEAD
+    if (method === "card") {
+      const paymentMethod = await PaymentMethod.findOne({
+        _id: req.body.paymentMethodId,
+        user: req.user._id,
+      });
+=======
     let paymentMethod;
     if (method === "demo_card") {
       const { cardholderName, cardNumber, expiryDate, cvv } =
@@ -130,6 +137,7 @@ exports.create = async (req, res, next) => {
           user: req.user._id,
         });
       }
+>>>>>>> origin/origin-02/feature/payment,review,admin
       if (!paymentMethod)
         return res.status(422).json({
           success: false,
@@ -142,7 +150,7 @@ exports.create = async (req, res, next) => {
       { booking: booking._id },
       {
         booking: booking._id,
-        paymentMethod: paymentMethod?._id,
+        paymentMethod: req.body.paymentMethodId || undefined,
         method,
         amount: booking.totalPrice,
         status: paid ? "paid" : "pending",

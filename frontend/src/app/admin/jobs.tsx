@@ -19,8 +19,7 @@ export default function AdminJobs() {
     }
   }, [status]);
   useEffect(() => {
-    const timer = setTimeout(() => void load(), 0);
-    return () => clearTimeout(timer);
+    void load();
   }, [load]);
   return (
     <ScrollView

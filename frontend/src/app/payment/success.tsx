@@ -23,8 +23,7 @@ export default function PaymentSuccess() {
     }
   }, [bookingId]);
   useEffect(() => {
-    const timer = setTimeout(() => void load(), 0);
-    return () => clearTimeout(timer);
+    void load();
   }, [load]);
   if (!data && !error) return <LoadingState label="Loading receipt..." />;
   if (error) return <ErrorState onRetry={() => void load()} />;

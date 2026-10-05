@@ -1,3 +1,19 @@
+<<<<<<< HEAD
+import { Redirect } from "expo-router";
+import { useAuth } from "@/context/AuthContext";
+import CustomerHome from "@/components/customer/CustomerHome";
+import { LoadingState } from "@/components/DataState";
+
+export default function HomeScreen() {
+  const { user, loading } = useAuth();
+  if (loading) return <LoadingState />;
+  if (!user) return <Redirect href="/auth/login" />;
+  if (user.role === "customer") return <CustomerHome />;
+  if (user.role === "provider") return <Redirect href="/provider/dashboard" />;
+  if (user.role === "admin") return <Redirect href="/admin/home" />;
+  return <Redirect href="/auth/login" />;
+}
+=======
 import { ServiceLocationGate } from "@/components/location/ServiceLocationGate";
 import {
     ProfileIcon,
@@ -256,3 +272,4 @@ const styles = StyleSheet.create({
   logout: { alignItems: "center", paddingVertical: 18 },
   logoutText: { color: "#7C879F", fontSize: 13, fontWeight: "700" },
 });
+>>>>>>> origin/origin-02/feature/payment,review,admin

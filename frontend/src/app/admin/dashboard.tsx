@@ -126,6 +126,7 @@ export default function AdminDashboard() {
         </View>
         <View style={styles.body}>
           <Action title="Service Management" subtitle="Create, edit and organise your service catalogue." icon={<Wrench size={21} color={C.purple} />} onPress={() => router.push("/admin/services")} />
+          <Action title="Provider Applications" subtitle={`${data.pendingProviderApplications ?? 0} Pending`} icon={<UsersRound size={21} color={C.purple} />} onPress={() => router.push("/admin/provider-applications")} />
           <View style={styles.metricGrid}>
             {metrics.map(([label, value, Icon]) => (
               <View key={label} style={styles.metric}>

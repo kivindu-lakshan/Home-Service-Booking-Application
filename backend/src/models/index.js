@@ -44,6 +44,8 @@ const settings = new Schema(
   },
   { _id: false },
 );
+<<<<<<< HEAD
+=======
 const serviceLocation = new Schema(
   {
     areaCity: { type: String, required: true, trim: true, maxlength: 120 },
@@ -53,8 +55,8 @@ const serviceLocation = new Schema(
   },
   { _id: false },
 );
+>>>>>>> origin/origin-02/feature/payment,review,admin
 const User = make("User", {
-  serviceLocation: { type: serviceLocation, default: null },
   fullName: { type: String, required: true, trim: true },
   email: {
     type: String,
@@ -241,19 +243,6 @@ const Review = make("Review", {
   rating: { type: Number, min: 1, max: 5, required: true },
   comment: String,
 });
-const Ticket = make("Ticket", {
-  customer: ref("User"),
-  subject: { type: String, required: true, trim: true, maxlength: 120 },
-  message: { type: String, required: true, trim: true, maxlength: 4000 },
-  status: {
-    type: String,
-    enum: ["open", "in_progress", "resolved"],
-    default: "open",
-  },
-  adminResponse: { type: String, trim: true, maxlength: 4000 },
-  respondedAt: Date,
-  respondedBy: ref("User", false),
-});
 const AdminActivityLog = make("AdminActivityLog", {
   actor: ref("User"),
   action: String,
@@ -296,6 +285,32 @@ const SupportTicket = make("SupportTicket", {
   respondedBy: ref("User", false),
 });
 SupportTicket.schema.index({ user: 1, createdAt: -1 });
+<<<<<<< HEAD
+const ProviderLocation = make("ProviderLocation", {
+  provider: ref("Provider"),
+  address: { type: String, required: true, trim: true, maxlength: 300 },
+  latitude: { type: Number, required: true, min: -90, max: 90 },
+  longitude: { type: Number, required: true, min: -180, max: 180 },
+}, { collection: "providerlocations" });
+const ProviderApplication = make("ProviderApplication", {
+  provider: ref("Provider"),
+  service: ref("Service"),
+  professionalName: { type: String, required: true, maxlength: 120 },
+  phone: { type: String, required: true, maxlength: 30 },
+  yearsExperience: { type: Number, required: true, min: 0, max: 80 },
+  aboutMe: { type: String, required: true, maxlength: 2000 },
+  qualifications: { type: String, required: true, maxlength: 2000 },
+  skills: { type: String, required: true, maxlength: 1000 },
+  priceFrom: { type: Number, min: 0, max: 10000000 },
+  location: ref("ProviderLocation"),
+  reviewedAt: Date,
+  reviewedBy: ref("User", false),
+  rejectionReason: { type: String, maxlength: 2000 },
+  documents: [{ name: String, mimeType: String, size: Number, storageKey: { type: String, select: false } }],
+  status: { type: String, enum: ["pending", "approved", "rejected"], default: "pending", required: true },
+}, { collection: "providerapplications" });
+ProviderApplication.schema.index({ provider: 1, service: 1 }, { unique: true, partialFilterExpression: { status: { $in: ["pending", "approved"] } } });
+=======
 const ProviderLocation = make(
   "ProviderLocation",
   {
@@ -343,6 +358,7 @@ ProviderApplication.schema.index(
     partialFilterExpression: { status: { $in: ["pending", "approved"] } },
   },
 );
+>>>>>>> origin/origin-02/feature/payment,review,admin
 ProviderApplication.schema.index({ provider: 1, createdAt: -1 });
 
 const models = {
@@ -359,7 +375,6 @@ const models = {
   PaymentMethod,
   Payment,
   Review,
-  Ticket,
   AdminActivityLog,
 };
 module.exports = { ...models, models, supportCategories };

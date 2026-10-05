@@ -1,3 +1,14 @@
+<<<<<<< HEAD
+const mongoose = require('mongoose');
+const { Service, ServiceCategory, Provider } = require('../../models');
+const { ok, fail } = require('../../utils/response');
+const fields = ['name', 'category', 'description', 'basePrice', 'imageUrl', 'estDurationHours', 'serviceType', 'inclusions', 'isActive'];
+const isId = value => typeof value === 'string' && /^[a-f\d]{24}$/i.test(value);
+const categoryFields = 'name icon sortOrder isActive';
+const serviceFields = 'name category description basePrice imageUrl estDurationHours serviceType inclusions isActive createdAt updatedAt';
+const { approvedApplications, publicProvider } = require('../../utils/approved-providers');
+const providerFields = 'user city ratingAvg reviewCount services';
+=======
 const mongoose = require("mongoose");
 const { Service, ServiceCategory, Provider } = require("../../models");
 const { ok, fail } = require("../../utils/response");
@@ -18,10 +29,18 @@ const categoryFields = "name icon sortOrder isActive";
 const serviceFields =
   "name category description basePrice imageUrl estDurationHours serviceType inclusions isActive createdAt updatedAt";
 const providerFields = "user city ratingAvg reviewCount services";
+>>>>>>> origin/origin-02/feature/payment,review,admin
 
 async function withProviders(services) {
   const isList = Array.isArray(services);
   const items = isList ? services : [services];
+<<<<<<< HEAD
+  const ids = items.map(service => service._id);
+  const applications = Provider.db.readyState === 1 ? await approvedApplications({ service: { $in: ids } }) : [];
+  const result = items.map(service => {
+    const assignedProviders = applications.filter(a => String(a.service?._id) === String(service._id)).map(a => publicProvider(a)).filter(Boolean).map(p => ({ _id: p._id, user: p.user, city: p.location.city, ratingAvg: p.ratingAvg, reviewCount: p.reviewCount }));
+    return { ...(typeof service.toObject === 'function' ? service.toObject() : service), assignedProviders };
+=======
   const ids = items.map((service) => service._id);
   const providers =
     Provider.db.readyState === 1
@@ -52,6 +71,7 @@ async function withProviders(services) {
         : service),
       assignedProviders,
     };
+>>>>>>> origin/origin-02/feature/payment,review,admin
   });
   return isList ? result : result[0];
 }
@@ -98,6 +118,12 @@ exports.validateService = async (req, res, next) => {
         continue;
       }
       changes[key] = body[key].trim();
+<<<<<<< HEAD
+      if (key === 'name' && changes[key].length < 2) errors.push({ path: key, msg: 'Service name must contain at least 2 characters.' });
+      if (key === 'imageUrl' && changes[key] && !/^\/api\/services\/images\/[a-f\d]{8}-[a-f\d]{4}-[a-f\d]{4}-[a-f\d]{4}-[a-f\d]{12}\.(png|jpg)$/i.test(changes[key])) {
+        try { const url = new URL(changes[key]); if (!['https:', 'http:'].includes(url.protocol) || url.username || url.password) throw new Error(); }
+        catch { errors.push({ path: key, msg: 'Enter a valid HTTP or HTTPS image URL.' }); }
+=======
       if (key === "name" && changes[key].length < 2)
         errors.push({
           path: key,
@@ -118,6 +144,7 @@ exports.validateService = async (req, res, next) => {
             msg: "Enter a valid HTTP or HTTPS image URL.",
           });
         }
+>>>>>>> origin/origin-02/feature/payment,review,admin
       }
     }
     if (Object.hasOwn(body, "basePrice")) {
@@ -156,6 +183,12 @@ exports.validateService = async (req, res, next) => {
         errors.push({ path: "isActive", msg: "Status must be true or false." });
       else changes.isActive = body.isActive;
     }
+<<<<<<< HEAD
+    if (Object.hasOwn(body, 'inclusions')) {
+      if (!Array.isArray(body.inclusions) || body.inclusions.length > 30 || body.inclusions.some(value => typeof value !== 'string' || !value.trim() || value.trim().length > 200))
+        errors.push({ path: 'inclusions', msg: 'Provide up to 30 inclusions, each 1â€“200 characters.' });
+      else changes.inclusions = body.inclusions.map(value => value.trim());
+=======
     if (Object.hasOwn(body, "inclusions")) {
       if (
         !Array.isArray(body.inclusions) ||
@@ -172,6 +205,7 @@ exports.validateService = async (req, res, next) => {
           msg: "Provide up to 30 inclusions, each 1–200 characters.",
         });
       else changes.inclusions = body.inclusions.map((value) => value.trim());
+>>>>>>> origin/origin-02/feature/payment,review,admin
     }
     if (errors.length)
       return fail(res, 400, "Please correct the highlighted fields.", errors);

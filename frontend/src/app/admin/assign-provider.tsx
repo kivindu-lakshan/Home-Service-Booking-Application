@@ -1,10 +1,9 @@
+import { useCallback, useEffect, useState } from "react";
+import { router, useLocalSearchParams } from "expo-router";
+import { Pressable, ScrollView, Text } from "react-native";
+import { Button, Card } from "@/components/ui";
 import { assignProvider, getAvailableProviders } from "@/api/domain";
 import { EmptyState, ErrorState, LoadingState } from "@/components/DataState";
-import { Button, Card } from "@/components/ui";
-import { router, useLocalSearchParams } from "expo-router";
-import { Star } from "lucide-react-native";
-import { useCallback, useEffect, useState } from "react";
-import { Pressable, ScrollView, Text } from "react-native";
 export default function AssignProvider() {
   const { bookingId } = useLocalSearchParams<{ bookingId: string }>();
   const [providers, setProviders] = useState<any[]>([]);
@@ -21,8 +20,7 @@ export default function AssignProvider() {
     }
   }, [bookingId]);
   useEffect(() => {
-    const timer = setTimeout(() => void load(), 0);
-    return () => clearTimeout(timer);
+    void load();
   }, [load]);
   const submit = async () => {
     try {
@@ -68,9 +66,8 @@ export default function AssignProvider() {
               >
                 {provider.user?.fullName || "Provider"}
               </Text>
-              <Text style={{ color: "#8E8E9A", marginTop: 6 }}>
-                <Star size={14} color="#FBBF24" fill="#FBBF24" />{" "}
-                {Number(provider.ratingAvg || 0).toFixed(1)} ·{" "}
+              <Text style={{ color: "#F29D38", marginTop: 6 }}>
+                ★ {Number(provider.ratingAvg || 0).toFixed(1)} ·{" "}
                 {provider.city || "Location not set"}
               </Text>
             </Card>
@@ -81,7 +78,6 @@ export default function AssignProvider() {
         <Text style={{ color: "#C0392B", marginBottom: 12 }}>{error}</Text>
       ) : null}
       <Button
-        disabled={!selected}
         onPress={() => {
           void submit();
         }}

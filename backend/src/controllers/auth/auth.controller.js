@@ -8,6 +8,7 @@ const {
 } = require("../../utils/tokens");
 
 const allowedPublicRoles = ["customer", "provider"];
+exports.allowedPublicRoles = allowedPublicRoles;
 
 const publicUser = (user) => ({
   id: user._id,
@@ -138,6 +139,7 @@ exports.verifyEmail = async (req, res, next) => {
 
 exports.login = async (req, res, next) => {
   try {
+    // Authentication always uses the stored account role, never a request role.
     const user = await User.findOne({ email: req.body.email }).select(
       "+passwordHash",
     );

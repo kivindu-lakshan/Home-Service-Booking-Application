@@ -4,6 +4,5 @@ export const AuthStack = {
     "auth/register",
     "auth/forgot-password",
     "auth/reset-password",
-    "auth/verify-email",
   ],
 };

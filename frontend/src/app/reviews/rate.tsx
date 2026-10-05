@@ -1,3 +1,12 @@
+<<<<<<< HEAD
+import { useState } from "react";
+import { router, useLocalSearchParams } from "expo-router";
+import { ScrollView, Text, TextInput } from "react-native";
+import { Button, Card } from "@/components/ui";
+import { createReview } from "@/api/domain";
+import ErrorText from "@/components/ErrorText";
+import { ProfileBackButton } from "@/components/profile/ProfileNavigation";
+=======
 import { createReview, getBookingReview, updateReview } from "@/api/domain";
 import ErrorText from "@/components/ErrorText";
 import { ProfileBackButton } from "@/components/profile/ProfileNavigation";
@@ -6,6 +15,7 @@ import { router, useLocalSearchParams } from "expo-router";
 import { Star } from "lucide-react-native";
 import { useEffect, useState } from "react";
 import { ScrollView, Text, TextInput } from "react-native";
+>>>>>>> origin/origin-02/feature/payment,review,admin
 export default function RateProvider() {
   const { bookingId } = useLocalSearchParams<{ bookingId: string }>();
   const [rating, setRating] = useState(0);
@@ -78,11 +88,7 @@ export default function RateProvider() {
         <Text style={{ color: "#F29D38", fontSize: 38, marginTop: 12 }}>
           {[1, 2, 3, 4, 5].map((value) => (
             <Text key={value} onPress={() => setRating(value)}>
-              <Star
-                size={30}
-                color="#FBBF24"
-                fill={value <= rating ? "#FBBF24" : "#FFFFFF"}
-              />
+              {value <= rating ? "★" : "☆"}
             </Text>
           ))}
         </Text>

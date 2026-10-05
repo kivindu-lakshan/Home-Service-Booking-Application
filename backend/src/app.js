@@ -22,10 +22,12 @@ app.get("/api/health", (req, res) =>
 app.use("/api/auth", authLimit, require("./routes/auth/auth.routes"));
 app.use("/api/addresses", require("./routes/address/address.routes"));
 app.use("/api/support", require("./routes/support/support.routes"));
+app.use("/api/catalogue", require("./routes/catalogue/catalogue.routes"));
+app.use("/api/bookings", require("./routes/booking/booking.routes"));
 app.use("/api/payments", require("./routes/payment/payment.routes"));
 app.use("/api/bookings", require("./routes/booking/booking.routes"));
 app.use("/api/reviews", require("./routes/review/review.routes"));
-app.use("/api/tickets", require("./routes/ticket/ticket.routes"));
+//app.use("/api/tickets", require("./routes/ticket/ticket.routes"));
 app.use("/api/services", require("./routes/service/service.routes"));
 app.use("/api/admin", require("./routes/admin/admin.routes"));
 app.use("/api/provider", require("./routes/provider/provider.routes"));

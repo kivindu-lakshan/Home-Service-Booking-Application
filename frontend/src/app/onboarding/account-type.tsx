@@ -10,7 +10,7 @@ export default function AccountTypeScreen() {
   return <AuthPage title="How can we help?" subtitle="Choose the account that's right for you." back="/onboarding/welcome">
     <View style={{ gap: 16 }}>
       <SettingsCard title="Find a service" subtitle="Book trusted professionals for your home." icon="home" onPress={() => router.push("/auth/register")} />
-      <SettingsCard title="Offer a service" subtitle="Find local customers and grow your business. Provider registration is not available yet." icon="person" placeholder />
+      <SettingsCard title="Offer a service" subtitle="Find local customers and grow your business." icon="person" onPress={() => router.push({ pathname: "/auth/register", params: { role: "provider" } })} />
     </View><Text style={themed(addressStyles.hint)}>Already part of HomeHalo?</Text>
     <AuthFooter><AuthButton title="Sign in" secondary onPress={() => router.push("/auth/login")} /></AuthFooter>
   </AuthPage>;

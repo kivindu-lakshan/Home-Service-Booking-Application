@@ -32,15 +32,6 @@
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 76
         }
-      ],
-      [
-        "expo-location",
-        {
-          "locationWhenInUsePermission": "Allow HomeHalo to find your service area when you choose Use current location.",
-          "isIosBackgroundLocationEnabled": false,
-          "isAndroidBackgroundLocationEnabled": false,
-          "isAndroidForegroundServiceEnabled": false
-        }
       ]
     ],
     "experiments": {

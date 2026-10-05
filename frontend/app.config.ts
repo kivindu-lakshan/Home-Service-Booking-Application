@@ -25,6 +25,7 @@ export default {
   ...appJson,
   expo: {
     ...expoConfig,
+    plugins: [...(expoConfig.plugins || []), "expo-sharing"],
     extra: { ...(expoConfig.extra || {}), apiUrl: rootEnv.EXPO_PUBLIC_API_URL },
   },
 };

@@ -1,10 +1,10 @@
-import { Redirect, Slot } from 'expo-router';
-import { useAuth } from '@/context/AuthContext';
-import { LoadingState } from '@/components/DataState';
+import { Stack } from "expo-router";
+import { RoleGuard } from "@/components/auth/RoleGuard";
+
 export default function ProviderLayout() {
-  const { user, loading } = useAuth();
-  if (loading) return <LoadingState label='Checking your session...' />;
-  if (!user) return <Redirect href='/auth/login' />;
-  if (user.role !== 'provider') return <Redirect href='/' />;
-  return <Slot />;
+  return (
+    <RoleGuard role="provider">
+      <Stack screenOptions={{ headerShown: false }} />
+    </RoleGuard>
+  );
 }

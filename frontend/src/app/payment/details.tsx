@@ -1,5 +1,19 @@
+import { isAxiosError } from "axios";
+import { useCallback, useEffect, useState } from "react";
+import { router, useLocalSearchParams } from "expo-router";
+import { Pressable, ScrollView, Text } from "react-native";
+import { Button, Card } from "@/components/ui";
 import { createPayment, getPayment, getPaymentMethods } from "@/api/domain";
 import { ErrorState, LoadingState } from "@/components/DataState";
+<<<<<<< HEAD
+import { ProfileBackButton } from "@/components/profile/ProfileNavigation";
+
+type PaymentMethod = {
+  _id: string;
+  brand?: string;
+  last4: string;
+};
+=======
 import { Button, Input } from "@/components/ui";
 import { router, useLocalSearchParams } from "expo-router";
 import {
@@ -11,22 +25,25 @@ import {
 } from "lucide-react-native";
 import { useCallback, useEffect, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+>>>>>>> origin/origin-02/feature/payment,review,admin
 
 export default function PaymentDetails() {
   const { bookingId } = useLocalSearchParams<{ bookingId: string }>();
   const [data, setData] = useState<any>();
+<<<<<<< HEAD
+  const [methods, setMethods] = useState<PaymentMethod[]>([]);
+  const [method, setMethod] = useState("cash_on_completion");
+=======
   const [methods, setMethods] = useState<any[]>([]);
   const [method, setMethod] = useState<
     "demo_card" | "card" | "cash_on_completion"
   >("demo_card");
+>>>>>>> origin/origin-02/feature/payment,review,admin
   const [selectedMethod, setSelectedMethod] = useState<string>();
-  const [cardholderName, setCardholderName] = useState("");
-  const [cardNumber, setCardNumber] = useState("");
-  const [expiryDate, setExpiryDate] = useState("");
-  const [cvv, setCvv] = useState("");
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+
   const load = useCallback(async () => {
     try {
       const [payment, saved] = await Promise.all([
@@ -35,16 +52,53 @@ export default function PaymentDetails() {
       ]);
       setData(payment.data.data);
       setMethods(saved.data.data);
-    } catch (e: any) {
-      setError(e.response?.data?.message || "Unable to load payment details.");
+      setError("");
+    } catch (failure) {
+      setError(
+        isAxiosError(failure) && typeof failure.response?.data?.message === "string"
+          ? failure.response.data.message
+          : "Unable to load payment details.",
+      );
     } finally {
       setLoading(false);
     }
   }, [bookingId]);
+
   useEffect(() => {
-    const timer = setTimeout(() => void load(), 0);
-    return () => clearTimeout(timer);
+    void Promise.resolve().then(load);
   }, [load]);
+
+  const submit = async () => {
+    if (method === "card" && !selectedMethod) {
+      setError("Select a saved payment method.");
+      return;
+    }
+    setBusy(true);
+    setError("");
+    try {
+      const response = await createPayment(bookingId, {
+        method,
+        paymentMethodId: selectedMethod,
+      });
+      await getPayment(bookingId);
+      router.replace({
+        pathname: "/payment/success",
+        params: {
+          bookingId,
+          receipt: response.data.data.payment.receiptNo || "pending",
+        },
+      });
+    } catch (failure) {
+      setError(
+        isAxiosError(failure) && typeof failure.response?.data?.message === "string"
+          ? failure.response.data.message
+          : "Unable to save payment.",
+      );
+    } finally {
+      setBusy(false);
+    }
+  };
+
   if (loading) return <LoadingState label="Loading payment details..." />;
   if (!data)
     return (
@@ -55,8 +109,77 @@ export default function PaymentDetails() {
         }}
       />
     );
+
   const booking = data.booking;
   const payment = data.payment;
+<<<<<<< HEAD
+
+  return (
+    <ScrollView
+      style={{ backgroundColor: "#F7F7FB" }}
+      contentContainerStyle={{ padding: 20 }}
+    >
+      <ProfileBackButton
+        onPress={() =>
+          router.canGoBack() ? router.back() : router.replace("/bookings")
+        }
+      />
+      <Text style={{ fontSize: 30, fontWeight: "900", color: "#25213D" }}>
+        Payment details
+      </Text>
+      <Card>
+        <Text style={{ color: "#747B90" }}>Booking reference</Text>
+        <Text
+          style={{
+            color: "#25213D",
+            fontWeight: "900",
+            fontSize: 18,
+            marginTop: 6,
+          }}
+        >
+          {booking.bookingRef}
+        </Text>
+        <Text style={{ color: "#747B90", marginTop: 16 }}>Service charge</Text>
+        <Text style={{ color: "#25213D", fontWeight: "800" }}>
+          LKR {Number(booking.serviceFee || 0).toLocaleString()}
+        </Text>
+        <Text style={{ color: "#747B90", marginTop: 10 }}>Tax</Text>
+        <Text style={{ color: "#25213D", fontWeight: "800" }}>
+          LKR {Number(booking.tax || 0).toLocaleString()}
+        </Text>
+        <Text
+          style={{
+            color: "#5B3DF5",
+            fontSize: 20,
+            fontWeight: "900",
+            marginTop: 16,
+          }}
+        >
+          Total LKR {Number(booking.totalPrice || 0).toLocaleString()}
+        </Text>
+      </Card>
+      <Text
+        style={{
+          color: "#25213D",
+          fontWeight: "900",
+          fontSize: 18,
+          marginBottom: 10,
+        }}
+      >
+        Payment method
+      </Text>
+      {methods.map((saved) => (
+        <Pressable
+          key={saved._id}
+          accessibilityRole="radio"
+          accessibilityState={{
+            checked: method === "card" && selectedMethod === saved._id,
+          }}
+          onPress={() => {
+            setMethod("card");
+            setSelectedMethod(saved._id);
+          }}
+=======
   const submit = async () => {
     if ((method === "card" || method === "demo_card") && !selectedMethod) {
       if (!cardholderName.trim()) {
@@ -109,9 +232,18 @@ export default function PaymentDetails() {
             router.canGoBack() ? router.back() : router.replace("/bookings")
           }
           style={styles.headerButton}
+>>>>>>> origin/origin-02/feature/payment,review,admin
         >
           <ChevronLeft size={20} color="#25213D" />
         </Pressable>
+<<<<<<< HEAD
+      ))}
+      <Pressable
+        accessibilityRole="radio"
+        accessibilityState={{
+          checked: method === "cash_on_completion",
+        }}
+=======
         <Text style={styles.headerTitle}>Checkout</Text>
         <View style={styles.headerButton}>
           <MoreVertical size={19} color="#25213D" />
@@ -233,6 +365,7 @@ export default function PaymentDetails() {
         </View>
       )}
       <Pressable
+>>>>>>> origin/origin-02/feature/payment,review,admin
         onPress={() => {
           setMethod("cash_on_completion");
           setSelectedMethod(undefined);
@@ -244,12 +377,24 @@ export default function PaymentDetails() {
           {method === "cash_on_completion" ? "Selected" : "Select"}
         </Text>
       </Pressable>
+<<<<<<< HEAD
+      {error ? (
+        <Text
+          accessibilityRole="alert"
+          style={{ color: "#C0392B", marginBottom: 12 }}
+        >
+          {error}
+        </Text>
+      ) : null}
+      <Button onPress={() => void submit()} disabled={busy}>
+=======
       {error ? <Text style={styles.error}>{error}</Text> : null}
       <Button
         onPress={() => {
           void submit();
         }}
       >
+>>>>>>> origin/origin-02/feature/payment,review,admin
         {busy
           ? "Saving..."
           : method === "cash_on_completion"

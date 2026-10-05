@@ -1,3 +1,18 @@
+<<<<<<< HEAD
+import type { ReactNode } from 'react';
+import { serviceImageUri } from '@/utils/service-image';
+import { useState } from 'react';
+import { Redirect, router } from 'expo-router';
+import { Image, Pressable, StyleSheet, View } from 'react-native';
+import { Archive, Clock, MapPin, Pencil, Plus, RotateCw, Trash2 } from 'lucide-react-native';
+import { useAuth } from '@/context/AuthContext';
+import { LoadingState } from '@/components/DataState';
+import { AccountText as Text } from '@/components/settings/AccountText';
+import { useAccountStyles } from '@/context/AccountThemeContext';
+import { Card } from '@/components/ui';
+import type { Service } from '@/api/services';
+export function ServiceGuard({ admin = false, children }: { admin?: boolean; children: ReactNode }) {
+=======
 import type { Service } from "@/api/services";
 import { LoadingState } from "@/components/DataState";
 import { AccountText as Text } from "@/components/settings/AccountText";
@@ -24,6 +39,7 @@ export function ServiceGuard({
   admin?: boolean;
   children: ReactNode;
 }) {
+>>>>>>> origin/origin-02/feature/payment,review,admin
   const { user, loading } = useAuth();
   if (loading) return <LoadingState />;
   if (!user) return <Redirect href="/auth/login" />;
@@ -88,6 +104,30 @@ export function ServiceCard({
 }) {
   const themed = useAccountStyles();
   const [failedImage, setFailedImage] = useState(false);
+<<<<<<< HEAD
+  const imageUri = serviceImageUri(service.imageUrl);
+  return <Card>
+    {!!imageUri && !failedImage && <Image accessibilityLabel={service.name} source={{ uri: imageUri }} onError={() => setFailedImage(true)} resizeMode='cover' style={serviceStyles.image} />}
+    <View style={serviceStyles.cardTop}>
+      <Text style={themed(serviceStyles.category)}>{service.category?.name || 'Category unavailable'}</Text>
+      <View style={[serviceStyles.status, !service.isActive && { backgroundColor: '#F0F1F6' }]}><View style={[serviceStyles.dot, !service.isActive && { backgroundColor: '#9298A8' }]} /><Text style={{ color: service.isActive ? '#217A62' : '#727A8D', fontSize: 11, fontWeight: '700' }}>{service.isActive ? 'Active' : 'Inactive'}</Text></View>
+    </View>
+    <Text style={themed(serviceStyles.title)}>{service.name}</Text>
+    {!!service.description && <Text style={themed(serviceStyles.copy)}>{service.description}</Text>}
+    <View style={serviceStyles.details}>
+      {!!service.estDurationHours && <View style={serviceStyles.detail}><Clock size={14} color='#8A91A4' /><Text style={themed(serviceStyles.detailText)}>{service.estDurationHours}</Text></View>}
+      {!!service.serviceType && <View style={serviceStyles.detail}><MapPin size={14} color='#8A91A4' /><Text style={themed(serviceStyles.detailText)}>{service.serviceType === 'on_site' ? 'On site' : 'Workshop'}</Text></View>}
+    </View>
+    {!!service.inclusions?.length && <Text style={themed(serviceStyles.inclusions)}>Includes {service.inclusions.join(' · ')}</Text>}
+    {!!service.assignedProviders?.length && <View style={serviceStyles.providers}><Text style={themed(serviceStyles.providerLabel)}>AVAILABLE PROVIDERS</Text>{service.assignedProviders.map(provider => <Pressable key={provider._id} onPress={() => router.push({ pathname: '/reviews/provider', params: { providerId: provider._id } })}><Text style={themed(serviceStyles.providerName)}>{provider.user?.fullName || 'Provider'}{provider.city ? ` · ${provider.city}` : ''} · {Number(provider.ratingAvg || 0).toFixed(1)} stars</Text></Pressable>)}</View>}
+    {service.category?.isActive === false && <Text style={themed(serviceStyles.copy)}>Category inactive</Text>}
+    <View style={themed(serviceStyles.priceBlock)}>
+      <Text style={themed(serviceStyles.priceLabel)}>STARTING FROM</Text>
+      <Text style={themed(serviceStyles.price)}>{service.basePrice === undefined ? 'Price not specified' : `LKR ${service.basePrice.toLocaleString()}`}</Text>
+    </View>
+    {children}
+  </Card>;
+=======
   return (
     <Card>
       {!!service.imageUrl && !failedImage && (
@@ -191,6 +231,7 @@ export function ServiceCard({
       {children}
     </Card>
   );
+>>>>>>> origin/origin-02/feature/payment,review,admin
 }
 export const serviceStyles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: "#F7F7FD" },

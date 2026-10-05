@@ -15,7 +15,8 @@ export default function Applications() {
       <Text style={{ color: '#242E49', fontSize: 18, fontWeight: '800' }}>{item.service?.name || 'Service no longer available'}</Text>
       <Text style={{ color: '#7C879F' }}>Submitted {new Date(item.createdAt).toLocaleDateString()}</Text>
       <Text style={{ color: item.status === 'approved' ? '#278B70' : item.status === 'rejected' ? '#B73248' : '#633CFF', backgroundColor: item.status === 'approved' ? '#E6F5EE' : item.status === 'rejected' ? '#FCE9EC' : '#EDE7FF', padding: 10, borderRadius: 16, alignSelf: 'flex-start', fontWeight: '700' }}>{item.status[0].toUpperCase() + item.status.slice(1)}</Text>
-      <Text style={{ color: '#7C879F' }}>{item.location.address}</Text>
+      <Text style={{ color: '#7C879F' }}>{item.location?.address || 'Location unavailable'}</Text>
+      {item.status === 'rejected' && !!item.rejectionReason && <Text style={{ color: '#B73248' }}>Reason: {item.rejectionReason}</Text>}
       <Text style={{ color: '#7C879F' }}>{item.documents.length} supporting document{item.documents.length === 1 ? '' : 's'}</Text>
     </View>)}
     <AddressButton title='Available Services' onPress={() => router.push('/services')} />

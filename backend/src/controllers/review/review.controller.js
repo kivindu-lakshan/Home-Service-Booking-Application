@@ -1,3 +1,6 @@
+const mongoose = require("mongoose");
+const { completedReviews } = require("../../utils/completed-reviews");
+const { approvedApplications, publicProvider } = require("../../utils/approved-providers");
 const { Booking, Review, Provider } = require("../../models");
 const send = (res, data, message = "Success") =>
   res.json({ success: true, data, message });
@@ -70,18 +73,24 @@ exports.create = async (req, res, next) => {
   }
 };
 exports.byProvider = async (req, res, next) => {
-  try {
-    const reviews = await Review.find({ provider: req.params.providerId })
-      .populate("customer", "fullName avatarUrl")
-      .populate("booking", "bookingRef scheduledDate")
-      .sort({ createdAt: -1 });
-    const provider = await Provider.findById(req.params.providerId).select(
-      "ratingAvg reviewCount",
-    );
-    return send(res, { provider, reviews });
-  } catch (error) {
-    return next(error);
-  }
+ try {
+  const validId = value => typeof value === 'string' && /^[a-f\d]{24}$/i.test(value);
+  if (!validId(req.params.providerId) || (req.query.serviceId && !validId(req.query.serviceId))) return res.status(400).json({ success: false, data: null, message: 'Invalid provider or service ID' });
+  const applications = await approvedApplications({ provider: req.params.providerId, ...(req.query.serviceId ? { service: req.query.serviceId } : {}) });
+  if (!applications.some(a => publicProvider(a))) return res.status(404).json({ success: false, data: null, message: 'Approved provider not found for this service' });
+  const page = Number(req.query.page || 1);
+  if (!Number.isInteger(page) || page < 1 || page > 100000) return res.status(400).json({ success: false, data: null, message: 'Invalid review page' });
+  const pipeline = completedReviews({ provider: new mongoose.Types.ObjectId(req.params.providerId) });
+  const [result] = await Review.aggregate([...pipeline, { $facet: {
+   summary: [{ $group: { _id: null, ratingAvg: { $avg: '$rating' }, reviewCount: { $sum: 1 } } }],
+   reviews: [{ $sort: { createdAt: -1, _id: -1 } }, { $skip: (page - 1) * 20 }, { $limit: 20 },
+    { $lookup: { from: 'users', localField: 'customer', foreignField: '_id', as: 'author' } },
+    { $project: { _id: 1, rating: 1, comment: 1, createdAt: 1, customer: { fullName: { $arrayElemAt: ['$author.fullName', 0] }, avatarUrl: { $arrayElemAt: ['$author.avatarUrl', 0] } } } }],
+  } }]);
+  const summary = result?.summary[0];
+  res.set('Cache-Control', 'private, no-store');
+  return send(res, { provider: { ratingAvg: summary?.ratingAvg || 0, reviewCount: summary?.reviewCount || 0 }, reviews: result?.reviews || [], page, pageSize: 20, total: summary?.reviewCount || 0 });
+ } catch (error) { next(error); }
 };
 exports.byBooking = async (req, res, next) => {
   try {

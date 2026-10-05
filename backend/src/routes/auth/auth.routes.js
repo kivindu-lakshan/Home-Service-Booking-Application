@@ -9,9 +9,14 @@ const password = (field) =>
     .isLength({ min: 8 })
     .matches(/[A-Za-z]/)
     .matches(/[0-9]/)
-    .withMessage(controller.passwordError);
+    .withMessage(controller.passwordError).hide();
 router.post(
   "/register",
+  (req, res, next) => {
+    if (!controller.allowedPublicRoles.includes(req.body?.role))
+      return fail(res, 400, "Choose customer or provider.");
+    next();
+  },
   [
     body("fullName")
       .isString()
@@ -83,11 +88,7 @@ router.post(
 );
 router.post(
   "/login",
-  [
-    body("email").isEmail().normalizeEmail(),
-    body("password").notEmpty(),
-    body("role").optional().isIn(["customer", "provider", "admin"]),
-  ],
+  [body("email").isEmail().normalizeEmail(), body("password").notEmpty()],
   validate,
   controller.login,
 );
@@ -139,6 +140,21 @@ router.patch(
   appearance.update,
 );
 router.get("/me/notification-preferences", auth, noStore, notifications.read);
+<<<<<<< HEAD
+router.patch("/me/notification-preferences", auth, noStore, (req, res, next) => {
+  const values = req.body;
+  if (!values || typeof values !== "object" || Array.isArray(values) || !Object.keys(values).length ||
+      Object.keys(values).some((key) => !notificationFields.includes(key)))
+    return fail(res, 400, "Provide only bookingConfirmations, arrivalStatusUpdates and bookingReminders.");
+  next();
+}, notificationFields.map((key) => body(key).optional()
+  .custom((value) => typeof value === "boolean").withMessage("Preference must be true or false.").hide()),
+(req, res, next) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) return fail(res, 400, "Validation failed", errors.array());
+  next();
+}, notifications.update);
+=======
 router.patch(
   "/me/notification-preferences",
   auth,
@@ -175,7 +191,15 @@ router.patch(
   notifications.update,
 );
 router.use("/me/service-location", require("./service-location.routes"));
+>>>>>>> origin/origin-02/feature/payment,review,admin
 router.get("/me", auth, controller.me);
+const authorizeRoles = require("../../middleware/role");
+for (const role of ["customer", "provider", "admin"]) {
+  router.get(`/dashboard/${role}`, auth, authorizeRoles(role), (req, res) => {
+    res.set("Cache-Control", "no-store");
+    res.json({ success: true, data: { role: req.user.role }, message: "Welcome to HomeHalo" });
+  });
+}
 router.patch(
   "/me",
   auth,

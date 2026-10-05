@@ -15,6 +15,9 @@ export const getPayment = (bookingId: string) =>
 export const getPaymentMethods = () => api.get("/payments/methods");
 export const createPayment = (
   bookingId: string,
+<<<<<<< HEAD
+  payload: { method: string; paymentMethodId?: string },
+=======
   payload: {
     method: "card" | "demo_card" | "cash_on_arrival" | "cash_on_completion";
     paymentMethodId?: string;
@@ -25,9 +28,10 @@ export const createPayment = (
       cvv: string;
     };
   },
+>>>>>>> origin/origin-02/feature/payment,review,admin
 ) => api.post(`/payments/booking/${bookingId}`, payload);
-export const getProviderReviews = (providerId: string) =>
-  api.get(`/reviews/provider/${providerId}`);
+export const getProviderReviews = (providerId: string, serviceId?: string, signal?: AbortSignal, page = 1) =>
+  api.get(`/reviews/provider/${encodeURIComponent(providerId)}`, { params: { serviceId, page }, signal, timeout: 15000 });
 export const getBookingReview = (bookingId: string) =>
   api.get(`/reviews/booking/${bookingId}`);
 export const createReview = (payload: {
@@ -35,23 +39,6 @@ export const createReview = (payload: {
   rating: number;
   comment?: string;
 }) => api.post("/reviews", payload);
-export const getMyReviews = () => api.get("/reviews/mine");
-export const updateReview = (
-  reviewId: string,
-  payload: { rating: number; comment?: string },
-) => api.patch(`/reviews/${reviewId}`, payload);
-export const deleteReview = (reviewId: string) =>
-  api.delete(`/reviews/${reviewId}`);
-export const getMyTickets = () => api.get("/tickets/mine");
-export const createTicket = (payload: { subject: string; message: string }) =>
-  api.post("/tickets", payload);
-export const getAdminTickets = () => api.get("/tickets/admin");
-export const respondToTicket = (
-  ticketId: string,
-  payload: { adminResponse: string; status: "in_progress" | "resolved" },
-) => api.patch(`/tickets/admin/${ticketId}`, payload);
-export const deleteTicketResponse = (ticketId: string) =>
-  api.delete(`/tickets/admin/${ticketId}/response`);
 export const getAdminDashboard = () => api.get("/admin/dashboard");
 export const getAdminBookings = (params: {
   status?: string;

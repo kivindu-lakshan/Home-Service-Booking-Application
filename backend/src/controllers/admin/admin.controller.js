@@ -4,6 +4,7 @@ const {
   BookingAssignment,
   AdminActivityLog,
   User,
+  ProviderApplication,
 } = require("../../models");
 const send = (res, data, message = "Success") =>
   res.json({ success: true, data, message });
@@ -29,7 +30,9 @@ exports.dashboard = async (req, res, next) => {
         .sort({ createdAt: -1 })
         .limit(10),
     ]);
+    const pendingProviderApplications = await ProviderApplication.countDocuments({ status: "pending" });
     return send(res, {
+      pendingProviderApplications,
       totalBookings,
       pending,
       ongoing,
@@ -83,15 +86,6 @@ exports.availableProviders = async (req, res, next) => {
 };
 exports.assignProvider = async (req, res, next) => {
   try {
-    const mongoose = require("mongoose");
-    if (!req.body.providerId || !mongoose.isValidObjectId(req.body.providerId))
-      return res
-        .status(422)
-        .json({
-          success: false,
-          data: null,
-          message: "Select a valid provider before assigning",
-        });
     const [booking, provider] = await Promise.all([
       Booking.findById(req.params.id),
       Provider.findOne({
