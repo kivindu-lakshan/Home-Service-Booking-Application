@@ -55,17 +55,89 @@ exports.create = async (req, res, next) => {
     const method =
       req.body.method ||
       (req.body.paymentMethodId ? "card" : "cash_on_completion");
-    if (!["card", "cash_on_arrival", "cash_on_completion"].includes(method))
+    if (
+      !["card", "demo_card", "cash_on_arrival", "cash_on_completion"].includes(
+        method,
+      )
+    )
       return res.status(422).json({
         success: false,
         data: null,
         message: "Invalid payment method",
       });
+<<<<<<< HEAD
     if (method === "card") {
       const paymentMethod = await PaymentMethod.findOne({
         _id: req.body.paymentMethodId,
         user: req.user._id,
       });
+=======
+    let paymentMethod;
+    if (method === "demo_card") {
+      const { cardholderName, cardNumber, expiryDate, cvv } =
+        req.body.card || {};
+      if (
+        !cardholderName?.trim() ||
+        !/^\d{16}$/.test(cardNumber || "") ||
+        !/^(0[1-9]|1[0-2])\/\d{2}$/.test(expiryDate || "") ||
+        !/^\d{3,4}$/.test(cvv || "")
+      )
+        return res.status(422).json({
+          success: false,
+          data: null,
+          message:
+            "Enter the demo card number, expiry date, CVV, and cardholder name",
+        });
+      paymentMethod = await PaymentMethod.findOneAndUpdate(
+        { user: req.user._id, gatewayToken: "university_demo_card" },
+        {
+          user: req.user._id,
+          type: "card",
+          brand: "Demo Visa",
+          last4: "4242",
+          gatewayToken: "university_demo_card",
+          isDefault: false,
+        },
+        { new: true, upsert: true, setDefaultsOnInsert: true },
+      );
+    } else if (method === "card") {
+      if (req.body.card) {
+        const { cardholderName, cardNumber, expiryDate, cvv } = req.body.card;
+        if (
+          !cardholderName?.trim() ||
+          !/^\d{16}$/.test(cardNumber || "") ||
+          !/^(0[1-9]|1[0-2])\/(\d{2})$/.test(expiryDate || "") ||
+          !/^\d{3,4}$/.test(cvv || "")
+        )
+          return res.status(422).json({
+            success: false,
+            data: null,
+            message:
+              "Enter a cardholder name, a 16-digit card number, a valid MM/YY expiry, and a 3 or 4 digit CVV",
+          });
+        const [month, year] = expiryDate.split("/").map(Number);
+        const expiry = new Date(2000 + year, month, 0, 23, 59, 59);
+        if (expiry < new Date())
+          return res.status(422).json({
+            success: false,
+            data: null,
+            message: "The card expiry date has passed",
+          });
+        paymentMethod = await PaymentMethod.create({
+          user: req.user._id,
+          type: "card",
+          brand: "Card",
+          last4: cardNumber.slice(-4),
+          gatewayToken: `sim_${crypto.randomBytes(16).toString("hex")}`,
+          isDefault: false,
+        });
+      } else {
+        paymentMethod = await PaymentMethod.findOne({
+          _id: req.body.paymentMethodId,
+          user: req.user._id,
+        });
+      }
+>>>>>>> origin/origin-02/feature/payment,review,admin
       if (!paymentMethod)
         return res.status(422).json({
           success: false,
@@ -73,7 +145,7 @@ exports.create = async (req, res, next) => {
           message: "Select a saved payment method",
         });
     }
-    const paid = method === "card";
+    const paid = method === "card" || method === "demo_card";
     const payment = await Payment.findOneAndUpdate(
       { booking: booking._id },
       {

@@ -62,6 +62,13 @@ exports.create = async (req, res, next) => {
       "Review submitted",
     );
   } catch (error) {
+    if (error?.code === 11000 && error?.keyPattern?.booking) {
+      return res.status(409).json({
+        success: false,
+        data: null,
+        message: "This booking already has a review",
+      });
+    }
     return next(error);
   }
 };
@@ -102,7 +109,11 @@ exports.mine = async (req, res, next) => {
     return send(
       res,
       await Review.find({ customer: req.user._id })
-        .populate({ path: "provider", select: "user ratingAvg", populate: { path: "user", select: "fullName" } })
+        .populate({
+          path: "provider",
+          select: "user ratingAvg",
+          populate: { path: "user", select: "fullName" },
+        })
         .populate("booking", "bookingRef scheduledDate")
         .sort({ createdAt: -1 }),
     );

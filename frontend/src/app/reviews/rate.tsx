@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import { useState } from "react";
 import { router, useLocalSearchParams } from "expo-router";
 import { ScrollView, Text, TextInput } from "react-native";
@@ -5,18 +6,53 @@ import { Button, Card } from "@/components/ui";
 import { createReview } from "@/api/domain";
 import ErrorText from "@/components/ErrorText";
 import { ProfileBackButton } from "@/components/profile/ProfileNavigation";
+=======
+import { createReview, getBookingReview, updateReview } from "@/api/domain";
+import ErrorText from "@/components/ErrorText";
+import { ProfileBackButton } from "@/components/profile/ProfileNavigation";
+import { Button, Card } from "@/components/ui";
+import { router, useLocalSearchParams } from "expo-router";
+import { Star } from "lucide-react-native";
+import { useEffect, useState } from "react";
+import { ScrollView, Text, TextInput } from "react-native";
+>>>>>>> origin/origin-02/feature/payment,review,admin
 export default function RateProvider() {
   const { bookingId } = useLocalSearchParams<{ bookingId: string }>();
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [reviewId, setReviewId] = useState<string | null>(null);
+  const [loadingReview, setLoadingReview] = useState(true);
+  useEffect(() => {
+    let active = true;
+    void getBookingReview(bookingId)
+      .then((response) => {
+        if (!active) return;
+        const review = response.data.data;
+        if (review) {
+          setReviewId(review._id);
+          setRating(review.rating);
+          setComment(review.comment || "");
+        }
+      })
+      .catch(() => undefined)
+      .finally(() => {
+        if (active) setLoadingReview(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [bookingId]);
   const submit = async () => {
+    if (busy || loadingReview) return;
     if (!rating) return setError("Select a rating from 1 to 5 stars.");
     setBusy(true);
     setError("");
     try {
-      const response = await createReview({ bookingId, rating, comment });
+      const response = reviewId
+        ? await updateReview(reviewId, { rating, comment })
+        : await createReview({ bookingId, rating, comment });
       router.replace({
         pathname: "/reviews/submitted",
         params: { rating: response.data.data.rating },
@@ -32,12 +68,18 @@ export default function RateProvider() {
       style={{ backgroundColor: "#F7F7FB" }}
       contentContainerStyle={{ padding: 20 }}
     >
-      <ProfileBackButton onPress={() => router.canGoBack() ? router.back() : router.replace("/bookings")} />
+      <ProfileBackButton
+        onPress={() =>
+          router.canGoBack() ? router.back() : router.replace("/bookings")
+        }
+      />
       <Text style={{ fontSize: 30, fontWeight: "900", color: "#25213D" }}>
         Rate your provider
       </Text>
       <Text style={{ color: "#747B90", marginVertical: 10 }}>
-        Your review is linked to completed booking {bookingId}.
+        {reviewId
+          ? "Update your review for this completed booking."
+          : `Your review is linked to completed booking ${bookingId}.`}
       </Text>
       <Card>
         <Text style={{ color: "#25213D", fontWeight: "900", fontSize: 18 }}>
@@ -69,11 +111,18 @@ export default function RateProvider() {
       />
       <ErrorText>{error}</ErrorText>
       <Button
+        disabled={busy || loadingReview}
         onPress={() => {
           void submit();
         }}
       >
-        {busy ? "Submitting..." : "Submit review"}
+        {loadingReview
+          ? "Loading review..."
+          : busy
+            ? "Saving..."
+            : reviewId
+              ? "Update review"
+              : "Submit review"}
       </Button>
       <Text
         onPress={() => router.replace("/bookings")}

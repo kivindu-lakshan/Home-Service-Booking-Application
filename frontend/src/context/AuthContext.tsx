@@ -1,10 +1,19 @@
 import {
+<<<<<<< HEAD
   createContext,
   useContext,
   useCallback,
   useEffect,
   useState,
   type ReactNode,
+=======
+    createContext,
+    useCallback,
+    useContext,
+    useEffect,
+    useState,
+    type ReactNode,
+>>>>>>> origin/origin-02/feature/payment,review,admin
 } from "react";
 import { api, clearToken, getStoredToken, saveToken } from "@/api/client";
 
@@ -20,17 +29,14 @@ type User = {
 type AuthValue = {
   user: User | null;
   loading: boolean;
-  login: (
-    email: string,
-    password: string,
-  ) => Promise<User>;
+  login: (email: string, password: string) => Promise<User>;
   register: (
     fullName: string,
     email: string,
     phone: string,
     password: string,
     role: "customer" | "provider",
-  ) => Promise<void>;
+  ) => Promise<string | undefined>;
   logout: () => Promise<void>;
   syncProfile: (profile: Pick<User, "id" | "fullName" | "phone">) => void;
 };
@@ -64,7 +70,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .finally(() => setLoading(false));
   }, []);
 
+<<<<<<< HEAD
   const login = async (email: string, password: string): Promise<User> => {
+=======
+  const login = async (email: string, password: string) => {
+>>>>>>> origin/origin-02/feature/payment,review,admin
     const response = await api.post("/auth/login", { email, password });
     await saveToken(response.data.data.token);
     setUser(response.data.data.user);
@@ -87,6 +97,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
     await saveToken(response.data.data.token);
     setUser(response.data.data.user);
+    return response.data.data.verificationCode;
   };
 
   const logout = async () => {

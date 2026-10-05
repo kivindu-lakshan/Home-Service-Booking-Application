@@ -38,33 +38,102 @@ async function createAuthToken(user, type, minutes) {
   return raw;
 }
 
+async function createVerificationCode(user) {
+  const code = String(Math.floor(100000 + Math.random() * 900000));
+  await AuthToken.create({
+    user: user._id,
+    type: "verify_email",
+    tokenHash: hashToken(code),
+    expiresAt: new Date(Date.now() + 30 * 60000),
+  });
+  console.log(`[SIMULATED EMAIL] verify_email code for ${user.email}: ${code}`);
+  return code;
+}
+
 exports.register = async (req, res, next) => {
   try {
     const { fullName, email, phone, password } = req.body;
     const role = req.body.role || "customer";
-    if (!allowedPublicRoles.includes(role)) return fail(res, 400, "Choose customer or provider.");
+    if (!allowedPublicRoles.includes(role))
+      return fail(res, 400, "Choose customer or provider.");
     if (await User.exists({ email }))
-      return fail(res, 409, "An account with that email already exists.", [{ path: "email", msg: "This email is already registered. Please sign in." }]);
+      return fail(res, 409, "An account with that email already exists.", [
+        {
+          path: "email",
+          msg: "This email is already registered. Please sign in.",
+        },
+      ]);
     const user = await User.create({
       fullName,
       email,
       phone,
       role,
       passwordHash: await bcrypt.hash(password, 12),
-      emailVerified: true,
+      emailVerified: false,
     });
+    const verificationCode = await createVerificationCode(user);
     return ok(
       res,
       {
         user: publicUser(user),
         token: signAccessToken(user),
+        verificationCode,
       },
       "Account created.",
     );
   } catch (error) {
-    if (error.code === 11000 && (error.keyPattern?.email || error.keyValue?.email))
-      return fail(res, 409, "An account with that email already exists.", [{ path: "email", msg: "This email is already registered. Please sign in." }]);
+    if (
+      error.code === 11000 &&
+      (error.keyPattern?.email || error.keyValue?.email)
+    )
+      return fail(res, 409, "An account with that email already exists.", [
+        {
+          path: "email",
+          msg: "This email is already registered. Please sign in.",
+        },
+      ]);
     next(error);
+  }
+};
+
+exports.resendVerification = async (req, res, next) => {
+  try {
+    const user = await User.findById(req.user._id);
+    if (!user) return fail(res, 404, "Account not found.");
+    if (user.emailVerified) return fail(res, 400, "Email is already verified.");
+    await AuthToken.updateMany(
+      { user: user._id, type: "verify_email", usedAt: null },
+      { $set: { usedAt: new Date() } },
+    );
+    const verificationCode = await createVerificationCode(user);
+    return ok(res, { verificationCode }, "Verification code sent.");
+  } catch (error) {
+    return next(error);
+  }
+};
+
+exports.verifyEmail = async (req, res, next) => {
+  try {
+    const record = await AuthToken.findOneAndUpdate(
+      {
+        user: req.user._id,
+        type: "verify_email",
+        tokenHash: hashToken(req.body.code),
+        usedAt: null,
+        expiresAt: { $gt: new Date() },
+      },
+      { $set: { usedAt: new Date() } },
+      { new: true },
+    );
+    if (!record) return fail(res, 400, "Invalid or expired verification code.");
+    const user = await User.findByIdAndUpdate(
+      req.user._id,
+      { emailVerified: true },
+      { new: true },
+    );
+    return ok(res, publicUser(user), "Email verified.");
+  } catch (error) {
+    return next(error);
   }
 };
 
@@ -98,14 +167,20 @@ exports.updateMe = async (req, res) => {
   try {
     const changes = {};
     // Never pass the request body directly to MongoDB.
-    if (Object.hasOwn(req.body, "fullName")) changes.fullName = req.body.fullName;
+    if (Object.hasOwn(req.body, "fullName"))
+      changes.fullName = req.body.fullName;
     if (Object.hasOwn(req.body, "phone")) changes.phone = req.body.phone;
     const user = await User.findOneAndUpdate(
       { _id: req.user._id, status: "active" },
       { $set: changes },
       { new: true, runValidators: true },
     );
-    if (!user) return fail(res, 401, "Your session is no longer active. Please sign in again.");
+    if (!user)
+      return fail(
+        res,
+        401,
+        "Your session is no longer active. Please sign in again.",
+      );
     return ok(res, publicProfile(user), "Profile updated successfully.");
   } catch {
     return fail(res, 500, "Unable to save your profile. Please try again.");

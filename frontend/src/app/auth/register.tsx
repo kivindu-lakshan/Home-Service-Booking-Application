@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import { Pressable, View } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { useRef, useState } from "react";
@@ -25,6 +26,31 @@ export default function Register() {
   const [role, setRole] = useState<"customer" | "provider">(
     params.role === "provider" ? "provider" : "customer",
   );
+=======
+import { authError } from "@/api/auth-error";
+import { addressStyles } from "@/components/address/AddressUI";
+import {
+    AuthButton,
+    AuthField,
+    AuthFooter,
+    AuthLink,
+    AuthPage,
+} from "@/components/auth/AuthUI";
+import ErrorText from "@/components/ErrorText";
+import { AccountText as Text } from "@/components/settings/AccountText";
+import { useAccountStyles } from "@/context/AccountThemeContext";
+import { useAuth } from "@/context/AuthContext";
+import {
+    validateRegistration,
+    type AuthErrors,
+    type RegistrationDraft,
+} from "@/validation/auth";
+import { router } from "expo-router";
+import { useRef, useState } from "react";
+import { Pressable, View } from "react-native";
+export default function Register() {
+  const [role, setRole] = useState<"customer" | "provider">("customer");
+>>>>>>> origin/origin-02/feature/payment,review,admin
   const { register } = useAuth();
   const themed = useAccountStyles();
   const [form, setForm] = useState<RegistrationDraft>({
@@ -38,7 +64,10 @@ export default function Register() {
   const [fields, setFields] = useState<AuthErrors>({});
   const [busy, setBusy] = useState(false);
   const lock = useRef(false);
+<<<<<<< HEAD
 
+=======
+>>>>>>> origin/origin-02/feature/payment,review,admin
   const update = (key: keyof RegistrationDraft, value: string) => {
     const next = { ...form, [key]: value };
     setForm(next);
@@ -47,7 +76,13 @@ export default function Register() {
     setFields((current) => ({
       ...current,
       [key]: errors[key],
+<<<<<<< HEAD
       ...(key === "password" && next.confirm ? { confirm: errors.confirm } : {}),
+=======
+      ...(key === "password" && next.confirm
+        ? { confirm: errors.confirm }
+        : {}),
+>>>>>>> origin/origin-02/feature/payment,review,admin
     }));
   };
 
@@ -57,11 +92,19 @@ export default function Register() {
     setFields(invalid);
     setError("");
     if (Object.keys(invalid).length) return;
+<<<<<<< HEAD
 
     lock.current = true;
     setBusy(true);
     try {
       await register(
+=======
+    lock.current = true;
+    setBusy(true);
+    let verificationCode: string | undefined;
+    try {
+      verificationCode = await register(
+>>>>>>> origin/origin-02/feature/payment,review,admin
         form.fullName.trim(),
         form.email.trim().toLowerCase(),
         form.phone.trim(),
@@ -80,12 +123,23 @@ export default function Register() {
       lock.current = false;
       setBusy(false);
     }
+<<<<<<< HEAD
     router.replace("/");
   };
 
   return (
     <AuthPage
       afterAuth="/"
+=======
+    router.replace({
+      pathname: "/auth/verify-email",
+      params: verificationCode ? { code: verificationCode } : {},
+    });
+  };
+  return (
+    <AuthPage
+      afterAuth="/auth/verify-email"
+>>>>>>> origin/origin-02/feature/payment,review,admin
       title={"Your home journey\nstarts here."}
       subtitle="Create your HomeHalo account."
       back="/onboarding/account-type"
@@ -131,7 +185,13 @@ export default function Register() {
         error={fields.password}
         onChangeText={(value) => update("password", value)}
       />
+<<<<<<< HEAD
       <Text style={themed([addressStyles.hint, { marginTop: 0, marginBottom: 16 }])}>
+=======
+      <Text
+        style={themed([addressStyles.hint, { marginTop: 0, marginBottom: 16 }])}
+      >
+>>>>>>> origin/origin-02/feature/payment,review,admin
         Use at least 8 characters, including a letter and a number.
       </Text>
       <AuthField
