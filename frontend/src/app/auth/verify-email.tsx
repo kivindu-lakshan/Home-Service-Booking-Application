@@ -1,46 +1,122 @@
-import { useRef, useState } from "react";
-import { Redirect, router } from "expo-router";
+import { resendVerification, verifyEmail } from "@/api/auth";
+import ErrorText from "@/components/ErrorText";
+import { Button } from "@/components/ui";
 import { useAuth } from "@/context/AuthContext";
-import { AddressPage, AddressNotice, addressStyles } from "@/components/address/AddressUI";
-import { AuthButton, AuthField, AuthFooter, AuthLink } from "@/components/auth/AuthUI";
-import { AccountText as Text } from "@/components/settings/AccountText";
-import { useAccountStyles } from "@/context/AccountThemeContext";
-import { LoadingState } from "@/components/DataState";
-import { authError } from "@/api/auth-error";
+import { Redirect, router, useLocalSearchParams } from "expo-router";
+import { useState } from "react";
+import { SafeAreaView, Text, TextInput, View } from "react-native";
+
 export default function VerifyEmail() {
-  const { user, loading, verificationCode, verifyEmail, resendVerification } = useAuth();
-  const themed = useAccountStyles();
-  const [code, setCode] = useState("");
+  const { user, loading } = useAuth();
+  const params = useLocalSearchParams<{ code?: string }>();
+  const [code, setCode] = useState(params.code || "");
   const [error, setError] = useState("");
-  const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
-  const lock = useRef(false);
-  const perform = async (resend: boolean) => {
-    if (lock.current) return;
-    setError(""); setMessage("");
-    if (!resend && !/^[0-9]{6}$/.test(code.trim())) { setError("Enter a 6-digit verification code."); return; }
-    lock.current = true; setBusy(true);
+  const [resent, setResent] = useState(false);
+
+  if (!loading && !user) return <Redirect href="/auth/login" />;
+
+  const submit = async () => {
+    if (!/^\d{6}$/.test(code)) {
+      setError("Enter the six-digit verification code.");
+      return;
+    }
+    setBusy(true);
+    setError("");
     try {
-      if (resend) { await resendVerification(); setCode(""); setMessage("New demo code generated. Previous codes no longer work."); }
-      else { await verifyEmail(code.trim()); router.replace("/"); }
-    } catch (failure) { setError(authError(failure, "Unable to verify. Please try again.").message); }
-    finally { lock.current = false; setBusy(false); }
+      await verifyEmail(code);
+      router.replace("/");
+    } catch (failure: any) {
+      setError(
+        failure.response?.data?.message ||
+          "Invalid or expired verification code.",
+      );
+    } finally {
+      setBusy(false);
+    }
   };
-  if (loading) return <LoadingState label="Checking your session..." />;
-  if (!user) return <Redirect href="/auth/login" />;
-  if (user.emailVerified) return <Redirect href="/" />;
-  return <AddressPage title="Verify your email" subtitle="Enter the 6-digit verification code." busy={busy} onBack={() => router.replace("/")}>
-    <AddressNotice>This is a student demo. No email is sent, and this does not prove ownership of your email address.</AddressNotice>
-    <Text style={themed([addressStyles.label, { marginTop: 20, marginBottom: 20 }])}>
-      {verificationCode ? `Demo verification code: ${verificationCode}` : "Tap Resend code to generate and display a new demo code."}
-    </Text>
-    <AuthField label="6-digit code" value={code} onChangeText={(value) => { setCode(value); setError(""); }}
-      keyboardType="number-pad" maxLength={6} autoCapitalize="none" autoCorrect={false} editable={!busy} error={error} placeholder="123456" />
-    {!!message && <AddressNotice>{message}</AddressNotice>}
-    <Text style={themed(addressStyles.hint)}>Codes expire after 24 hours. After refreshing this page, use Resend code to display a new one.</Text>
-    <AuthFooter>
-      <AuthButton title="Verify email" busy={busy} onPress={() => void perform(false)} />
-      <AuthLink title="Didn't receive a code? Resend code" disabled={busy} onPress={() => void perform(true)} />
-    </AuthFooter>
-  </AddressPage>;
+
+  const resend = async () => {
+    setBusy(true);
+    setError("");
+    setResent(false);
+    try {
+      const response = await resendVerification();
+      setCode(response.data.data.verificationCode || "");
+      setResent(true);
+    } catch (failure: any) {
+      setError(
+        failure.response?.data?.message ||
+          "Unable to resend the verification code.",
+      );
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <SafeAreaView style={{ flex: 1, backgroundColor: "#F7F7FD" }}>
+      <View
+        style={{
+          width: "100%",
+          maxWidth: 520,
+          alignSelf: "center",
+          padding: 22,
+          gap: 16,
+        }}
+      >
+        <Text
+          style={{
+            color: "#633CFF",
+            fontSize: 12,
+            fontWeight: "800",
+            letterSpacing: 2,
+          }}
+        >
+          VERIFY YOUR EMAIL
+        </Text>
+        <Text style={{ color: "#242E49", fontSize: 30, fontWeight: "800" }}>
+          One last step.
+        </Text>
+        <Text style={{ color: "#7C879F", fontSize: 15, lineHeight: 23 }}>
+          Enter the six-digit code sent to {user?.email}.
+        </Text>
+        <TextInput
+          value={code}
+          onChangeText={(value) =>
+            setCode(value.replace(/\D/g, "").slice(0, 6))
+          }
+          keyboardType="number-pad"
+          maxLength={6}
+          editable={!busy}
+          placeholder="000000"
+          placeholderTextColor="#8890A5"
+          style={{
+            backgroundColor: "#FFFFFF",
+            borderWidth: 1,
+            borderColor: "#E6EAF3",
+            borderRadius: 15,
+            minHeight: 56,
+            paddingHorizontal: 16,
+            color: "#242E49",
+            fontSize: 24,
+            letterSpacing: 6,
+          }}
+          accessibilityLabel="Email verification code"
+        />
+        <ErrorText>{error}</ErrorText>
+        {resent && (
+          <Text style={{ color: "#278B70" }}>
+            A new verification code was generated.
+          </Text>
+        )}
+        <Button disabled={busy} onPress={() => void submit()}>
+          {busy ? "Checking..." : "Verify email"}
+        </Button>
+        <Button secondary disabled={busy} onPress={() => void resend()}>
+          Resend code
+        </Button>
+      </View>
+    </SafeAreaView>
+  );
 }

@@ -11,5 +11,4 @@ router.get("/:id", controller.getById);
 router.patch("/:id/reschedule", controller.reschedule);
 router.patch("/:id/cancel", controller.cancel);
 router.patch("/:id/status", controller.updateStatus);
-
 module.exports = router;

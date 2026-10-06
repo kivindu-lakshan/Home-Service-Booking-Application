@@ -14,7 +14,7 @@ const text = (value, min, max) => typeof value === 'string' && value.trim().leng
 const number = (value, min, max) => typeof value === 'number' && Number.isFinite(value) && value >= min && value <= max;
 function validate(data) {
   if (!data || typeof data !== 'object' || Array.isArray(data)) return 'Invalid application.';
-  if (['status', 'provider', 'providerId', 'documents', 'user', 'role'].some(key => key in data)) return 'Application identity, documents and status are determined by the server.';
+  if (['status', 'reviewedAt', 'reviewedBy', 'rejectionReason', 'provider', 'providerId', 'documents', 'user', 'role'].some(key => key in data)) return 'Application identity, documents and status are determined by the server.';
   if (!mongoose.isValidObjectId(data.service)) return 'Select a valid service.';
   if (!text(data.professionalName, 2, 120)) return 'Enter your professional name (2–120 characters).';
   if (!text(data.phone, 7, 30) || !/^[+\d\s()-]+$/.test(data.phone)) return 'Enter a valid phone number.';

@@ -1,25 +1,28 @@
+import { useCallback, useRef, useState } from "react";
+import { useFocusEffect, useLocalSearchParams } from "expo-router";
+import { ScrollView, Text } from "react-native";
+import { Button, Card } from "@/components/ui";
 import { getProviderReviews } from "@/api/domain";
 import { EmptyState, ErrorState, LoadingState } from "@/components/DataState";
-import { Card } from "@/components/ui";
-import { useLocalSearchParams } from "expo-router";
-import { Star } from "lucide-react-native";
-import { useCallback, useEffect, useState } from "react";
-import { ScrollView, Text } from "react-native";
 export default function ProviderReviews() {
-  const { providerId } = useLocalSearchParams<{ providerId: string }>();
+  const { providerId = "", serviceId } = useLocalSearchParams<{ providerId: string; serviceId?: string }>();
+  const request = useRef<AbortController | null>(null);
+  const [page, setPage] = useState(1);
   const [data, setData] = useState<any>();
   const [error, setError] = useState(false);
   const load = useCallback(async () => {
+    request.current?.abort(); const controller = new AbortController(); request.current = controller; setError(false);
     try {
-      setData((await getProviderReviews(providerId)).data.data);
+      const response = await getProviderReviews(providerId, serviceId, controller.signal, page);
+      if (!controller.signal.aborted) setData(response.data.data);
     } catch {
-      setError(true);
+      if (!controller.signal.aborted) setError(true);
     }
-  }, [providerId]);
-  useEffect(() => {
-    const timer = setTimeout(() => void load(), 0);
-    return () => clearTimeout(timer);
-  }, [load]);
+  }, [providerId, serviceId, page]);
+  useFocusEffect(useCallback(() => {
+    let active = true; void Promise.resolve().then(() => { if (active) void load(); });
+    return () => { active = false; request.current?.abort(); };
+  }, [load]));
   if (!data && !error)
     return <LoadingState label="Loading provider reviews..." />;
   if (error) return <ErrorState onRetry={() => void load()} />;
@@ -39,8 +42,7 @@ export default function ProviderReviews() {
           marginVertical: 12,
         }}
       >
-        <Star size={20} color="#FBBF24" fill="#FBBF24" />{" "}
-        {Number(data.provider?.ratingAvg || 0).toFixed(1)} ·{" "}
+        ★ {Number(data.provider?.ratingAvg || 0).toFixed(1)} ·{" "}
         {data.provider?.reviewCount || 0} reviews
       </Text>
       {data.reviews.length === 0 ? (
@@ -49,14 +51,8 @@ export default function ProviderReviews() {
         data.reviews.map((review: any) => (
           <Card key={review._id}>
             <Text style={{ color: "#F29D38", fontSize: 22 }}>
-              {[1, 2, 3, 4, 5].map((value) => (
-                <Star
-                  key={value}
-                  size={18}
-                  color="#FBBF24"
-                  fill={value <= review.rating ? "#FBBF24" : "#FFFFFF"}
-                />
-              ))}
+              {"★".repeat(review.rating)}
+              {"☆".repeat(5 - review.rating)}
             </Text>
             <Text style={{ color: "#25213D", fontWeight: "800", marginTop: 8 }}>
               {review.customer?.fullName || "Customer"}
@@ -70,6 +66,8 @@ export default function ProviderReviews() {
           </Card>
         ))
       )}
+      {page > 1 && <Button secondary onPress={() => setPage(n => n - 1)}>Previous reviews</Button>}
+      {page * (data.pageSize || 20) < data.total && <Button secondary onPress={() => setPage(n => n + 1)}>More reviews</Button>}
     </ScrollView>
   );
 }

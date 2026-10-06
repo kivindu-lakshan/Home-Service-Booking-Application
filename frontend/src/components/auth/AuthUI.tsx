@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from "react";
 import { Redirect, router, type Href } from "expo-router";
-import { Pressable, StyleSheet, TextInput, View, type TextInputProps } from "react-native";
+import { Image, Pressable, StyleSheet, TextInput, View, type TextInputProps } from "react-native";
 import { useAuth } from "@/context/AuthContext";
 import { useAccountStyles } from "@/context/AccountThemeContext";
 import { AccountText as Text } from "@/components/settings/AccountText";
@@ -12,7 +12,22 @@ export function AuthPage({ title, subtitle, back, busy, children, afterAuth = "/
   const { user, loading } = useAuth();
   if (loading) return <AddressPage title={title} subtitle={subtitle} onBack={() => {}} busy><LoadingState label="Checking your session..." /></AddressPage>;
   if (user) return <Redirect href={afterAuth} />;
-  return <AddressPage title={title} subtitle={subtitle} busy={busy} onBack={() => router.canGoBack() ? router.back() : router.replace(back)}>{children}</AddressPage>;
+  return (
+    <AddressPage
+      title={title}
+      subtitle={subtitle}
+      busy={busy}
+      onBack={() => router.canGoBack() ? router.back() : router.replace(back)}
+    >
+      <Image
+        source={require("../../../assets/images/homehalo-logo.png")}
+        accessibilityLabel="HomeHalo logo"
+        resizeMode="contain"
+        style={{ width: 180, height: 100, alignSelf: "center", marginBottom: 20 }}
+      />
+      {children}
+    </AddressPage>
+  );
 }
 export function AuthLink({ title, onPress, disabled = false }: { title: string; onPress?: () => void; disabled?: boolean }) {
   const themed = useAccountStyles();

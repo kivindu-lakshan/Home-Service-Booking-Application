@@ -1,6 +1,6 @@
 import { Platform } from "react-native";
 import * as Location from "expo-location";
-import type { ServiceLocation } from "@/validation/service-location";
+type ServiceLocation = { areaCity: string; latitude: number; longitude: number; source: "current" };
 const denied = "Location permission was not granted. You can enter your area manually.";
 function deadline<T>(promise: Promise<T>, milliseconds: number): Promise<T> {
   return new Promise((resolve, reject) => {

@@ -8,12 +8,9 @@ export const AppStack = {
     "reviews/rate",
     "reviews/submitted",
     "reviews/provider",
-    "reviews/mine",
-    "support",
     "admin/dashboard",
     "admin/bookings",
     "admin/assign-provider",
     "admin/jobs",
-    "admin/tickets",
   ],
 };

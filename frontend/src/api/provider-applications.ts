@@ -3,7 +3,7 @@ import { Platform } from 'react-native';
 import type { DocumentPickerAsset } from 'expo-document-picker';
 export type ApplicationLocation = { address: string; latitude: number; longitude: number };
 export type ApplicationInput = { service: string; professionalName: string; phone: string; yearsExperience: number; aboutMe: string; qualifications: string; skills: string; priceFrom?: number; location: ApplicationLocation };
-export type ProviderApplication = { _id: string; service: { _id: string; name: string } | null; status: 'pending' | 'approved' | 'rejected'; createdAt: string; location: ApplicationLocation; documents: { _id: string; name: string; mimeType: string; size: number }[] };
+export type ProviderApplication = { _id: string; service: { _id: string; name: string } | null; status: 'pending' | 'approved' | 'rejected'; createdAt: string; rejectionReason?: string; reviewedAt?: string; location: ApplicationLocation | null; documents: { _id: string; name: string; mimeType: string; size: number }[] };
 export async function getApplications(signal?: AbortSignal): Promise<ProviderApplication[]> { return (await api.get('/provider/applications', { signal })).data.data; }
 export async function searchApplicationLocations(address: string): Promise<ApplicationLocation[]> { return (await api.get('/provider/location-search', { params: { address }, timeout: 12000 })).data.data; }
 export async function submitApplication(application: ApplicationInput, documents: DocumentPickerAsset[]) {

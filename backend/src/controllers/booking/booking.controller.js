@@ -1,11 +1,237 @@
 const crypto = require("crypto");
-const { Booking, Service, Provider, Payment, User } = require("../../models");
+const {
+  Booking,
+  Service,
+  Provider,
+  User,
+  ProviderApplication,
+  Payment,
+} = require("../../models");
+const { activeService, validId } = require("../catalogue/catalogue.controller");
+const { ok } = require("../../utils/response");
+const fail = (res, first, second = 400, data = null) => {
+  const status = typeof first === "number" ? first : second;
+  const message = typeof first === "number" ? second : first;
+  return res.status(status).json({ success: false, data, message });
+};
+exports.create = async (req, res, next) => {
+  try {
+    const body = req.body || {};
+    if (!body.providerId && body.addressSnapshot) {
+      if (!validId(body.serviceId))
+        return fail(res, 400, "Service ID is required");
+      if (typeof body.scheduledDate !== "string")
+        return fail(res, 400, "Scheduled date is required");
+      const service = await Service.findOne({
+        _id: body.serviceId,
+        isActive: true,
+      });
+      if (!service)
+        return fail(res, 404, "Selected service is no longer available");
+      const bookingDate = new Date(body.scheduledDate);
+      if (!Number.isFinite(bookingDate.getTime()))
+        return fail(res, 400, "Invalid scheduled date");
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const dateOnly = new Date(bookingDate);
+      dateOnly.setHours(0, 0, 0, 0);
+      if (dateOnly < today)
+        return fail(res, 400, "Scheduled date cannot be in the past");
+      const timePeriod = ["morning", "afternoon", "evening"].includes(
+        body.timePeriod,
+      )
+        ? body.timePeriod
+        : "morning";
+      const basePrice = Number(service.basePrice) || 0;
+      const booking = await Booking.create({
+        bookingRef: `BK-${crypto.randomUUID().toUpperCase()}`,
+        customer: req.user._id,
+        service: service._id,
+        addressSnapshot: body.addressSnapshot.trim(),
+        scheduledDate: bookingDate,
+        timePeriod,
+        scheduledTime:
+          body.scheduledTime ||
+          (timePeriod === "morning"
+            ? "09:00 AM"
+            : timePeriod === "afternoon"
+              ? "02:00 PM"
+              : "06:00 PM"),
+        durationHours: service.estDurationHours || "1-2 hours",
+        serviceFee: basePrice,
+        bookingCharge: 350,
+        tax: Math.round(basePrice * 0.05),
+        totalPrice: basePrice + 350 + Math.round(basePrice * 0.05),
+        paymentMode:
+          body.paymentMode === "pay_now" ? "pay_now" : "pay_on_completion",
+        status: "pending",
+        notes: typeof body.notes === "string" ? body.notes.trim() : "",
+        statusHistory: [
+          {
+            status: "pending",
+            changedBy: req.user._id,
+            note: "Booking submitted by customer",
+          },
+        ],
+      });
+      const populated = await Booking.findById(booking._id)
+        .populate("service")
+        .populate("customer", "fullName email phone avatarUrl");
+      return res
+        .status(201)
+        .json({
+          success: true,
+          data: populated,
+          message: "Booking scheduled successfully",
+        });
+    }
+    const allowed = [
+      "serviceId",
+      "providerId",
+      "addressId",
+      "scheduledDate",
+      "scheduledTime",
+      "notes",
+    ];
+    if (Object.keys(body).some((k) => !allowed.includes(k)))
+      return fail(res, 400, "Unsupported booking fields");
+    if (![body.serviceId, body.providerId, body.addressId].every(validId))
+      return fail(res, 400, "Select a service, provider and saved address");
+    if (
+      typeof body.scheduledDate !== "string" ||
+      !/^\d{4}-\d{2}-\d{2}$/.test(body.scheduledDate) ||
+      typeof body.scheduledTime !== "string" ||
+      !/^([01]\d|2[0-3]):[0-5]\d$/.test(body.scheduledTime)
+    )
+      return fail(res, 400, "Use a valid date and 24-hour time");
+    const day = new Date(`${body.scheduledDate}T00:00:00+05:30`);
+    const appointment = new Date(
+      `${body.scheduledDate}T${body.scheduledTime}:00+05:30`,
+    );
+    if (
+      !Number.isFinite(appointment.getTime()) ||
+      new Intl.DateTimeFormat("en-CA", {
+        timeZone: "Asia/Colombo",
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+      }).format(day) !== body.scheduledDate ||
+      appointment <= new Date()
+    )
+      return fail(res, 400, "Choose a future appointment date and time");
+    if (
+      body.notes !== undefined &&
+      (typeof body.notes !== "string" || body.notes.length > 2000)
+    )
+      return fail(res, 400, "Notes must be under 2000 characters");
+    const [service, provider] = await Promise.all([
+      activeService(body.serviceId),
+      Provider.findOne({
+        _id: body.providerId,
+        status: "active",
+        isAvailable: { $ne: false },
+        "services.service": body.serviceId,
+      }).lean(),
+    ]);
+    if (
+      !(await ProviderApplication.exists({
+        provider: body.providerId,
+        service: body.serviceId,
+        status: "approved",
+      }))
+    )
+      return fail(
+        res,
+        409,
+        "This provider is not approved for the selected service",
+      );
+    if (
+      !service ||
+      !provider ||
+      !(await User.exists({ _id: provider.user, status: "active" }))
+    )
+      return fail(
+        res,
+        409,
+        "The selected provider or service is no longer available",
+      );
+    const address = req.user.addresses?.find(
+      (a) => String(a._id) === body.addressId,
+    );
+    if (!address || !address.line1)
+      return fail(res, 400, "Choose one of your saved addresses");
+    const weekday = new Date(`${body.scheduledDate}T00:00:00Z`).getUTCDay();
+    if (
+      provider.availability?.length &&
+      !provider.availability.some(
+        (a) =>
+          a.dayOfWeek === weekday &&
+          a.isAvailable &&
+          a.startTime <= body.scheduledTime &&
+          a.endTime > body.scheduledTime,
+      )
+    )
+      return fail(res, 409, "The provider is unavailable at this time");
+    const offering = provider.services.find(
+      (s) => String(s.service) === body.serviceId,
+    );
+    const price = offering.priceFrom ?? service.basePrice;
+    if (!Number.isFinite(price) || price < 0)
+      return fail(
+        res,
+        409,
+        "This provider has no booking price. Please contact support.",
+      );
+    const hours = Number(body.scheduledTime.slice(0, 2));
+    // Preserve the stored time convention so the existing unique slot index also protects seeded bookings.
+    const scheduledTime = `${String(hours % 12 || 12).padStart(2, "0")}:${body.scheduledTime.slice(3)} ${hours < 12 ? "AM" : "PM"}`;
+    const booking = await Booking.create({
+      bookingRef: `BK-${crypto.randomUUID().toUpperCase()}`,
+      customer: req.user._id,
+      provider: provider._id,
+      service: service._id,
+      addressSnapshot: [address.line1, address.areaCity, address.landmark]
+        .filter(Boolean)
+        .join(", "),
+      scheduledDate: day,
+      scheduledTime,
+      timePeriod: hours < 12 ? "morning" : hours < 17 ? "afternoon" : "evening",
+      durationHours: service.estDurationHours,
+      serviceFee: price,
+      totalPrice: price,
+      paymentMode: "pay_on_completion",
+      notes: body.notes?.trim(),
+      status: "pending",
+      statusHistory: [{ status: "pending", changedBy: req.user._id }],
+    });
+    return res
+      .status(201)
+      .json({ success: true, data: booking, message: "Booking requested" });
+  } catch (e) {
+    if (e.code === 11000)
+      return fail(
+        res,
+        409,
+        "This appointment time has already been booked. Choose another time.",
+      );
+    next(e);
+  }
+};
+exports.details = async (req, res, next) => {
+  try {
+    if (!validId(req.params.id)) return fail(res, 400, "Invalid booking ID");
+    const booking = await Booking.findOne({
+      _id: req.params.id,
+      customer: req.user._id,
+    }).populate("service provider");
+    return booking ? ok(res, booking) : fail(res, 404, "Booking not found");
+  } catch (e) {
+    next(e);
+  }
+};
 
 const send = (res, data, message = "Success", status = 200) =>
   res.status(status).json({ success: true, data, message });
-
-const fail = (res, message, status = 400, data = null) =>
-  res.status(status).json({ success: false, data, message });
 
 const activeStatuses = [
   "pending",
@@ -15,106 +241,6 @@ const activeStatuses = [
   "arrived",
   "in_progress",
 ];
-
-const generateBookingRef = () => {
-  const dateStr = Date.now().toString(36).toUpperCase();
-  const randStr = crypto.randomBytes(2).toString("hex").toUpperCase();
-  return `BK-${dateStr.slice(-4)}${randStr}`;
-};
-
-// Create a new booking
-exports.create = async (req, res, next) => {
-  try {
-    const {
-      serviceId,
-      scheduledDate,
-      timePeriod,
-      scheduledTime,
-      addressSnapshot,
-      notes,
-      paymentMode = "pay_on_completion",
-    } = req.body;
-
-    if (!serviceId) {
-      return fail(res, "Service ID is required");
-    }
-    if (!scheduledDate) {
-      return fail(res, "Scheduled date is required");
-    }
-    if (!addressSnapshot || !addressSnapshot.trim()) {
-      return fail(res, "Service address is required");
-    }
-
-    const service = await Service.findById(serviceId);
-    if (!service || !service.isActive) {
-      return fail(res, "Selected service is no longer available", 404);
-    }
-
-    const bookingDate = new Date(scheduledDate);
-    if (isNaN(bookingDate.getTime())) {
-      return fail(res, "Invalid scheduled date");
-    }
-
-    // Ensure scheduled date is not before today (start of day)
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const checkDate = new Date(bookingDate);
-    checkDate.setHours(0, 0, 0, 0);
-    if (checkDate < today) {
-      return fail(res, "Scheduled date cannot be in the past");
-    }
-
-    const validPeriods = ["morning", "afternoon", "evening"];
-    const period = validPeriods.includes(timePeriod) ? timePeriod : "morning";
-
-    const basePrice = Number(service.basePrice) || 0;
-    const bookingCharge = 350; // standard booking/platform fee
-    const tax = Math.round(basePrice * 0.05); // 5% tax
-    const totalPrice = basePrice + bookingCharge + tax;
-
-    let bookingRef = generateBookingRef();
-    // Ensure uniqueness
-    let existingRef = await Booking.findOne({ bookingRef });
-    while (existingRef) {
-      bookingRef = generateBookingRef();
-      existingRef = await Booking.findOne({ bookingRef });
-    }
-
-    const booking = await Booking.create({
-      bookingRef,
-      customer: req.user._id,
-      service: service._id,
-      addressSnapshot: addressSnapshot.trim(),
-      scheduledDate: bookingDate,
-      timePeriod: period,
-      scheduledTime: scheduledTime || (period === "morning" ? "09:00 AM" : period === "afternoon" ? "02:00 PM" : "06:00 PM"),
-      durationHours: service.estDurationHours || "1-2 hours",
-      serviceFee: basePrice,
-      bookingCharge,
-      tax,
-      totalPrice,
-      paymentMode: paymentMode === "pay_now" ? "pay_now" : "pay_on_completion",
-      status: "pending",
-      notes: notes ? notes.trim() : "",
-      statusHistory: [
-        {
-          status: "pending",
-          changedBy: req.user._id,
-          note: "Booking submitted by customer",
-          at: new Date(),
-        },
-      ],
-    });
-
-    const populated = await Booking.findById(booking._id)
-      .populate("service")
-      .populate("customer", "fullName email phone avatarUrl");
-
-    return send(res, populated, "Booking scheduled successfully", 201);
-  } catch (error) {
-    return next(error);
-  }
-};
 
 // List bookings for current user (customer or provider)
 exports.list = async (req, res, next) => {
@@ -182,12 +308,16 @@ exports.getById = async (req, res, next) => {
     }
 
     // Authorization check
-    const isCustomer = booking.customer?._id?.toString() === req.user._id.toString();
+    const isCustomer =
+      booking.customer?._id?.toString() === req.user._id.toString();
     const isAdmin = req.user.role === "admin";
     let isAssignedProvider = false;
     if (req.user.role === "provider" && booking.provider) {
       const providerProfile = await Provider.findOne({ user: req.user._id });
-      if (providerProfile && booking.provider._id?.toString() === providerProfile._id.toString()) {
+      if (
+        providerProfile &&
+        booking.provider._id?.toString() === providerProfile._id.toString()
+      ) {
         isAssignedProvider = true;
       }
     }
@@ -197,7 +327,9 @@ exports.getById = async (req, res, next) => {
     }
 
     // Also fetch associated payment record if exists
-    const payment = await Payment.findOne({ booking: booking._id }).populate("paymentMethod");
+    const payment = await Payment.findOne({ booking: booking._id }).populate(
+      "paymentMethod",
+    );
 
     return send(res, { booking, payment });
   } catch (error) {
@@ -223,7 +355,11 @@ exports.reschedule = async (req, res, next) => {
     const isCustomer = booking.customer.toString() === req.user._id.toString();
     const isAdmin = req.user.role === "admin";
     if (!isCustomer && !isAdmin) {
-      return fail(res, "You do not have permission to reschedule this booking", 403);
+      return fail(
+        res,
+        "You do not have permission to reschedule this booking",
+        403,
+      );
     }
 
     // Check if status allows rescheduling
@@ -249,7 +385,9 @@ exports.reschedule = async (req, res, next) => {
     }
 
     const validPeriods = ["morning", "afternoon", "evening"];
-    const period = validPeriods.includes(timePeriod) ? timePeriod : booking.timePeriod;
+    const period = validPeriods.includes(timePeriod)
+      ? timePeriod
+      : booking.timePeriod;
     const time = scheduledTime || booking.scheduledTime;
 
     const previousDateStr = booking.scheduledDate
@@ -300,7 +438,11 @@ exports.cancel = async (req, res, next) => {
     const isCustomer = booking.customer.toString() === req.user._id.toString();
     const isAdmin = req.user.role === "admin";
     if (!isCustomer && !isAdmin) {
-      return fail(res, "You do not have permission to cancel this booking", 403);
+      return fail(
+        res,
+        "You do not have permission to cancel this booking",
+        403,
+      );
     }
 
     if (booking.status === "completed") {
@@ -310,7 +452,8 @@ exports.cancel = async (req, res, next) => {
       return fail(res, "Booking is already cancelled");
     }
 
-    const cancellationReason = reason && reason.trim() ? reason.trim() : "Cancelled by customer";
+    const cancellationReason =
+      reason && reason.trim() ? reason.trim() : "Cancelled by customer";
 
     booking.status = "cancelled";
     booking.cancelledReason = cancellationReason;
@@ -354,13 +497,20 @@ exports.updateStatus = async (req, res, next) => {
     let isProvider = false;
     if (req.user.role === "provider" && booking.provider) {
       const providerProfile = await Provider.findOne({ user: req.user._id });
-      if (providerProfile && booking.provider.toString() === providerProfile._id.toString()) {
+      if (
+        providerProfile &&
+        booking.provider.toString() === providerProfile._id.toString()
+      ) {
         isProvider = true;
       }
     }
 
     if (!isAdmin && !isProvider) {
-      return fail(res, "You do not have permission to update this booking status", 403);
+      return fail(
+        res,
+        "You do not have permission to update this booking status",
+        403,
+      );
     }
 
     booking.status = status;
@@ -398,9 +548,30 @@ exports.getAvailableSlots = async (req, res, next) => {
     const targetDate = date ? new Date(date) : new Date();
 
     const slots = [
-      { id: "morning", period: "morning", label: "Morning", timeRange: "08:00 AM - 12:00 PM", defaultTime: "09:00 AM", available: true },
-      { id: "afternoon", period: "afternoon", label: "Afternoon", timeRange: "12:00 PM - 04:00 PM", defaultTime: "02:00 PM", available: true },
-      { id: "evening", period: "evening", label: "Evening", timeRange: "04:00 PM - 08:00 PM", defaultTime: "06:00 PM", available: true },
+      {
+        id: "morning",
+        period: "morning",
+        label: "Morning",
+        timeRange: "08:00 AM - 12:00 PM",
+        defaultTime: "09:00 AM",
+        available: true,
+      },
+      {
+        id: "afternoon",
+        period: "afternoon",
+        label: "Afternoon",
+        timeRange: "12:00 PM - 04:00 PM",
+        defaultTime: "02:00 PM",
+        available: true,
+      },
+      {
+        id: "evening",
+        period: "evening",
+        label: "Evening",
+        timeRange: "04:00 PM - 08:00 PM",
+        defaultTime: "06:00 PM",
+        available: true,
+      },
     ];
 
     return send(res, { date: targetDate.toISOString().split("T")[0], slots });

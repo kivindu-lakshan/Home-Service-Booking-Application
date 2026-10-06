@@ -1,65 +1,164 @@
-import { useCallback, useEffect, useState } from "react";
+import { getBookings, type Booking } from "@/api/bookings";
+import { CustomerGuard, CustomerNav } from "@/components/customer/CustomerUI";
+import { ErrorState, LoadingState } from "@/components/DataState";
+import { AccountText as Text } from "@/components/settings/AccountText";
+import { Button, Input } from "@/components/ui";
+import { useAccountStyles } from "@/context/AccountThemeContext";
+import { router, useFocusEffect } from "expo-router";
 import {
-  Pressable,
-  RefreshControl,
-  ScrollView,
-  StyleSheet,
-  TextInput,
-  View,
+    CalendarDays,
+    ChevronRight,
+    Clock3,
+    MapPin,
+    Plus,
+    Search,
+} from "lucide-react-native";
+import { useCallback, useMemo, useState } from "react";
+import {
+    Pressable,
+    RefreshControl,
+    ScrollView,
+    StyleSheet,
+    View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { router } from "expo-router";
-import {
-  Calendar,
-  ChevronRight,
-  Clock,
-  MapPin,
-  Plus,
-  Search,
-  Sparkles,
-} from "lucide-react-native";
-import { getBookings, type Booking } from "@/api/bookings";
-import { EmptyState, ErrorState, LoadingState } from "@/components/DataState";
-import { Card } from "@/components/ui";
-import { ProfileBackButton, ProfileNavigation } from "@/components/profile/ProfileNavigation";
-import { useAuth } from "@/context/AuthContext";
-import { useAccountStyles } from "@/context/AccountThemeContext";
-import { AccountText as Text } from "@/components/settings/AccountText";
 
-const filterTabs = [
-  { key: "all", label: "All" },
-  { key: "active", label: "Upcoming / Active" },
-  { key: "completed", label: "Completed" },
-  { key: "cancelled", label: "Cancelled" },
-] as const;
+type Filter = "all" | "active" | "completed" | "cancelled";
+const filters: { label: string; value: Filter }[] = [
+  { label: "All", value: "all" },
+  { label: "Upcoming / Active", value: "active" },
+  { label: "Completed", value: "completed" },
+  { label: "Cancelled", value: "cancelled" },
+];
+const activeStatuses = new Set([
+  "pending",
+  "confirmed",
+  "assigned",
+  "en_route",
+  "arrived",
+  "in_progress",
+]);
+
+const statusLabel = (status: string) =>
+  status
+    .replaceAll("_", " ")
+    .replace(/\b\w/g, (letter) => letter.toUpperCase());
+const dateLabel = (value?: string) =>
+  value
+    ? new Date(value).toLocaleDateString("en-US", {
+        weekday: "short",
+        month: "short",
+        day: "numeric",
+      })
+    : "Date pending";
+const timeLabel = (value?: string) => value || "Time pending";
+
+function BookingCard({ booking }: { booking: Booking }) {
+  const themed = useAccountStyles();
+  const cancelled = booking.status === "cancelled";
+  const completed = booking.status === "completed";
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={`View ${booking.service?.name || "booking"}`}
+      disabled={cancelled}
+      onPress={() =>
+        router.push({ pathname: "/bookings/[id]", params: { id: booking._id } })
+      }
+      style={themed(({ pressed }) => [
+        styles.bookingCard,
+        pressed && styles.pressed,
+        cancelled && styles.cancelledCard,
+      ])}
+    >
+      <View style={styles.cardHeader}>
+        <View style={styles.cardHeading}>
+          <Text style={themed(styles.serviceName)}>
+            {booking.service?.name || "Service booking"}
+          </Text>
+          <Text style={themed(styles.reference)}>
+            Ref: {booking.bookingRef}
+          </Text>
+        </View>
+        <View
+          style={themed([
+            styles.statusBadge,
+            cancelled && styles.cancelledBadge,
+            completed && styles.completedBadge,
+          ])}
+        >
+          <Text
+            style={themed([
+              styles.statusText,
+              cancelled && styles.cancelledText,
+              completed && styles.completedText,
+            ])}
+          >
+            {statusLabel(booking.status)}
+          </Text>
+        </View>
+      </View>
+      <View style={themed(styles.divider)} />
+      <View style={styles.detailRow}>
+        <CalendarDays size={18} color="#633CFF" />
+        <Text style={themed(styles.detailText)}>
+          {dateLabel(booking.scheduledDate)}
+        </Text>
+      </View>
+      <View style={styles.detailRow}>
+        <Clock3 size={18} color="#633CFF" />
+        <Text style={themed(styles.detailText)}>
+          {timeLabel(booking.scheduledTime)}
+        </Text>
+      </View>
+      <View style={styles.detailRow}>
+        <MapPin size={18} color="#8A97B1" />
+        <Text numberOfLines={1} style={themed(styles.location)}>
+          {booking.addressSnapshot || "Address to be confirmed"}
+        </Text>
+      </View>
+      <View style={themed(styles.divider)} />
+      <View style={styles.cardFooter}>
+        <View>
+          <Text style={themed(styles.fareLabel)}>ESTIMATED FARE</Text>
+          <Text style={themed(styles.fare)}>
+            LKR{" "}
+            {Number(
+              booking.totalPrice || booking.serviceFee || 0,
+            ).toLocaleString()}
+          </Text>
+        </View>
+        {!cancelled && (
+          <View style={styles.detailsLink}>
+            <Text style={themed(styles.detailsText)}>View Details</Text>
+            <ChevronRight size={19} color="#633CFF" />
+          </View>
+        )}
+      </View>
+    </Pressable>
+  );
+}
 
 export default function BookingsScreen() {
-  const { user } = useAuth();
   const themed = useAccountStyles();
-
   const [bookings, setBookings] = useState<Booking[]>([]);
+  const [query, setQuery] = useState("");
+  const [filter, setFilter] = useState<Filter>("all");
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(false);
-
-  const [activeTab, setActiveTab] = useState<"all" | "active" | "completed" | "cancelled">("all");
-  const [searchQuery, setSearchQuery] = useState("");
-
-  const isProvider = user?.role === "provider";
-  const isAdmin = user?.role === "admin";
 
   const load = useCallback(
     async (refresh = false) => {
       if (refresh) setRefreshing(true);
       else setLoading(true);
       setError(false);
-
       try {
         const response = await getBookings({
-          filter: activeTab === "all" ? undefined : activeTab,
-          search: searchQuery.trim() || undefined,
+          filter: filter === "all" ? undefined : filter,
+          search: query.trim() || undefined,
         });
-        setBookings(response.data.data);
+        setBookings(response.data.data || []);
       } catch {
         setError(true);
       } finally {
@@ -67,355 +166,263 @@ export default function BookingsScreen() {
         setRefreshing(false);
       }
     },
-    [activeTab, searchQuery],
+    [filter, query],
   );
 
-  useEffect(() => {
-    if (isAdmin) {
-      router.replace("/admin/dashboard");
-      return;
-    }
-    const timer = setTimeout(() => void load(), 0);
-    return () => clearTimeout(timer);
-  }, [load, isAdmin]);
+  useFocusEffect(
+    useCallback(() => {
+      let active = true;
+      void Promise.resolve().then(() => {
+        if (active) void load();
+      });
+      return () => {
+        active = false;
+      };
+    }, [load]),
+  );
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "completed":
-        return { bg: "#DDF7F2", text: "#168A76" };
-      case "cancelled":
-        return { bg: "#FDEAEA", text: "#D33F49" };
-      case "en_route":
-      case "arrived":
-      case "in_progress":
-        return { bg: "#FFF4E5", text: "#B86500" };
-      case "assigned":
-        return { bg: "#EBF3FF", text: "#1E6FD9" };
-      default:
-        return { bg: "#EEE8FF", text: "#633CFF" };
-    }
-  };
+  const visibleBookings = useMemo(() => {
+    const normalized = query.trim().toLowerCase();
+    return bookings.filter((booking) => {
+      if (!normalized) return true;
+      return `${booking.bookingRef} ${booking.service?.name || ""} ${booking.addressSnapshot || ""}`
+        .toLowerCase()
+        .includes(normalized);
+    });
+  }, [bookings, query]);
 
   return (
-    <SafeAreaView style={themed(styles.safe)}>
-      <View style={themed(styles.shell)}>
-        {/* Top Header */}
-        <View style={styles.topBar}>
-          <ProfileBackButton
-            label="Back"
-            onPress={() =>
-              isProvider
-                ? router.replace("/provider/dashboard")
-                : router.canGoBack()
-                ? router.back()
-                : router.replace("/")
-            }
-          />
-          <Text style={themed(styles.headerTitle)}>
-            {isProvider ? "Assigned Jobs" : "My Bookings"}
-          </Text>
-          {!isProvider ? (
-            <Pressable
-              onPress={() => router.push("/services")}
-              style={styles.newBookingBtn}
-            >
-              <Plus size={16} color="#633CFF" />
-            </Pressable>
-          ) : (
-            <View style={{ width: 40 }} />
-          )}
-        </View>
-
-        <ScrollView
-          style={{ flex: 1 }}
-          contentContainerStyle={styles.content}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={() => void load(true)}
-            />
-          }
-        >
-          <Text style={themed(styles.title)}>
-            {isProvider ? "Manage your schedule" : "Keep track of your bookings"}
-          </Text>
-          <Text style={themed(styles.subtitle)}>
-            {isProvider
-              ? "All services assigned to your professional profile."
-              : "Review upcoming dates, track providers, and manage appointments."}
-          </Text>
-
-          {/* Search Box */}
-          <View style={themed(styles.searchBox)}>
-            <Search size={18} color="#8A91A4" />
-            <TextInput
-              placeholder="Search by reference or service name..."
-              placeholderTextColor="#8A91A4"
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-              onSubmitEditing={() => void load()}
-              style={themed(styles.searchInput)}
-            />
-          </View>
-
-          {/* Filter Tabs */}
+    <CustomerGuard>
+      <SafeAreaView style={themed(styles.safe)}>
+        <View style={styles.page}>
           <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.tabScroll}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={() => void load(true)}
+              />
+            }
+            contentContainerStyle={styles.content}
+            keyboardShouldPersistTaps="handled"
           >
-            {filterTabs.map((tab) => {
-              const isActive = activeTab === tab.key;
-              return (
+            <View style={styles.topBar}>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Go back"
+                onPress={() =>
+                  router.canGoBack() ? router.back() : router.replace("/")
+                }
+                style={themed(styles.backButton)}
+              >
+                <Text style={themed(styles.backArrow)}>‹</Text>
+              </Pressable>
+              <Text accessibilityRole="header" style={themed(styles.topTitle)}>
+                My Bookings
+              </Text>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Create a booking"
+                onPress={() => router.push("/bookings/new")}
+                style={themed(styles.addButton)}
+              >
+                <Plus size={22} color="#633CFF" />
+              </Pressable>
+            </View>
+            <Text style={themed(styles.title)}>
+              Keep track of your bookings
+            </Text>
+            <Text style={themed(styles.subtitle)}>
+              Review upcoming dates, track providers, and manage appointments.
+            </Text>
+            <View style={styles.searchWrap}>
+              <Search size={21} color="#8B98B2" />
+              <Input
+                accessibilityLabel="Search bookings"
+                placeholder="Search by reference or service name..."
+                value={query}
+                onChangeText={setQuery}
+                style={styles.searchInput}
+              />
+            </View>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.filters}
+            >
+              {filters.map((item) => (
                 <Pressable
-                  key={tab.key}
-                  onPress={() => setActiveTab(tab.key)}
+                  key={item.value}
+                  onPress={() => setFilter(item.value)}
                   style={themed([
-                    styles.tabChip,
-                    isActive && styles.tabChipActive,
+                    styles.filter,
+                    filter === item.value && styles.activeFilter,
                   ])}
                 >
                   <Text
                     style={themed([
-                      styles.tabText,
-                      isActive && styles.tabTextActive,
+                      styles.filterText,
+                      filter === item.value && styles.activeFilterText,
                     ])}
                   >
-                    {tab.label}
+                    {item.label}
                   </Text>
                 </Pressable>
-              );
-            })}
+              ))}
+            </ScrollView>
+            {loading ? (
+              <LoadingState label="Loading bookings..." />
+            ) : error ? (
+              <ErrorState onRetry={() => void load()} />
+            ) : visibleBookings.length ? (
+              visibleBookings.map((booking) => (
+                <BookingCard key={booking._id} booking={booking} />
+              ))
+            ) : (
+              <View style={styles.empty}>
+                <Text style={themed(styles.emptyTitle)}>No bookings found</Text>
+                <Text style={themed(styles.emptyCopy)}>
+                  {query || filter !== "all"
+                    ? "Try another search or filter."
+                    : "Your confirmed services will appear here."}
+                </Text>
+                <Button onPress={() => router.push("/customer/services")}>
+                  Browse services
+                </Button>
+              </View>
+            )}
           </ScrollView>
-
-          {/* List or States */}
-          {loading ? (
-            <LoadingState label="Loading bookings..." />
-          ) : error ? (
-            <ErrorState onRetry={() => void load()} />
-          ) : bookings.length === 0 ? (
-            <View style={styles.emptyContainer}>
-              <EmptyState
-                label={
-                  searchQuery.trim()
-                    ? "No bookings match your search query."
-                    : activeTab !== "all"
-                    ? `No ${activeTab} bookings found.`
-                    : "You haven't scheduled any services yet."
-                }
-              />
-              {!isProvider && (
-                <Pressable
-                  onPress={() => router.push("/services")}
-                  style={styles.bookNowCTA}
-                >
-                  <Sparkles size={16} color="#FFFFFF" />
-                  <Text style={styles.bookNowCTAText}>Explore Services & Book Now</Text>
-                </Pressable>
-              )}
-            </View>
-          ) : (
-            bookings.map((b) => {
-              const statusColors = getStatusColor(b.status);
-              return (
-                <Pressable
-                  key={b._id}
-                  onPress={() =>
-                    router.push({
-                      pathname: "/bookings/[id]",
-                      params: { id: b._id },
-                    })
-                  }
-                  style={({ pressed }) => [
-                    themed(styles.bookingCard),
-                    pressed && { opacity: 0.9 },
-                  ]}
-                >
-                  <View style={styles.cardHeader}>
-                    <View style={{ flex: 1 }}>
-                      <Text style={themed(styles.serviceName)}>
-                        {b.service?.name || "Home Service"}
-                      </Text>
-                      <Text style={themed(styles.bookingRef)}>
-                        Ref: {b.bookingRef}
-                      </Text>
-                    </View>
-                    <View
-                      style={[
-                        styles.statusBadge,
-                        { backgroundColor: statusColors.bg },
-                      ]}
-                    >
-                      <Text
-                        style={[
-                          styles.statusText,
-                          { color: statusColors.text },
-                        ]}
-                      >
-                        {b.status.replace("_", " ")}
-                      </Text>
-                    </View>
-                  </View>
-
-                  <View style={styles.divider} />
-
-                  <View style={styles.cardBody}>
-                    <View style={styles.metaRow}>
-                      <Calendar size={15} color="#633CFF" />
-                      <Text style={themed(styles.metaText)}>
-                        {b.scheduledDate
-                          ? new Date(b.scheduledDate).toLocaleDateString(
-                              "en-US",
-                              {
-                                weekday: "short",
-                                month: "short",
-                                day: "numeric",
-                              },
-                            )
-                          : "Date pending"}
-                      </Text>
-                    </View>
-
-                    <View style={styles.metaRow}>
-                      <Clock size={15} color="#633CFF" />
-                      <Text style={themed(styles.metaText)}>
-                        {b.scheduledTime || b.timePeriod}
-                      </Text>
-                    </View>
-
-                    <View style={styles.metaRow}>
-                      <MapPin size={15} color="#8A91A4" />
-                      <Text
-                        numberOfLines={1}
-                        style={themed(styles.addressText)}
-                      >
-                        {b.addressSnapshot}
-                      </Text>
-                    </View>
-                  </View>
-
-                  <View style={styles.cardFooter}>
-                    <View>
-                      <Text style={themed(styles.priceLabel)}>ESTIMATED FARE</Text>
-                      <Text style={themed(styles.priceValue)}>
-                        LKR {Number(b.totalPrice || 0).toLocaleString()}
-                      </Text>
-                    </View>
-
-                    <View style={styles.viewDetailsRow}>
-                      <Text style={styles.viewDetailsText}>View Details</Text>
-                      <ChevronRight size={16} color="#633CFF" />
-                    </View>
-                  </View>
-                </Pressable>
-              );
-            })
-          )}
-        </ScrollView>
-
-        {!isProvider && <ProfileNavigation active="bookings" />}
-      </View>
-    </SafeAreaView>
+          <CustomerNav active="Bookings" />
+        </View>
+      </SafeAreaView>
+    </CustomerGuard>
   );
 }
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: "#F7F7FD" },
-  shell: { flex: 1, maxWidth: 540, width: "100%", alignSelf: "center" },
+  page: { flex: 1, width: "100%", maxWidth: 680, alignSelf: "center" },
+  content: { paddingHorizontal: 22, paddingTop: 12, paddingBottom: 22 },
   topBar: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 20,
-    paddingTop: 8,
-    paddingBottom: 12,
+    marginBottom: 30,
   },
-  headerTitle: { fontSize: 18, fontWeight: "800", color: "#242E49" },
-  newBookingBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: 12,
+  backButton: {
+    width: 54,
+    height: 54,
+    borderRadius: 28,
+    backgroundColor: "#FFFFFF",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  backArrow: { color: "#633CFF", fontSize: 34, lineHeight: 38, marginTop: -4 },
+  topTitle: { color: "#182342", fontSize: 23, fontWeight: "900" },
+  addButton: {
+    width: 48,
+    height: 48,
+    borderRadius: 16,
     backgroundColor: "#EEE8FF",
     alignItems: "center",
     justifyContent: "center",
   },
-  content: { paddingHorizontal: 20, paddingTop: 6, paddingBottom: 32 },
-  title: { fontSize: 24, fontWeight: "900", color: "#242E49" },
-  subtitle: { fontSize: 13, color: "#7C879F", marginTop: 4, marginBottom: 16 },
-  searchBox: {
+  title: { color: "#242E49", fontSize: 30, lineHeight: 38, fontWeight: "900" },
+  subtitle: {
+    color: "#7D89A1",
+    fontSize: 15,
+    lineHeight: 22,
+    marginTop: 6,
+    marginBottom: 20,
+  },
+  searchWrap: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "#E3E6F0",
+    borderRadius: 18,
+    paddingLeft: 18,
+    marginBottom: 16,
+  },
+  searchInput: {
+    flex: 1,
+    backgroundColor: "transparent",
+    marginBottom: 0,
+    minHeight: 56,
+  },
+  filters: { gap: 10, paddingBottom: 22 },
+  filter: {
+    minHeight: 42,
+    paddingHorizontal: 18,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "#E3E6F0",
+    backgroundColor: "#FFFFFF",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  activeFilter: { backgroundColor: "#633CFF", borderColor: "#633CFF" },
+  filterText: { color: "#5F6B84", fontSize: 14, fontWeight: "800" },
+  activeFilterText: { color: "#FFFFFF" },
+  bookingCard: {
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "#E5E7F0",
+    borderRadius: 22,
+    padding: 20,
+    marginBottom: 16,
+  },
+  cancelledCard: { opacity: 0.96 },
+  pressed: { opacity: 0.7 },
+  cardHeader: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    gap: 12,
+  },
+  cardHeading: { flex: 1 },
+  serviceName: { color: "#26324F", fontSize: 20, fontWeight: "900" },
+  reference: { color: "#8A97B1", fontSize: 12, marginTop: 5 },
+  statusBadge: {
+    backgroundColor: "#E5F7F0",
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  cancelledBadge: { backgroundColor: "#FDE7E6" },
+  completedBadge: { backgroundColor: "#EDE8FF" },
+  statusText: { color: "#1F8A6D", fontSize: 12, fontWeight: "900" },
+  cancelledText: { color: "#D34445" },
+  completedText: { color: "#633CFF" },
+  divider: { height: 1, backgroundColor: "#ECEEF5", marginVertical: 14 },
+  detailRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: 10,
-    backgroundColor: "#FFFFFF",
-    borderRadius: 14,
-    paddingHorizontal: 14,
-    borderWidth: 1,
-    borderColor: "#EBE8F5",
-    marginBottom: 14,
-    height: 48,
+    marginBottom: 10,
   },
-  searchInput: { flex: 1, fontSize: 13, color: "#242E49" },
-  tabScroll: { gap: 8, marginBottom: 18 },
-  tabChip: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 12,
-    backgroundColor: "#FFFFFF",
-    borderWidth: 1,
-    borderColor: "#EBE8F5",
-  },
-  tabChipActive: { backgroundColor: "#633CFF", borderColor: "#633CFF" },
-  tabText: { fontSize: 12, fontWeight: "700", color: "#626980" },
-  tabTextActive: { color: "#FFFFFF" },
-  bookingCard: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 20,
-    padding: 16,
-    marginBottom: 14,
-    borderWidth: 1,
-    borderColor: "#EBE8F5",
-    shadowColor: "#242E49",
-    shadowOpacity: 0.04,
-    shadowRadius: 10,
-    elevation: 2,
-  },
-  cardHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" },
-  serviceName: { fontSize: 16, fontWeight: "800", color: "#242E49" },
-  bookingRef: { fontSize: 11, color: "#8A91A4", marginTop: 2 },
-  statusBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 8,
-  },
-  statusText: { fontSize: 11, fontWeight: "800", textTransform: "capitalize" },
-  divider: { height: 1, backgroundColor: "#F2F0FA", marginVertical: 12 },
-  cardBody: { gap: 6 },
-  metaRow: { flexDirection: "row", alignItems: "center", gap: 8 },
-  metaText: { fontSize: 12, color: "#242E49", fontWeight: "700" },
-  addressText: { fontSize: 12, color: "#7C879F", flex: 1 },
+  detailText: { color: "#26324F", fontSize: 15, fontWeight: "800" },
+  location: { flex: 1, color: "#8190AB", fontSize: 14 },
   cardFooter: {
     flexDirection: "row",
+    alignItems: "flex-end",
     justifyContent: "space-between",
-    alignItems: "center",
-    marginTop: 12,
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: "#F2F0FA",
   },
-  priceLabel: { fontSize: 9, fontWeight: "800", color: "#8A91A4", letterSpacing: 0.5 },
-  priceValue: { fontSize: 15, fontWeight: "900", color: "#633CFF", marginTop: 1 },
-  viewDetailsRow: { flexDirection: "row", alignItems: "center", gap: 4 },
-  viewDetailsText: { fontSize: 13, fontWeight: "800", color: "#633CFF" },
-  emptyContainer: { alignItems: "center", paddingVertical: 20 },
-  bookNowCTA: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    backgroundColor: "#633CFF",
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 14,
-    marginTop: 14,
+  fareLabel: {
+    color: "#8995AA",
+    fontSize: 11,
+    fontWeight: "900",
+    letterSpacing: 0.6,
   },
-  bookNowCTAText: { color: "#FFFFFF", fontSize: 14, fontWeight: "800" },
+  fare: { color: "#633CFF", fontSize: 19, fontWeight: "900", marginTop: 3 },
+  detailsLink: { flexDirection: "row", alignItems: "center", gap: 2 },
+  detailsText: { color: "#633CFF", fontSize: 14, fontWeight: "900" },
+  empty: { alignItems: "center", paddingVertical: 44, gap: 10 },
+  emptyTitle: { color: "#26324F", fontSize: 20, fontWeight: "900" },
+  emptyCopy: {
+    color: "#8190AB",
+    fontSize: 14,
+    textAlign: "center",
+    marginBottom: 8,
+  },
 });
