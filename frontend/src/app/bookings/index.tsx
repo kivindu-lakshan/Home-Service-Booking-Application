@@ -1,10 +1,11 @@
 import { getBookings, type Booking } from "@/api/bookings";
-import { CustomerGuard, CustomerNav } from "@/components/customer/CustomerUI";
+import { CustomerNav } from "@/components/customer/CustomerUI";
 import { ErrorState, LoadingState } from "@/components/DataState";
 import { AccountText as Text } from "@/components/settings/AccountText";
 import { Button, Input } from "@/components/ui";
 import { useAccountStyles } from "@/context/AccountThemeContext";
-import { router, useFocusEffect } from "expo-router";
+import { useAuth } from "@/context/AuthContext";
+import { Redirect, router, useFocusEffect } from "expo-router";
 import {
     CalendarDays,
     ChevronRight,
@@ -61,7 +62,6 @@ function BookingCard({ booking }: { booking: Booking }) {
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={`View ${booking.service?.name || "booking"}`}
-      disabled={cancelled}
       onPress={() =>
         router.push({ pathname: "/bookings/[id]", params: { id: booking._id } })
       }
@@ -128,12 +128,10 @@ function BookingCard({ booking }: { booking: Booking }) {
             ).toLocaleString()}
           </Text>
         </View>
-        {!cancelled && (
-          <View style={styles.detailsLink}>
-            <Text style={themed(styles.detailsText)}>View Details</Text>
-            <ChevronRight size={19} color="#633CFF" />
-          </View>
-        )}
+        <View style={styles.detailsLink}>
+          <Text style={themed(styles.detailsText)}>View Details</Text>
+          <ChevronRight size={19} color="#633CFF" />
+        </View>
       </View>
     </Pressable>
   );
@@ -141,6 +139,7 @@ function BookingCard({ booking }: { booking: Booking }) {
 
 export default function BookingsScreen() {
   const themed = useAccountStyles();
+  const { user, loading: authLoading } = useAuth();
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<Filter>("all");
@@ -191,34 +190,41 @@ export default function BookingsScreen() {
     });
   }, [bookings, query]);
 
+  if (authLoading) return <LoadingState />;
+  if (!user) return <Redirect href="/auth/login" />;
+
+  const isProvider = user.role === "provider";
+
   return (
-    <CustomerGuard>
-      <SafeAreaView style={themed(styles.safe)}>
-        <View style={styles.page}>
-          <ScrollView
-            refreshControl={
-              <RefreshControl
-                refreshing={refreshing}
-                onRefresh={() => void load(true)}
-              />
-            }
-            contentContainerStyle={styles.content}
-            keyboardShouldPersistTaps="handled"
-          >
-            <View style={styles.topBar}>
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="Go back"
-                onPress={() =>
-                  router.canGoBack() ? router.back() : router.replace("/")
-                }
-                style={themed(styles.backButton)}
-              >
-                <Text style={themed(styles.backArrow)}>‹</Text>
-              </Pressable>
-              <Text accessibilityRole="header" style={themed(styles.topTitle)}>
-                My Bookings
-              </Text>
+    <SafeAreaView style={themed(styles.safe)}>
+      <View style={styles.page}>
+        <ScrollView
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={() => void load(true)}
+            />
+          }
+          contentContainerStyle={styles.content}
+          keyboardShouldPersistTaps="handled"
+        >
+          <View style={styles.topBar}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Go back"
+              onPress={() =>
+                router.canGoBack()
+                  ? router.back()
+                  : router.replace(isProvider ? "/provider/dashboard" : "/")
+              }
+              style={themed(styles.backButton)}
+            >
+              <Text style={themed(styles.backArrow)}>‹</Text>
+            </Pressable>
+            <Text accessibilityRole="header" style={themed(styles.topTitle)}>
+              {isProvider ? "Assigned Jobs" : "My Bookings"}
+            </Text>
+            {!isProvider ? (
               <Pressable
                 accessibilityRole="button"
                 accessibilityLabel="Create a booking"
@@ -227,7 +233,10 @@ export default function BookingsScreen() {
               >
                 <Plus size={22} color="#633CFF" />
               </Pressable>
-            </View>
+            ) : (
+              <View style={{ width: 48 }} />
+            )}
+          </View>
             <Text style={themed(styles.title)}>
               Keep track of your bookings
             </Text>
@@ -291,10 +300,9 @@ export default function BookingsScreen() {
               </View>
             )}
           </ScrollView>
-          <CustomerNav active="Bookings" />
+          {user.role === "customer" && <CustomerNav active="Bookings" />}
         </View>
       </SafeAreaView>
-    </CustomerGuard>
   );
 }
 
