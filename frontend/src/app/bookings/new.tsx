@@ -31,6 +31,12 @@ import { ProfileBackButton } from "@/components/profile/ProfileNavigation";
 import { getServices, type Service } from "@/api/services";
 import { getAddresses, type SavedAddress } from "@/api/addresses";
 import { createBooking, type Booking } from "@/api/bookings";
+import {
+  validateBooking,
+  isSlotInPast,
+  type BookingDraft,
+  type BookingErrors,
+} from "@/validation/booking";
 import ErrorText from "@/components/ErrorText";
 
 export default function NewBookingScreen() {
@@ -55,6 +61,10 @@ export default function NewBookingScreen() {
   // Notes & Payment
   const [notes, setNotes] = useState("");
   const [paymentMode, setPaymentMode] = useState<"pay_on_completion" | "pay_now">("pay_on_completion");
+
+  // Validation State
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
+  const [fieldErrors, setFieldErrors] = useState<BookingErrors>({});
 
   // Submission State
   const [submitting, setSubmitting] = useState(false);
@@ -92,7 +102,27 @@ export default function NewBookingScreen() {
   // Set default slot when timePeriod changes
   const handlePeriodSelect = (period: "morning" | "afternoon" | "evening") => {
     setTimePeriod(period);
-    setSelectedSlot(periodSlots[period][0]);
+    const slots = periodSlots[period];
+    const targetDate = upcomingDays[selectedDateIndex]?.date;
+    const firstAvailable = slots.find((s) => !isSlotInPast(targetDate, s)) || slots[0];
+    setSelectedSlot(firstAvailable);
+    setFieldErrors((prev) => ({ ...prev, scheduledTime: undefined }));
+  };
+
+  const handleDateSelect = (idx: number) => {
+    setSelectedDateIndex(idx);
+    const targetDate = upcomingDays[idx]?.date;
+    if (isSlotInPast(targetDate, selectedSlot)) {
+      const slots = periodSlots[timePeriod];
+      const firstAvailable = slots.find((s) => !isSlotInPast(targetDate, s)) || slots[0];
+      setSelectedSlot(firstAvailable);
+    }
+    setFieldErrors((prev) => ({ ...prev, scheduledTime: undefined, scheduledDate: undefined }));
+  };
+
+  const handleSlotSelect = (slot: string) => {
+    setSelectedSlot(slot);
+    setFieldErrors((prev) => ({ ...prev, scheduledTime: undefined }));
   };
 
   // Load services
@@ -150,14 +180,33 @@ export default function NewBookingScreen() {
   }, [useCustomAddress, savedAddresses, selectedAddressIndex, customAddress]);
 
   const handleSubmit = async () => {
-    if (!selectedService) {
-      setErrorMessage("Please select a service first.");
-      return;
-    }
-
+    const chosenDay = upcomingDays[selectedDateIndex]?.date;
     const addr = resolvedAddress();
-    if (!addr) {
-      setErrorMessage("Please provide a valid service address.");
+
+    const draft: BookingDraft = {
+      serviceId: selectedService?._id || "",
+      scheduledDate: chosenDay ? chosenDay.toISOString() : "",
+      timePeriod,
+      scheduledTime: selectedSlot,
+      address: addr,
+      notes: notes.trim(),
+      paymentMode,
+    };
+
+    const validation = validateBooking(draft);
+    setFieldErrors(validation);
+    setTouched({
+      serviceId: true,
+      scheduledDate: true,
+      scheduledTime: true,
+      address: true,
+      notes: true,
+      paymentMode: true,
+    });
+
+    if (Object.keys(validation).length > 0) {
+      const firstMsg = Object.values(validation)[0] || "Please check your booking details.";
+      setErrorMessage(firstMsg);
       return;
     }
 
@@ -165,9 +214,8 @@ export default function NewBookingScreen() {
     setSubmitting(true);
 
     try {
-      const chosenDay = upcomingDays[selectedDateIndex].date;
       const res = await createBooking({
-        serviceId: selectedService._id,
+        serviceId: selectedService!._id,
         scheduledDate: chosenDay.toISOString(),
         timePeriod,
         scheduledTime: selectedSlot,
@@ -278,7 +326,7 @@ export default function NewBookingScreen() {
                 return (
                   <Pressable
                     key={idx}
-                    onPress={() => setSelectedDateIndex(idx)}
+                    onPress={() => handleDateSelect(idx)}
                     style={themed([
                       styles.dateTile,
                       isSelected && styles.dateTileSelected,
@@ -395,20 +443,25 @@ export default function NewBookingScreen() {
             <Text style={themed(styles.sublabel)}>Preferred Start Time Slot</Text>
             <View style={styles.slotsGrid}>
               {periodSlots[timePeriod].map((slot) => {
+                const targetDay = upcomingDays[selectedDateIndex]?.date;
+                const isPast = isSlotInPast(targetDay, slot);
                 const isSlotSelected = selectedSlot === slot;
                 return (
                   <Pressable
                     key={slot}
-                    onPress={() => setSelectedSlot(slot)}
+                    disabled={isPast}
+                    onPress={() => handleSlotSelect(slot)}
                     style={themed([
                       styles.slotPill,
                       isSlotSelected && styles.slotPillActive,
+                      isPast && styles.slotPillDisabled,
                     ])}
                   >
                     <Text
                       style={themed([
                         styles.slotText,
                         isSlotSelected && styles.slotTextActive,
+                        isPast && styles.slotTextDisabled,
                       ])}
                     >
                       {slot}
@@ -417,6 +470,9 @@ export default function NewBookingScreen() {
                 );
               })}
             </View>
+            {touched.scheduledTime && fieldErrors.scheduledTime && (
+              <ErrorText>{fieldErrors.scheduledTime}</ErrorText>
+            )}
           </View>
 
           {/* SECTION 3: Service Address */}
@@ -433,7 +489,10 @@ export default function NewBookingScreen() {
                   return (
                     <Pressable
                       key={addr._id || idx}
-                      onPress={() => setSelectedAddressIndex(idx)}
+                      onPress={() => {
+                        setSelectedAddressIndex(idx);
+                        setFieldErrors((prev) => ({ ...prev, address: undefined }));
+                      }}
                       style={themed([
                         styles.addressCard,
                         isSelected && styles.addressCardSelected,
@@ -454,8 +513,14 @@ export default function NewBookingScreen() {
                     </Pressable>
                   );
                 })}
+                {touched.address && fieldErrors.address && (
+                  <ErrorText>{fieldErrors.address}</ErrorText>
+                )}
                 <Pressable
-                  onPress={() => setUseCustomAddress(true)}
+                  onPress={() => {
+                    setUseCustomAddress(true);
+                    setFieldErrors((prev) => ({ ...prev, address: undefined }));
+                  }}
                   style={styles.switchAddressLink}
                 >
                   <Text style={styles.switchAddressText}>+ Enter a different address</Text>
@@ -467,13 +532,31 @@ export default function NewBookingScreen() {
                   placeholder="Enter complete address, building number, street..."
                   placeholderTextColor="#8A91A4"
                   value={customAddress}
-                  onChangeText={setCustomAddress}
-                  style={themed(styles.textInput)}
+                  onChangeText={(val) => {
+                    setCustomAddress(val);
+                    setFieldErrors((prev) => ({ ...prev, address: undefined }));
+                    setErrorMessage("");
+                  }}
+                  onBlur={() => setTouched((prev) => ({ ...prev, address: true }))}
+                  maxLength={300}
+                  style={themed([
+                    styles.textInput,
+                    touched.address && fieldErrors.address && styles.inputInvalid,
+                  ])}
                   multiline
                 />
+                <View style={styles.fieldMetaRow}>
+                  {touched.address && fieldErrors.address ? (
+                    <ErrorText>{fieldErrors.address}</ErrorText>
+                  ) : <View />}
+                  <Text style={styles.charCount}>{customAddress.length}/300</Text>
+                </View>
                 {savedAddresses.length > 0 && (
                   <Pressable
-                    onPress={() => setUseCustomAddress(false)}
+                    onPress={() => {
+                      setUseCustomAddress(false);
+                      setFieldErrors((prev) => ({ ...prev, address: undefined }));
+                    }}
                     style={styles.switchAddressLink}
                   >
                     <Text style={styles.switchAddressText}>← Choose from saved addresses</Text>
@@ -493,11 +576,26 @@ export default function NewBookingScreen() {
               placeholder="e.g. Please call upon arrival, gate code is 1234, problem is in the upstairs bathroom..."
               placeholderTextColor="#8A91A4"
               value={notes}
-              onChangeText={setNotes}
-              style={themed(styles.notesInput)}
+              onChangeText={(val) => {
+                setNotes(val);
+                setFieldErrors((prev) => ({ ...prev, notes: undefined }));
+                setErrorMessage("");
+              }}
+              onBlur={() => setTouched((prev) => ({ ...prev, notes: true }))}
+              maxLength={500}
+              style={themed([
+                styles.notesInput,
+                touched.notes && fieldErrors.notes && styles.inputInvalid,
+              ])}
               multiline
               numberOfLines={3}
             />
+            <View style={styles.fieldMetaRow}>
+              {touched.notes && fieldErrors.notes ? (
+                <ErrorText>{fieldErrors.notes}</ErrorText>
+              ) : <View />}
+              <Text style={styles.charCount}>{notes.length}/500</Text>
+            </View>
           </View>
 
           {/* SECTION 5: Payment Option */}
@@ -797,6 +895,14 @@ const styles = StyleSheet.create({
   },
   slotText: { fontSize: 12, fontWeight: "700", color: "#242E49" },
   slotTextActive: { color: "#FFFFFF" },
+  slotPillDisabled: {
+    backgroundColor: "#F2F3F7",
+    borderColor: "#E6E9F0",
+    opacity: 0.5,
+  },
+  slotTextDisabled: {
+    color: "#9AA1B2",
+  },
   addressList: { gap: 10 },
   addressCard: {
     flexDirection: "row",
@@ -853,6 +959,21 @@ const styles = StyleSheet.create({
     borderColor: "#E6EAF3",
     minHeight: 70,
     textAlignVertical: "top",
+  },
+  inputInvalid: {
+    borderColor: "#D33F49",
+    borderWidth: 1.5,
+  },
+  fieldMetaRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  charCount: {
+    fontSize: 11,
+    color: "#8A91A4",
+    fontWeight: "600",
+    alignSelf: "flex-end",
   },
   paymentOptionCard: {
     flexDirection: "row",
