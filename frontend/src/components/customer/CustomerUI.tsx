@@ -45,9 +45,9 @@ export function CatalogueState({ loading, error, retry }: { loading: boolean; er
 }
 export function CatalogueImage({ uri, label, avatar = false }: { uri?: string; label: string; avatar?: boolean }) {
   const themed = useAccountStyles(); const [failed, setFailed] = useState(false);
-  const imageUri = avatar ? uri : serviceImageUri(uri);
+  const imageUri = avatar ? uri : (serviceImageUri(uri) || uri);
   if (imageUri && !failed) return <Image accessibilityLabel={label} source={{ uri: imageUri }} resizeMode='cover' onError={() => setFailed(true)} style={avatar ? css.avatar : css.image} />;
-  return <View style={themed([avatar ? css.avatar : css.image, css.placeholder])}><Text style={themed(css.placeholderText)}>{avatar ? label.slice(0, 1).toUpperCase() : '⌂'}</Text></View>;
+  return <View style={themed([avatar ? css.avatar : css.image, css.placeholder])}><Text numberOfLines={2} style={themed(avatar ? css.avatarText : css.placeholderText)}>{avatar ? label.slice(0, 1).toUpperCase() : label}</Text></View>;
 }
 export const priceLabel = (price?: number) => Number.isFinite(price) ? `LKR ${price!.toLocaleString()}` : 'Price on request';
 export function ProviderCard({ provider, serviceId }: { provider: Provider; serviceId: string }) {
@@ -72,7 +72,7 @@ export const css = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: 14 }, grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginVertical: 16 },
   tile: { width: '47%', minHeight: 125, padding: 16, borderRadius: 22, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E6EAF3' },
   icon: { color: '#8157FF', fontSize: 30 }, image: { width: '100%', height: 190, borderRadius: 18, marginBottom: 12 }, avatar: { width: 74, height: 74, borderRadius: 24 },
-  placeholder: { alignItems: 'center', justifyContent: 'center', backgroundColor: '#EEE8FF' }, placeholderText: { color: '#8157FF', fontSize: 36, fontWeight: '700' },
+  placeholder: { alignItems: 'center', justifyContent: 'center', backgroundColor: '#EEE8FF', paddingHorizontal: 16 }, placeholderText: { color: '#8157FF', fontSize: 26, fontWeight: '700', textAlign: 'center' }, avatarText: { color: '#8157FF', fontSize: 32, fontWeight: '700', textAlign: 'center' },
   banner: { padding: 24, borderRadius: 26, backgroundColor: '#5B3DF5', marginBottom: 20 }, bannerTitle: { color: '#FFFFFF', fontSize: 25, fontWeight: '800', marginBottom: 10 }, bannerCopy: { color: '#FFFFFF', fontSize: 14, lineHeight: 22 },
   nav: { flexDirection: 'row', backgroundColor: '#FFFFFF', borderRadius: 32, padding: 6, marginHorizontal: 14, marginBottom: 8, borderWidth: 1, borderColor: '#F0EEF8' },
   navItem: { flex: 1, minHeight: 54, borderRadius: 26, alignItems: 'center', justifyContent: 'center', gap: 4 }, active: { backgroundColor: '#EEE8FF' }, back: { alignSelf: 'flex-start', minHeight: 44 },
