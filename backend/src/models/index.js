@@ -283,6 +283,9 @@ const ProviderApplication = make("ProviderApplication", {
   location: ref("ProviderLocation"),
   documents: [{ name: String, mimeType: String, size: Number, storageKey: { type: String, select: false } }],
   status: { type: String, enum: ["pending", "approved", "rejected"], default: "pending", required: true },
+  reviewedAt: { type: Date, default: null },
+  reviewedBy: { type: Schema.Types.ObjectId, ref: "User", default: null },
+  rejectionReason: { type: String, default: "" },
 }, { collection: "providerapplications" });
 ProviderApplication.schema.index({ provider: 1, service: 1 }, { unique: true, partialFilterExpression: { status: { $in: ["pending", "approved"] } } });
 ProviderApplication.schema.index({ provider: 1, createdAt: -1 });

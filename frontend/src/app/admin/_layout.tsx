@@ -12,10 +12,10 @@ export default function Layout() {
         <Stack.Screen name='services' options={{ headerShown: false }} />
         <Stack.Screen name='service-form' options={{ headerShown: false }} />
         <Stack.Screen name='profile' options={{ title: 'Admin profile' }} />
-        <Stack.Screen name='bookings' options={{ title: 'Manage bookings' }} />
-        <Stack.Screen name='assign-provider' options={{ title: 'Assign provider' }} />
+        <Stack.Screen name='bookings' options={{ headerShown: false }} />
+        <Stack.Screen name='assign-provider' options={{ headerShown: false }} />
         <Stack.Screen name='assign-service-provider' options={{ title: 'Assign service provider' }} />
-        <Stack.Screen name='jobs' options={{ title: 'Job monitor' }} />
+        <Stack.Screen name='jobs' options={{ headerShown: false }} />
       </Stack>
     </RoleGuard>
   );
