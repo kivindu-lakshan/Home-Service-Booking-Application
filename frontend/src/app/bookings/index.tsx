@@ -13,6 +13,7 @@ import {
     MapPin,
     Plus,
     Search,
+    Star,
 } from "lucide-react-native";
 import { useCallback, useMemo, useState } from "react";
 import {
@@ -127,10 +128,24 @@ function BookingCard({ booking }: { booking: Booking }) {
               booking.totalPrice || booking.serviceFee || 0,
             ).toLocaleString()}
           </Text>
+          <Text style={themed(styles.paymentModeText)}>
+            {booking.paymentMode === "pay_now" ? "Paid" : "Pay on completion"}
+          </Text>
         </View>
-        <View style={styles.detailsLink}>
-          <Text style={themed(styles.detailsText)}>View Details</Text>
-          <ChevronRight size={19} color="#633CFF" />
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+          {completed && (
+            <Pressable
+              onPress={() => router.push({ pathname: "/reviews/rate", params: { bookingId: booking._id } })}
+              style={{ flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: "#FFF8EC", paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8 }}
+            >
+              <Star size={14} color="#E07C00" fill="#E07C00" />
+              <Text style={{ color: "#E07C00", fontSize: 12, fontWeight: "800" }}>Review</Text>
+            </Pressable>
+          )}
+          <View style={styles.detailsLink}>
+            <Text style={themed(styles.detailsText)}>View Details</Text>
+            <ChevronRight size={19} color="#633CFF" />
+          </View>
         </View>
       </View>
     </Pressable>
@@ -423,6 +438,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.6,
   },
   fare: { color: "#633CFF", fontSize: 19, fontWeight: "900", marginTop: 3 },
+  paymentModeText: { color: "#8190AB", fontSize: 11, fontWeight: "700", marginTop: 4, textTransform: "uppercase" },
   detailsLink: { flexDirection: "row", alignItems: "center", gap: 2 },
   detailsText: { color: "#633CFF", fontSize: 14, fontWeight: "900" },
   empty: { alignItems: "center", paddingVertical: 44, gap: 10 },

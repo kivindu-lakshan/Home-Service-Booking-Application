@@ -151,6 +151,13 @@ exports.create = async (req, res, next) => {
       },
       { new: true, upsert: true, setDefaultsOnInsert: true },
     ).populate("paymentMethod");
+
+    if (paid) {
+      await Booking.findByIdAndUpdate(booking._id, { paymentMode: "pay_now" });
+    } else {
+      await Booking.findByIdAndUpdate(booking._id, { paymentMode: "pay_on_completion" });
+    }
+
     return send(
       res,
       { payment, booking },

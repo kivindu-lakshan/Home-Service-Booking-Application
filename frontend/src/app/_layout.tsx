@@ -113,35 +113,7 @@ export default function RootLayout() {
             options={{ title: "Provider reviews" }}
           />
           <Stack.Screen name="reviews/mine" options={{ title: "My reviews" }} />
-          <Stack.Screen
-            name="admin/tickets"
-            options={{ title: "Support tickets" }}
-          />
-          <Stack.Screen
-            name="admin/services"
-            options={{ headerShown: false }}
-          />
-          <Stack.Screen
-            name="admin/service-form"
-            options={{ headerShown: false }}
-          />
-          <Stack.Screen
-            name="admin/dashboard"
-            options={{ headerShown: false }}
-          />
-          <Stack.Screen
-            name="admin/profile"
-            options={{ title: "Admin profile" }}
-          />
-          <Stack.Screen
-            name="admin/bookings"
-            options={{ title: "Manage bookings" }}
-          />
-          <Stack.Screen
-            name="admin/assign-provider"
-            options={{ title: "Assign provider" }}
-          />
-          <Stack.Screen name="admin/jobs" options={{ title: "Job monitor" }} />
+          <Stack.Screen name="admin" options={{ headerShown: false }} />
         </Stack>
       </AccountThemeProvider>
     </AuthProvider>

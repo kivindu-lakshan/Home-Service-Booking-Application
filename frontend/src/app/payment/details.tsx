@@ -60,12 +60,19 @@ export default function PaymentDetails() {
       setError("Select a saved payment method.");
       return;
     }
+    let isFutureDate = false;
+    if (/^(0[1-9]|1[0-2])\/\d{2}$/.test(expiryDate)) {
+      const [month, year] = expiryDate.split("/").map(Number);
+      const expiry = new Date(2000 + year, month, 0, 23, 59, 59);
+      if (expiry >= new Date()) isFutureDate = true;
+    }
+
     if (
       method === "demo_card" &&
       (!cardholderName.trim() ||
         !/^\d{16}$/.test(cardNumber) ||
-        !/^(0[1-9]|1[0-2])\/\d{2}$/.test(expiryDate) ||
-        !/^\d{3,4}$/.test(cvv))
+        !isFutureDate ||
+        !/^\d{3}$/.test(cvv))
     ) {
       setError("Enter valid demo card details.");
       return;

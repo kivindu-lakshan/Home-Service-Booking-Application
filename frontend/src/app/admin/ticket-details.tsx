@@ -1,50 +1,98 @@
 import {
-    deleteTicketResponse,
-    getAdminTickets,
-    respondToTicket,
+  deleteTicketResponse,
+  getAdminTicket,
+  getAdminTickets,
+  respondToTicket,
 } from "@/api/domain";
 import { ErrorState, LoadingState } from "@/components/DataState";
 import { Button, Input } from "@/components/ui";
-import { router, useLocalSearchParams } from "expo-router";
+import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import {
-    MoreVertical,
-    Pencil,
-    Star,
-    UserRound
+  CheckCircle2,
+  Clock,
+  MessageCircle,
+  MoreVertical,
+  Trash2,
+  UserRound,
 } from "lucide-react-native";
 import { useCallback, useEffect, useState } from "react";
-import { Alert, ScrollView, StyleSheet, Text, View } from "react-native";
+import {
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
+
+const STATUS_COLORS: Record<string, { bg: string; text: string }> = {
+  open: { bg: "#FFE5E9", text: "#B73248" },
+  pending: { bg: "#FFE5E9", text: "#B73248" },
+  in_progress: { bg: "#FFF4E5", text: "#E07C00" },
+  resolved: { bg: "#E5F8F5", text: "#0F9D8A" },
+};
+
+function statusLabel(status: string) {
+  const map: Record<string, string> = {
+    open: "Open",
+    pending: "Pending",
+    in_progress: "In Progress",
+    resolved: "Resolved",
+  };
+  return map[status] || status;
+}
 
 export default function AdminTicketDetails() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const [ticket, setTicket] = useState<any>(null);
   const [response, setResponse] = useState("");
-  const [status, setStatus] = useState<"in_progress" | "resolved">(
-    "in_progress",
-  );
+  const [status, setStatus] = useState<"in_progress" | "resolved">("in_progress");
   const [editing, setEditing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+
   const load = useCallback(async () => {
+    if (!id) return;
     try {
-      const items = (await getAdminTickets()).data.data;
-      const found = items.find((item: any) => item._id === id);
+      const res = await getAdminTicket(id);
+      const found = res.data.data;
       setTicket(found || null);
       if (found) {
         setResponse(found.adminResponse || "");
         setStatus(found.status === "resolved" ? "resolved" : "in_progress");
       }
       setError(found ? "" : "Ticket not found.");
-    } catch (failure: any) {
-      setError(failure.response?.data?.message || "Unable to load ticket.");
+    } catch {
+      try {
+        const items = (await getAdminTickets()).data.data;
+        const found = items.find((item: any) => item._id === id);
+        setTicket(found || null);
+        if (found) {
+          setResponse(found.adminResponse || "");
+          setStatus(found.status === "resolved" ? "resolved" : "in_progress");
+        }
+        setError(found ? "" : "Ticket not found.");
+      } catch (failure: any) {
+        setError(failure.response?.data?.message || "Unable to load ticket.");
+      }
     } finally {
       setLoading(false);
     }
   }, [id]);
+
+  useFocusEffect(
+    useCallback(() => {
+      void load();
+    }, [load]),
+  );
+
   useEffect(() => {
     void load();
   }, [load]);
+
   const save = async () => {
     if (!response.trim()) {
       setError("Write a response first.");
@@ -53,15 +101,21 @@ export default function AdminTicketDetails() {
     setBusy(true);
     setError("");
     try {
-      await respondToTicket(id, { adminResponse: response, status });
+      const updated = await respondToTicket(id, {
+        adminResponse: response.trim(),
+        status,
+      });
+      const savedTicket = updated.data.data;
+      setTicket(savedTicket);
+      setResponse(savedTicket.adminResponse || "");
       setEditing(false);
-      await load();
     } catch (failure: any) {
       setError(failure.response?.data?.message || "Unable to save response.");
     } finally {
       setBusy(false);
     }
   };
+
   const remove = () =>
     Alert.alert(
       "Delete response?",
@@ -72,13 +126,28 @@ export default function AdminTicketDetails() {
           text: "Delete",
           style: "destructive",
           onPress: async () => {
-            await deleteTicketResponse(id);
-            await load();
+            setBusy(true);
+            try {
+              const updated = await deleteTicketResponse(id);
+              const savedTicket = updated.data.data;
+              setTicket(savedTicket);
+              setResponse("");
+              setEditing(false);
+            } catch (err: any) {
+              Alert.alert(
+                "Error",
+                err.response?.data?.message || "Failed to delete response.",
+              );
+            } finally {
+              setBusy(false);
+            }
           },
         },
       ],
     );
-  if (loading) return <LoadingState label="Loading ticket details..." />;
+
+  if (loading && !ticket)
+    return <LoadingState label="Loading ticket details..." />;
   if (error && !ticket)
     return (
       <ErrorState
@@ -89,220 +158,335 @@ export default function AdminTicketDetails() {
       />
     );
   if (!ticket) return null;
+
+  const sc = STATUS_COLORS[ticket.status] || { bg: "#F0F1F7", text: "#747B90" };
+
   return (
-    <View style={styles.screen}>
-      <ScrollView contentContainerStyle={styles.content}>
-        <View style={styles.header}>
-          <Text onPress={() => router.back()} style={styles.back}>
-            ‹
-          </Text>
-          <Text style={styles.headerTitle}>Ticket Details</Text>
-          <View style={styles.headerActions}>
-            <Star size={20} color="#25213D" />
-            <Pencil size={18} color="#25213D" />
-            <MoreVertical size={20} color="#25213D" />
-          </View>
-        </View>
-        <View style={styles.panel}>
-          <Text style={styles.panelTitle}>Ticket Info</Text>
-          <Info label="Ticket ID" value={`#${String(ticket._id).slice(-4)}`} />
-          <Info
-            label="Created"
-            value={new Date(ticket.createdAt).toLocaleDateString()}
-          />
-          <Info
-            label="Last Message"
-            value={new Date(
-              ticket.updatedAt || ticket.createdAt,
-            ).toLocaleDateString()}
-          />
-          <Info label="Status" value={ticket.status.replace("_", " ")} />
-          <Info
-            label="Priority"
-            value={
-              ticket.status === "resolved"
-                ? "Low"
-                : ticket.status === "in_progress"
-                  ? "High"
-                  : "Medium"
-            }
-          />
-        </View>
-        <View style={styles.panel}>
-          <Text style={styles.panelTitle}>Responsibility</Text>
-          <Info label="Team" value="Default Team" action="Change" />
-          <View style={styles.rule} />
-          <Info label="Agent" value="Admin support" action="Change" />
-          <View style={styles.agent}>
-            <View style={styles.smallAvatar}>
-              <UserRound size={15} color="#5B3DF5" />
+    <KeyboardAvoidingView
+      style={styles.screen}
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
+    >
+      {/* Header */}
+      <View style={styles.header}>
+        <Pressable style={styles.backBtn} onPress={() => router.back()}>
+          <Text style={styles.backArrow}>‹</Text>
+        </Pressable>
+        <Text style={styles.headerTitle}>Ticket Details</Text>
+        <Pressable style={styles.moreBtn}>
+          <MoreVertical size={18} color="#25213D" />
+        </Pressable>
+      </View>
+
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Top Info Card */}
+        <View style={styles.card}>
+          <View style={styles.cardHeader}>
+            <View>
+              <Text style={styles.ticketIdText}>
+                #{String(ticket._id).slice(-6).toUpperCase()}
+              </Text>
+              <Text style={styles.ticketDateText}>
+                {new Date(ticket.createdAt).toLocaleString("en-US", {
+                  month: "short",
+                  day: "numeric",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })}
+              </Text>
             </View>
-            <Text style={styles.agentName}>
-              {ticket.customer?.fullName || "Assigned admin"}
-            </Text>
-          </View>
-          <View style={styles.rule} />
-          <Info label="Followers (0)" value="" action="Follow    Edit" />
-          <Text style={styles.muted}>
-            No followers assigned to this ticket.
-          </Text>
-        </View>
-        <View style={styles.panel}>
-          <Text style={styles.panelTitle}>Requester</Text>
-          <Info label="Details" value="" action="Change" />
-          <View style={styles.agent}>
-            <View style={styles.smallAvatar}>
-              <UserRound size={15} color="#5B3DF5" />
+            <View style={[styles.statusBadge, { backgroundColor: sc.bg }]}>
+              <Text style={[styles.statusText, { color: sc.text }]}>
+                {statusLabel(ticket.status)}
+              </Text>
             </View>
-            <Text style={styles.agentName}>
-              {ticket.customer?.fullName || "Customer"}
-            </Text>
+          </View>
+          <View style={styles.divider} />
+          <View style={styles.userRow}>
+            <View style={styles.avatarWrap}>
+              <UserRound size={20} color="#5B3DF5" />
+            </View>
+            <View>
+              <Text style={styles.userName}>
+                {ticket.customer?.fullName || "Customer"}
+              </Text>
+              <Text style={styles.userSub}>Requester</Text>
+            </View>
           </View>
         </View>
-        <View style={styles.panel}>
-          <Text style={styles.panelTitle}>Message</Text>
-          <Text style={styles.message}>{ticket.message}</Text>
-          {ticket.adminResponse && !editing ? (
-            <Text style={styles.response}>
-              Response: {ticket.adminResponse}
+
+        {/* Complaint Section */}
+        <Text style={styles.sectionTitle}>Customer Complaint</Text>
+        <View style={styles.complaintCard}>
+          <View style={styles.messageHeader}>
+            <MessageCircle size={16} color="#747B90" />
+            <Text style={styles.subjectText}>
+              {ticket.subject || "No Subject"}
             </Text>
-          ) : null}
-          {editing ? (
-            <>
-              <Input
-                value={response}
-                onChangeText={setResponse}
-                multiline
-                placeholder="Write your response"
-                style={styles.input}
-              />
-              <View style={styles.statusRow}>
+          </View>
+          <Text style={styles.messageText}>{ticket.description}</Text>
+        </View>
+
+        {/* Admin Reply Section */}
+        {ticket.adminResponse && !editing ? (
+          <>
+            <Text style={styles.sectionTitle}>Admin Reply</Text>
+            <View style={styles.replyCard}>
+              <Text style={styles.replyText}>{ticket.adminResponse}</Text>
+              <View style={styles.replyFooter}>
+                <Pressable onPress={() => setEditing(true)} style={styles.actionBtn}>
+                  <Text style={styles.actionText}>Edit Reply</Text>
+                </Pressable>
+                <Pressable onPress={remove} style={styles.actionBtnDestructive}>
+                  <Trash2 size={14} color="#C0392B" />
+                  <Text style={styles.actionTextDestructive}>Delete</Text>
+                </Pressable>
+              </View>
+            </View>
+          </>
+        ) : null}
+
+        {/* Edit / Write Reply Section */}
+        {(!ticket.adminResponse || editing) && (
+          <View style={styles.editSection}>
+            <Text style={styles.sectionTitle}>
+              {ticket.adminResponse ? "Edit Reply" : "Write a Reply"}
+            </Text>
+            <Input
+              value={response}
+              onChangeText={setResponse}
+              multiline
+              placeholder="Type your response here..."
+              style={styles.replyInput}
+            />
+
+            <Text style={styles.statusLabel}>Set ticket status:</Text>
+            <View style={styles.statusSelectorRow}>
+              <Pressable
+                onPress={() => setStatus("in_progress")}
+                style={[
+                  styles.statusSelectBtn,
+                  status === "in_progress" && styles.statusSelectBtnActive,
+                ]}
+              >
+                <Clock
+                  size={16}
+                  color={status === "in_progress" ? "#FFF" : "#747B90"}
+                />
                 <Text
-                  onPress={() => setStatus("in_progress")}
                   style={[
-                    styles.action,
-                    status !== "in_progress" && styles.muted,
+                    styles.statusSelectText,
+                    status === "in_progress" && styles.statusSelectTextActive,
                   ]}
                 >
-                  In progress
+                  In Progress
                 </Text>
+              </Pressable>
+              <Pressable
+                onPress={() => setStatus("resolved")}
+                style={[
+                  styles.statusSelectBtn,
+                  status === "resolved" && styles.statusSelectBtnActiveResolved,
+                ]}
+              >
+                <CheckCircle2
+                  size={16}
+                  color={status === "resolved" ? "#FFF" : "#747B90"}
+                />
                 <Text
-                  onPress={() => setStatus("resolved")}
                   style={[
-                    styles.actionResolved,
-                    status !== "resolved" && styles.muted,
+                    styles.statusSelectText,
+                    status === "resolved" && styles.statusSelectTextActive,
                   ]}
                 >
                   Resolved
                 </Text>
-              </View>
-              <Button onPress={() => void save()}>
-                {busy ? "Saving..." : "Save response"}
-              </Button>
-            </>
-          ) : (
-            <View style={styles.actions}>
-              <Text onPress={() => setEditing(true)} style={styles.action}>
-                {ticket.adminResponse ? "Edit response" : "Reply"}
-              </Text>
-              {ticket.adminResponse ? (
-                <Text onPress={remove} style={styles.delete}>
-                  Delete response
-                </Text>
-              ) : null}
+              </Pressable>
             </View>
-          )}
-        </View>
-        {!!error && <Text style={styles.error}>{error}</Text>}
+
+            {!!error && <Text style={styles.errorText}>{error}</Text>}
+
+            <View style={{ marginTop: 10 }}>
+              <Button
+                onPress={() => void save()}
+                disabled={busy}
+              >
+                {busy ? "Saving..." : "Save Response"}
+              </Button>
+            </View>
+            {editing && ticket.adminResponse && (
+              <Pressable
+                onPress={() => {
+                  setEditing(false);
+                  setResponse(ticket.adminResponse);
+                  setStatus(ticket.status === "resolved" ? "resolved" : "in_progress");
+                }}
+                style={styles.cancelBtn}
+              >
+                <Text style={styles.cancelBtnText}>Cancel Edit</Text>
+              </Pressable>
+            )}
+          </View>
+        )}
       </ScrollView>
-      <View style={styles.cancel}>
-        <Text style={styles.cancelText}>Slide to cancel the ticket ›</Text>
-      </View>
-    </View>
+    </KeyboardAvoidingView>
   );
 }
-function Info({
-  label,
-  value,
-  action,
-}: {
-  label: string;
-  value: string;
-  action?: string;
-}) {
-  return (
-    <View style={styles.info}>
-      <Text style={styles.infoValue}>{value}</Text>
-      <Text style={styles.infoLabel}>{action || label}</Text>
-    </View>
-  );
-}
+
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: "#F7F7FB" },
-  content: { padding: 16, paddingBottom: 30 },
+  scrollView: { flex: 1 },
+  content: { padding: 20, paddingBottom: 40 },
+
+  /* Header */
   header: {
-    height: 48,
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 16,
+    justifyContent: "space-between",
+    paddingHorizontal: 20,
+    paddingTop: 54,
+    paddingBottom: 16,
+    backgroundColor: "#FFF",
+    borderBottomWidth: 1,
+    borderBottomColor: "#F0EEF8",
   },
-  back: { color: "#25213D", fontSize: 34, lineHeight: 36, width: 36 },
-  headerTitle: { color: "#25213D", fontSize: 17, fontWeight: "900", flex: 1 },
-  headerActions: { flexDirection: "row", gap: 16, alignItems: "center" },
-  panel: {
-    backgroundColor: "#EDEBFF",
-    borderRadius: 15,
-    padding: 15,
-    marginBottom: 10,
+  backBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "#F4F5FA",
+    alignItems: "center",
+    justifyContent: "center",
   },
-  panelTitle: {
-    color: "#5B3DF5",
-    fontSize: 14,
-    fontWeight: "900",
-    marginBottom: 12,
+  backArrow: { color: "#5B3DF5", fontSize: 28, lineHeight: 32, marginTop: -2 },
+  headerTitle: { color: "#25213D", fontSize: 18, fontWeight: "800" },
+  moreBtn: {
+    width: 40,
+    height: 40,
+    alignItems: "center",
+    justifyContent: "center",
   },
-  info: {
+
+  /* Card */
+  card: {
+    backgroundColor: "#FFF",
+    borderRadius: 18,
+    padding: 18,
+    marginBottom: 20,
+    shadowColor: "#25213D",
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    elevation: 2,
+  },
+  cardHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
-    minHeight: 27,
-    gap: 15,
+    alignItems: "center",
   },
-  infoValue: { color: "#25213D", fontSize: 13, flex: 1 },
-  infoLabel: { color: "#747B90", fontSize: 12, textAlign: "right" },
-  rule: { height: 1, backgroundColor: "#DDE2F0", marginVertical: 8 },
-  agent: {
+  ticketIdText: { color: "#25213D", fontSize: 16, fontWeight: "900" },
+  ticketDateText: { color: "#8B98B2", fontSize: 12, marginTop: 4 },
+  statusBadge: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10 },
+  statusText: { fontSize: 12, fontWeight: "800" },
+  divider: { height: 1, backgroundColor: "#F0F1F7", marginVertical: 14 },
+  userRow: { flexDirection: "row", alignItems: "center", gap: 12 },
+  avatarWrap: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: "#EDEBFF",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  userName: { color: "#25213D", fontSize: 15, fontWeight: "800" },
+  userSub: { color: "#747B90", fontSize: 12, marginTop: 2 },
+
+  sectionTitle: {
+    color: "#25213D",
+    fontSize: 16,
+    fontWeight: "900",
+    marginBottom: 12,
+    marginTop: 8,
+  },
+
+  /* Complaint */
+  complaintCard: {
+    backgroundColor: "#FFF",
+    borderRadius: 16,
+    padding: 18,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: "#F0EEF8",
+  },
+  messageHeader: {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    marginBottom: 5,
+    marginBottom: 10,
   },
-  smallAvatar: {
-    width: 27,
-    height: 27,
-    borderRadius: 14,
+  subjectText: { color: "#25213D", fontSize: 14, fontWeight: "800" },
+  messageText: { color: "#5F6B84", fontSize: 14, lineHeight: 22 },
+
+  /* Reply */
+  replyCard: {
+    backgroundColor: "#EDEBFF",
+    borderRadius: 16,
+    padding: 18,
+    marginBottom: 20,
+    borderLeftWidth: 4,
+    borderLeftColor: "#5B3DF5",
+  },
+  replyText: { color: "#25213D", fontSize: 14, lineHeight: 22, fontWeight: "600" },
+  replyFooter: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    alignItems: "center",
+    gap: 16,
+    marginTop: 16,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: "rgba(91, 61, 245, 0.1)",
+  },
+  actionBtn: { padding: 6 },
+  actionText: { color: "#5B3DF5", fontSize: 13, fontWeight: "800" },
+  actionBtnDestructive: { flexDirection: "row", alignItems: "center", gap: 4, padding: 6 },
+  actionTextDestructive: { color: "#C0392B", fontSize: 13, fontWeight: "800" },
+
+  /* Edit Section */
+  editSection: {
     backgroundColor: "#FFF",
+    borderRadius: 18,
+    padding: 18,
+    marginTop: 10,
+  },
+  replyInput: {
+    minHeight: 120,
+    textAlignVertical: "top",
+    backgroundColor: "#F4F5FA",
+    borderRadius: 12,
+    padding: 16,
+    fontSize: 14,
+    marginBottom: 20,
+  },
+  statusLabel: { color: "#747B90", fontSize: 13, fontWeight: "600", marginBottom: 10 },
+  statusSelectorRow: { flexDirection: "row", gap: 10, marginBottom: 20 },
+  statusSelectBtn: {
+    flex: 1,
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
+    gap: 6,
+    height: 48,
+    borderRadius: 12,
+    backgroundColor: "#F0F1F7",
   },
-  agentName: { color: "#25213D", fontSize: 13, fontWeight: "800" },
-  muted: { color: "#747B90", fontSize: 12 },
-  message: { color: "#25213D", lineHeight: 22 },
-  response: { color: "#25213D", lineHeight: 22, marginTop: 14 },
-  input: { minHeight: 100, marginTop: 12, textAlignVertical: "top" },
-  statusRow: { flexDirection: "row", gap: 18, marginVertical: 12 },
-  actions: { flexDirection: "row", gap: 22, marginTop: 15 },
-  action: { color: "#5B3DF5", fontWeight: "900" },
-  actionResolved: { color: "#0F9D8A", fontWeight: "900" },
-  delete: { color: "#C0392B", fontWeight: "900" },
-  error: { color: "#C0392B", marginTop: 10 },
-  cancel: {
-    marginHorizontal: 45,
-    marginBottom: 14,
-    backgroundColor: "#5B3DF5",
-    minHeight: 46,
-    borderRadius: 24,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  cancelText: { color: "#FFF", fontWeight: "800" },
+  statusSelectBtnActive: { backgroundColor: "#E07C00" },
+  statusSelectBtnActiveResolved: { backgroundColor: "#0F9D8A" },
+  statusSelectText: { color: "#747B90", fontSize: 13, fontWeight: "800" },
+  statusSelectTextActive: { color: "#FFF" },
+  cancelBtn: { marginTop: 16, alignItems: "center", paddingVertical: 10 },
+  cancelBtnText: { color: "#747B90", fontSize: 14, fontWeight: "700" },
+  errorText: { color: "#B73248", marginBottom: 10, fontSize: 13, textAlign: "center" },
 });

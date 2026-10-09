@@ -262,6 +262,9 @@ const SupportTicket = make("SupportTicket", {
   subject: { type: String, required: true, trim: true, minlength: 3, maxlength: 120 },
   description: { type: String, required: true, trim: true, minlength: 10, maxlength: 2000 },
   status: { type: String, enum: ["pending", "in_progress", "resolved", "cancelled"], default: "pending", required: true },
+  adminResponse: { type: String, trim: true, maxlength: 4000 },
+  respondedAt: Date,
+  respondedBy: ref("User", false),
 });
 SupportTicket.schema.index({ user: 1, createdAt: -1 });
 const ProviderLocation = make("ProviderLocation", {

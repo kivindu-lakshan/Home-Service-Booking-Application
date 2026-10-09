@@ -1,9 +1,16 @@
 import { getAdminTickets } from "@/api/domain";
 import { EmptyState, ErrorState, LoadingState } from "@/components/DataState";
-import { router } from "expo-router";
-import { Mail, MoreVertical } from "lucide-react-native";
+import { router, useFocusEffect } from "expo-router";
+import { Headphones, Mail, MoreVertical } from "lucide-react-native";
 import { useCallback, useEffect, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import {
+  Pressable,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 
 function initials(name?: string) {
   return (name || "Customer")
@@ -27,8 +34,11 @@ function due(status: string) {
 export default function AdminTickets() {
   const [tickets, setTickets] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState("");
-  const load = useCallback(async () => {
+
+  const load = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
     try {
       setTickets((await getAdminTickets()).data.data);
       setError("");
@@ -38,22 +48,57 @@ export default function AdminTickets() {
       );
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      void load(true);
+    }, [load]),
+  );
+
   useEffect(() => {
-    const timer = setTimeout(() => void load(), 0);
-    return () => clearTimeout(timer);
+    void load();
   }, [load]);
+
   useEffect(() => {
-    const timer = setInterval(() => void load(), 5000);
+    const timer = setInterval(() => void load(true), 5000);
     return () => clearInterval(timer);
   }, [load]);
-  if (loading) return <LoadingState label="Loading support tickets..." />;
+
+  const onRefresh = () => {
+    setRefreshing(true);
+    void load(true);
+  };
+
+  if (loading && !tickets.length)
+    return <LoadingState label="Loading support tickets..." />;
   if (error && !tickets.length)
     return <ErrorState onRetry={() => void load()} />;
+
   return (
     <View style={styles.screen}>
-      <ScrollView contentContainerStyle={styles.content}>
+      {/* Header */}
+      <View style={styles.header}>
+        <Pressable
+          style={styles.backBtn}
+          onPress={() => router.replace("/admin/dashboard")}
+        >
+          <Text style={styles.backArrow}>‹</Text>
+        </Pressable>
+        <Text style={styles.headerTitle}>Customer Support</Text>
+        <View style={styles.headerIcon}>
+          <Headphones size={18} color="#5B3DF5" />
+        </View>
+      </View>
+
+      <ScrollView
+        contentContainerStyle={styles.content}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
+      >
         {error ? <Text style={styles.error}>{error}</Text> : null}
         {!tickets.length ? (
           <EmptyState label="No customer tickets found." />
@@ -177,4 +222,42 @@ const styles = StyleSheet.create({
   },
   priorityText: { color: "#25213D", fontSize: 12, fontWeight: "800" },
   error: { color: "#C0392B", marginBottom: 10 },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 20,
+    paddingTop: 54,
+    paddingBottom: 16,
+    backgroundColor: "#FFF",
+    borderBottomWidth: 1,
+    borderBottomColor: "#F0EEF8",
+  },
+  backBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "#F4F5FA",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  backArrow: {
+    color: "#5B3DF5",
+    fontSize: 28,
+    lineHeight: 32,
+    marginTop: -2,
+  },
+  headerTitle: {
+    color: "#25213D",
+    fontSize: 18,
+    fontWeight: "800",
+  },
+  headerIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "#EDEBFF",
+    alignItems: "center",
+    justifyContent: "center",
+  },
 });

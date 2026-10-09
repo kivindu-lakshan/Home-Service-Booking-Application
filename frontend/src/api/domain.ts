@@ -45,15 +45,14 @@ export const createReview = (payload: {
   comment?: string;
 }) => api.post("/reviews", payload);
 export const getAdminTickets = () => api.get("/admin/tickets");
+export const getAdminTicket = (id: string) =>
+  api.get(`/admin/tickets/${encodeURIComponent(id)}`);
 export const respondToTicket = (
   id: string,
   payload: { adminResponse: string; status: string },
 ) => api.patch(`/admin/tickets/${encodeURIComponent(id)}`, payload);
 export const deleteTicketResponse = (id: string) =>
-  api.patch(`/admin/tickets/${encodeURIComponent(id)}`, {
-    adminResponse: "",
-    status: "pending",
-  });
+  api.delete(`/admin/tickets/${encodeURIComponent(id)}/response`);
 export const getAdminDashboard = () => api.get("/admin/dashboard");
 export const getAdminBookings = (params: {
   status?: string;

@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useFocusEffect } from "expo-router";
-import { ScrollView, StyleSheet, Text, View } from "react-native";
+import { ScrollView, StyleSheet, Text, View, TextInput, Pressable } from "react-native";
 import { api } from "@/api/client";
 import { EmptyState, ErrorState, LoadingState } from "@/components/DataState";
 import { Card } from "@/components/ui";
+import { Search } from "lucide-react-native";
 
 function StarRating({ rating }: { rating: number }) {
   return (
@@ -17,6 +18,8 @@ export default function MyReviews() {
   const [reviews, setReviews] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const [query, setQuery] = useState("");
+  const [filter, setFilter] = useState<"all" | "5" | "4" | "3">("all");
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -43,6 +46,28 @@ export default function MyReviews() {
     }, [load]),
   );
 
+  const visibleReviews = useMemo(() => {
+    let filtered = reviews;
+    if (filter !== "all") {
+      filtered = filtered.filter((r) => r.rating === parseInt(filter));
+    }
+    if (query.trim()) {
+      const q = query.toLowerCase();
+      filtered = filtered.filter((r) => {
+        const providerName = r.provider?.user?.fullName || "";
+        const serviceName = r.service?.name || "";
+        const comment = r.comment || "";
+        return (
+          providerName.toLowerCase().includes(q) ||
+          serviceName.toLowerCase().includes(q) ||
+          comment.toLowerCase().includes(q)
+        );
+      });
+    }
+    // Sort top rated to the top
+    return filtered.sort((a, b) => b.rating - a.rating || new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }, [reviews, query, filter]);
+
   if (loading) return <LoadingState label="Loading your reviews..." />;
   if (error) return <ErrorState onRetry={() => void load()} />;
 
@@ -52,12 +77,45 @@ export default function MyReviews() {
       contentContainerStyle={styles.content}
     >
       <Text style={styles.heading}>My reviews</Text>
-      {reviews.length === 0 ? (
-        <EmptyState label="You haven't left any reviews yet." />
+
+      {/* Search Bar */}
+      <View style={styles.searchWrap}>
+        <Search size={20} color="#8B98B2" />
+        <TextInput
+          placeholder="Search providers or reviews..."
+          placeholderTextColor="#8B98B2"
+          value={query}
+          onChangeText={setQuery}
+          style={styles.searchInput}
+        />
+      </View>
+
+      {/* Filter Chips */}
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterScroll} contentContainerStyle={styles.filterContent}>
+        {(["all", "5", "4", "3"] as const).map((f) => (
+          <Pressable
+            key={f}
+            onPress={() => setFilter(f)}
+            style={[styles.filterChip, filter === f && styles.filterChipActive]}
+          >
+            <Text style={[styles.filterText, filter === f && styles.filterTextActive]}>
+              {f === "all" ? "All" : `${f} Stars`}
+            </Text>
+          </Pressable>
+        ))}
+      </ScrollView>
+
+      {visibleReviews.length === 0 ? (
+        <EmptyState label={query || filter !== "all" ? "No matching reviews." : "You haven't left any reviews yet."} />
       ) : (
-        reviews.map((review: any) => (
+        visibleReviews.map((review: any) => (
           <Card key={review._id}>
-            <StarRating rating={review.rating} />
+            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" }}>
+              <StarRating rating={review.rating} />
+              {review.provider?.user?.fullName && (
+                <Text style={styles.providerName}>{review.provider.user.fullName}</Text>
+              )}
+            </View>
             {review.service?.name ? (
               <Text style={styles.service}>{review.service.name}</Text>
             ) : null}
@@ -94,6 +152,39 @@ const styles = StyleSheet.create({
     marginTop: 8,
     fontSize: 14,
   },
+  providerName: {
+    color: "#5B3DF5",
+    fontWeight: "700",
+    fontSize: 13,
+  },
   comment: { color: "#747B90", marginTop: 8 },
   date: { color: "#8890A5", marginTop: 8, fontSize: 12 },
+  searchWrap: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FFF",
+    borderRadius: 14,
+    paddingHorizontal: 16,
+    height: 52,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: "#E3E6F0",
+  },
+  searchInput: {
+    flex: 1,
+    marginLeft: 10,
+    fontSize: 15,
+    color: "#25213D",
+  },
+  filterScroll: { flexGrow: 0, marginBottom: 20 },
+  filterContent: { gap: 10 },
+  filterChip: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: "#E3E6F0",
+  },
+  filterChipActive: { backgroundColor: "#5B3DF5" },
+  filterText: { color: "#5F6B84", fontSize: 13, fontWeight: "700" },
+  filterTextActive: { color: "#FFF" },
 });
