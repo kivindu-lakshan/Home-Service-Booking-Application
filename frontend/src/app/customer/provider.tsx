@@ -22,7 +22,7 @@ export default function ProviderDetails() {
     </Card><Card><Text style={themed(css.heading)}>Services Offered</Text>{p.services.map(o => <Text key={o.service._id} style={themed(css.copy)}>{o.service.name} · {priceLabel(o.priceFrom ?? o.service.basePrice)}</Text>)}</Card>
       <Button secondary onPress={() => router.push({ pathname: '/reviews/provider', params: { providerId, serviceId } })}>View Reviews</Button>
       <Card><Text style={themed(css.heading)}>Availability</Text>{!p.availability?.length && <Text style={themed(css.copy)}>No availability schedule published. Confirm a time when booking.</Text>}{p.availability?.map((a,i) => <Text key={i} style={themed(css.copy)}>{days[a.dayOfWeek]}: {a.isAvailable ? `${a.startTime}–${a.endTime}` : 'Unavailable'}</Text>)}</Card>
-      {p.isAvailable === false ? <Text style={themed(css.copy)}>This provider is currently unavailable.</Text> : <Button onPress={() => router.push({ pathname: '/customer/book', params: { providerId, serviceId } })}>Book This Provider</Button>}
+      {p.isAvailable === false ? <Text style={themed(css.copy)}>This provider is currently unavailable.</Text> : <Button onPress={() => router.push({ pathname: '/bookings/new', params: { serviceId } })}>Book This Provider</Button>}
     </>}
   </CustomerPage>;
 }
