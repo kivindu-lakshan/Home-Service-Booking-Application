@@ -133,13 +133,24 @@ function BookingCard({ booking }: { booking: Booking }) {
           </Text>
         </View>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-          {completed && (
+
+          {(completed || booking.status === "in_progress") && (
             <Pressable
-              onPress={() => router.push({ pathname: "/reviews/rate", params: { bookingId: booking._id } })}
-              style={{ flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: "#FFF8EC", paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8 }}
+              accessibilityRole="button"
+              accessibilityLabel="Review provider"
+              onPress={(e) => {
+                e.stopPropagation();
+                router.push({
+                  pathname: "/reviews/rate",
+                  params: { bookingId: booking._id },
+                });
+              }}
+              style={styles.reviewBtn}
             >
-              <Star size={14} color="#E07C00" fill="#E07C00" />
-              <Text style={{ color: "#E07C00", fontSize: 12, fontWeight: "800" }}>Review</Text>
+              <Star size={14} color="#D97706" fill="#F59E0B" />
+              <Text style={styles.reviewBtnText}>
+                {booking.status === "in_progress" ? "Review Now" : "Review"}
+              </Text>
             </Pressable>
           )}
           <View style={styles.detailsLink}>
@@ -149,6 +160,7 @@ function BookingCard({ booking }: { booking: Booking }) {
         </View>
       </View>
     </Pressable>
+
   );
 }
 
@@ -441,7 +453,29 @@ const styles = StyleSheet.create({
   paymentModeText: { color: "#8190AB", fontSize: 11, fontWeight: "700", marginTop: 4, textTransform: "uppercase" },
   detailsLink: { flexDirection: "row", alignItems: "center", gap: 2 },
   detailsText: { color: "#633CFF", fontSize: 14, fontWeight: "900" },
+  reviewBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    backgroundColor: "#FEF3C7",
+    borderWidth: 1,
+    borderColor: "#FDE68A",
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 10,
+    shadowColor: "#F59E0B",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.12,
+    shadowRadius: 4,
+    elevation: 1,
+  },
+  reviewBtnText: {
+    color: "#B45309",
+    fontSize: 12,
+    fontWeight: "800",
+  },
   empty: { alignItems: "center", paddingVertical: 44, gap: 10 },
+
   emptyTitle: { color: "#26324F", fontSize: 20, fontWeight: "900" },
   emptyCopy: {
     color: "#8190AB",

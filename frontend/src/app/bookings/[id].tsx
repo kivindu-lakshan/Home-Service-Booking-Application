@@ -595,8 +595,8 @@ export default function BookingDetailsScreen() {
                 </Pressable>
               )}
 
-              {/* Rate Provider Button (if completed) */}
-              {isCompleted && (
+              {/* Rate Provider Button (if completed or in_progress) */}
+              {(isCompleted || booking.status === "in_progress") && (
                 <Pressable
                   onPress={() =>
                     router.push({
@@ -607,7 +607,11 @@ export default function BookingDetailsScreen() {
                   style={styles.rateButton}
                 >
                   <Star size={18} color="#FFFFFF" fill="#FFFFFF" />
-                  <Text style={styles.rateButtonText}>Rate & Review Service</Text>
+                  <Text style={styles.rateButtonText}>
+                    {booking.status === "in_progress"
+                      ? "Rate & Review Service (In Progress)"
+                      : "Rate & Review Service"}
+                  </Text>
                 </Pressable>
               )}
 

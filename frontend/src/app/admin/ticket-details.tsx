@@ -8,17 +8,20 @@ import { ErrorState, LoadingState } from "@/components/DataState";
 import { Button, Input } from "@/components/ui";
 import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import {
+  Check,
   CheckCircle2,
   Clock,
   MessageCircle,
   MoreVertical,
   Trash2,
   UserRound,
+  X,
 } from "lucide-react-native";
 import { useCallback, useEffect, useState } from "react";
 import {
   Alert,
   KeyboardAvoidingView,
+  Modal,
   Platform,
   Pressable,
   ScrollView,
@@ -26,6 +29,7 @@ import {
   Text,
   View,
 } from "react-native";
+
 
 const STATUS_COLORS: Record<string, { bg: string; text: string }> = {
   open: { bg: "#FFE5E9", text: "#B73248" },
@@ -93,11 +97,21 @@ export default function AdminTicketDetails() {
     void load();
   }, [load]);
 
-  const save = async () => {
-    if (!response.trim()) {
-      setError("Write a response first.");
-      return;
-    }
+  const [confirmConfig, setConfirmConfig] = useState<{
+    visible: boolean;
+    type: "update" | "delete";
+    title: string;
+    message: string;
+    onConfirm: () => void;
+  }>({
+    visible: false,
+    type: "update",
+    title: "",
+    message: "",
+    onConfirm: () => {},
+  });
+
+  const executeSave = async () => {
     setBusy(true);
     setError("");
     try {
@@ -116,35 +130,48 @@ export default function AdminTicketDetails() {
     }
   };
 
-  const remove = () =>
-    Alert.alert(
-      "Delete response?",
-      "The customer will see the ticket as pending again.",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Delete",
-          style: "destructive",
-          onPress: async () => {
-            setBusy(true);
-            try {
-              const updated = await deleteTicketResponse(id);
-              const savedTicket = updated.data.data;
-              setTicket(savedTicket);
-              setResponse("");
-              setEditing(false);
-            } catch (err: any) {
-              Alert.alert(
-                "Error",
-                err.response?.data?.message || "Failed to delete response.",
-              );
-            } finally {
-              setBusy(false);
-            }
-          },
-        },
-      ],
-    );
+  const handleSavePress = () => {
+    if (!response.trim()) {
+      setError("Write a response first.");
+      return;
+    }
+    setConfirmConfig({
+      visible: true,
+      type: "update",
+      title: "Are you sure want to update this reply?",
+      message: "The customer will see this updated reply for their complaint.",
+      onConfirm: () => void executeSave(),
+    });
+  };
+
+  const executeRemove = async () => {
+    setBusy(true);
+    try {
+      const updated = await deleteTicketResponse(id);
+      const savedTicket = updated.data.data;
+      setTicket(savedTicket);
+      setResponse("");
+      setEditing(false);
+    } catch (err: any) {
+      Alert.alert(
+        "Error",
+        err.response?.data?.message || "Failed to delete response.",
+      );
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleRemovePress = () => {
+    setConfirmConfig({
+      visible: true,
+      type: "delete",
+      title: "Are you sure want to delete this reply?",
+      message: "This reply will be permanently deleted and the ticket will return to pending.",
+      onConfirm: () => void executeRemove(),
+    });
+  };
+
 
   if (loading && !ticket)
     return <LoadingState label="Loading ticket details..." />;
@@ -240,7 +267,7 @@ export default function AdminTicketDetails() {
                 <Pressable onPress={() => setEditing(true)} style={styles.actionBtn}>
                   <Text style={styles.actionText}>Edit Reply</Text>
                 </Pressable>
-                <Pressable onPress={remove} style={styles.actionBtnDestructive}>
+                <Pressable onPress={handleRemovePress} style={styles.actionBtnDestructive}>
                   <Trash2 size={14} color="#C0392B" />
                   <Text style={styles.actionTextDestructive}>Delete</Text>
                 </Pressable>
@@ -311,10 +338,10 @@ export default function AdminTicketDetails() {
 
             <View style={{ marginTop: 10 }}>
               <Button
-                onPress={() => void save()}
+                onPress={handleSavePress}
                 disabled={busy}
               >
-                {busy ? "Saving..." : "Save Response"}
+                {busy ? "Saving..." : ticket.adminResponse ? "Update Reply" : "Save Response"}
               </Button>
             </View>
             {editing && ticket.adminResponse && (
@@ -332,9 +359,57 @@ export default function AdminTicketDetails() {
           </View>
         )}
       </ScrollView>
+
+      {/* Confirmation Modal with Greeny Touch */}
+      <Modal
+        visible={confirmConfig.visible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setConfirmConfig((prev) => ({ ...prev, visible: false }))}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.confirmCard}>
+            <View style={styles.confirmBadge}>
+              {confirmConfig.type === "delete" ? (
+                <Trash2 size={28} color="#059669" strokeWidth={2.2} />
+              ) : (
+                <CheckCircle2 size={28} color="#059669" strokeWidth={2.2} />
+              )}
+            </View>
+
+            <Text style={styles.confirmTitle}>{confirmConfig.title}</Text>
+            <Text style={styles.confirmMessage}>{confirmConfig.message}</Text>
+
+            <View style={styles.confirmActionsRow}>
+              <Pressable
+                style={styles.confirmNoBtn}
+                onPress={() => setConfirmConfig((prev) => ({ ...prev, visible: false }))}
+              >
+                <X size={16} color="#047857" strokeWidth={2.5} />
+                <Text style={styles.confirmNoText}>No, Cancel</Text>
+              </Pressable>
+
+              <Pressable
+                style={styles.confirmYesBtn}
+                onPress={() => {
+                  const run = confirmConfig.onConfirm;
+                  setConfirmConfig((prev) => ({ ...prev, visible: false }));
+                  run();
+                }}
+              >
+                <Check size={16} color="#FFFFFF" strokeWidth={2.5} />
+                <Text style={styles.confirmYesText}>
+                  {confirmConfig.type === "delete" ? "Yes, Delete" : "Yes, Update"}
+                </Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </KeyboardAvoidingView>
   );
 }
+
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: "#F7F7FB" },
@@ -489,4 +564,97 @@ const styles = StyleSheet.create({
   cancelBtn: { marginTop: 16, alignItems: "center", paddingVertical: 10 },
   cancelBtnText: { color: "#747B90", fontSize: 14, fontWeight: "700" },
   errorText: { color: "#B73248", marginBottom: 10, fontSize: 13, textAlign: "center" },
+
+  /* Confirmation Modal with Greeny Touch */
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(15, 23, 42, 0.6)",
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 24,
+  },
+  confirmCard: {
+    width: "100%",
+    maxWidth: 360,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 24,
+    padding: 24,
+    alignItems: "center",
+    borderWidth: 1.5,
+    borderColor: "#D1FAE5",
+    shadowColor: "#059669",
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.18,
+    shadowRadius: 20,
+    elevation: 8,
+  },
+  confirmBadge: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: "#ECFDF5",
+    borderWidth: 2,
+    borderColor: "#A7F3D0",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 16,
+  },
+  confirmTitle: {
+    fontSize: 18,
+    fontWeight: "800",
+    color: "#111827",
+    textAlign: "center",
+    marginBottom: 8,
+    letterSpacing: -0.3,
+  },
+  confirmMessage: {
+    fontSize: 14,
+    color: "#4B5563",
+    textAlign: "center",
+    lineHeight: 20,
+    marginBottom: 24,
+  },
+  confirmActionsRow: {
+    flexDirection: "row",
+    gap: 12,
+    width: "100%",
+  },
+  confirmNoBtn: {
+    flex: 1,
+    height: 48,
+    borderRadius: 14,
+    backgroundColor: "#F0FDF4",
+    borderWidth: 1.5,
+    borderColor: "#A7F3D0",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+  },
+  confirmNoText: {
+    color: "#047857",
+    fontSize: 14,
+    fontWeight: "700",
+  },
+  confirmYesBtn: {
+    flex: 1.2,
+    height: 48,
+    borderRadius: 14,
+    backgroundColor: "#059669",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    shadowColor: "#059669",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  confirmYesText: {
+    color: "#FFFFFF",
+    fontSize: 14,
+    fontWeight: "700",
+  },
 });
+

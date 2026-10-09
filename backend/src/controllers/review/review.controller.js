@@ -17,11 +17,11 @@ exports.create = async (req, res, next) => {
         data: null,
         message: "Booking not found for this customer",
       });
-    if (booking.status !== "completed")
+    if (!["completed", "in_progress"].includes(booking.status))
       return res.status(409).json({
         success: false,
         data: null,
-        message: "Only completed bookings can be reviewed",
+        message: "Only in-progress or completed bookings can be reviewed",
       });
     if (!booking.provider)
       return res.status(409).json({
@@ -39,6 +39,7 @@ exports.create = async (req, res, next) => {
       booking: booking._id,
       customer: req.user._id,
       provider: booking.provider._id,
+      service: booking.service?._id || booking.service,
       rating: req.body.rating,
       comment: req.body.comment,
     });
@@ -114,7 +115,12 @@ exports.mine = async (req, res, next) => {
           select: "user ratingAvg",
           populate: { path: "user", select: "fullName" },
         })
-        .populate("booking", "bookingRef scheduledDate")
+        .populate({
+          path: "booking",
+          select: "bookingRef scheduledDate service status",
+          populate: { path: "service", select: "name" },
+        })
+        .populate("service", "name")
         .sort({ createdAt: -1 }),
     );
   } catch (error) {

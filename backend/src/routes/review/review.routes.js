@@ -17,4 +17,26 @@ router.post(
   validate,
   controller.create,
 );
+router.patch(
+  "/:id",
+  auth,
+  [
+    body("rating").optional().isInt({ min: 1, max: 5 }),
+    body("comment").optional().isString().isLength({ max: 2000 }),
+  ],
+  validate,
+  controller.update,
+);
+router.put(
+  "/:id",
+  auth,
+  [
+    body("rating").optional().isInt({ min: 1, max: 5 }),
+    body("comment").optional().isString().isLength({ max: 2000 }),
+  ],
+  validate,
+  controller.update,
+);
+router.delete("/:id", auth, controller.remove);
 module.exports = router;
+

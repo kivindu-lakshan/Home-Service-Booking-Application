@@ -44,6 +44,14 @@ export const createReview = (payload: {
   rating: number;
   comment?: string;
 }) => api.post("/reviews", payload);
+export const getMyReviews = () => api.get("/reviews/mine");
+export const updateReview = (
+  id: string,
+  payload: { rating?: number; comment?: string },
+) => api.patch(`/reviews/${encodeURIComponent(id)}`, payload);
+export const deleteReview = (id: string) =>
+  api.delete(`/reviews/${encodeURIComponent(id)}`);
+
 export const getAdminTickets = () => api.get("/admin/tickets");
 export const getAdminTicket = (id: string) =>
   api.get(`/admin/tickets/${encodeURIComponent(id)}`);

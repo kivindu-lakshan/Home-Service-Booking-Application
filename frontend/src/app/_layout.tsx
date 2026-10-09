@@ -102,18 +102,23 @@ export default function RootLayout() {
           />
           <Stack.Screen
             name="reviews/rate"
-            options={{ title: "Rate provider" }}
+            options={{ headerShown: false }}
           />
           <Stack.Screen
             name="reviews/submitted"
-            options={{ title: "Review submitted" }}
+            options={{ headerShown: false }}
           />
           <Stack.Screen
             name="reviews/provider"
-            options={{ title: "Provider reviews" }}
+            options={{ headerShown: false }}
           />
-          <Stack.Screen name="reviews/mine" options={{ title: "My reviews" }} />
+          <Stack.Screen
+            name="reviews/mine"
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen name="provider" options={{ headerShown: false }} />
           <Stack.Screen name="admin" options={{ headerShown: false }} />
+
         </Stack>
       </AccountThemeProvider>
     </AuthProvider>
