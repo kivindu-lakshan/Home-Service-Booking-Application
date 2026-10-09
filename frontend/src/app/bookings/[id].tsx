@@ -733,7 +733,17 @@ export default function BookingDetailsScreen() {
                 maxLength={300}
                 onChangeText={(val) => {
                   setRescheduleNotes(val);
-                  setRescheduleError("");
+                  if (val.trim()) {
+                    if (/[<>{}\\]/.test(val)) {
+                      setRescheduleError("Reschedule notes cannot contain invalid characters (< > { }).");
+                    } else if (val.trim().length >= 4 && !/\p{L}/u.test(val.trim())) {
+                      setRescheduleError("Reschedule reason must contain words, not just numbers or symbols.");
+                    } else {
+                      setRescheduleError("");
+                    }
+                  } else {
+                    setRescheduleError("");
+                  }
                 }}
                 style={themed(styles.modalInput)}
               />
@@ -816,7 +826,17 @@ export default function BookingDetailsScreen() {
                     maxLength={300}
                     onChangeText={(val) => {
                       setCancelCustomText(val);
-                      setCancelError("");
+                      if (val.trim()) {
+                        if (/[<>{}\\]/.test(val)) {
+                          setCancelError("Explanation cannot contain invalid characters (< > { }).");
+                        } else if (val.trim().length >= 4 && !/\p{L}/u.test(val.trim())) {
+                          setCancelError("Explanation must contain words explaining the reason, not just numbers or symbols.");
+                        } else {
+                          setCancelError("");
+                        }
+                      } else {
+                        setCancelError("");
+                      }
                     }}
                     style={themed(styles.modalInput)}
                   />

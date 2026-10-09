@@ -125,6 +125,88 @@ export default function NewBookingScreen() {
     setFieldErrors((prev) => ({ ...prev, scheduledTime: undefined }));
   };
 
+  const handleCustomAddressChange = (val: string) => {
+    setCustomAddress(val);
+    setErrorMessage("");
+    const trimmed = val.trim();
+    if (trimmed) {
+      if (/[@$%^*~+=<>{}\\]/.test(val)) {
+        setFieldErrors((prev) => ({
+          ...prev,
+          address: "Address contains invalid symbols like '@'. Use standard address formats.",
+        }));
+        setTouched((prev) => ({ ...prev, address: true }));
+        return;
+      }
+      if (trimmed.length >= 5 && !/\p{L}/u.test(trimmed)) {
+        setFieldErrors((prev) => ({
+          ...prev,
+          address: "Address cannot be only numbers. Please include a street or location name.",
+        }));
+        setTouched((prev) => ({ ...prev, address: true }));
+        return;
+      }
+      if (/(.)\1{5,}/.test(val)) {
+        setFieldErrors((prev) => ({
+          ...prev,
+          address: "Address contains too many repeated characters.",
+        }));
+        setTouched((prev) => ({ ...prev, address: true }));
+        return;
+      }
+      if (fieldErrors.address) {
+        setFieldErrors((prev) => ({ ...prev, address: undefined }));
+      }
+    } else if (touched.address) {
+      setFieldErrors((prev) => ({ ...prev, address: "Service location address is required." }));
+    }
+  };
+
+  const handleNotesChange = (val: string) => {
+    setNotes(val);
+    setErrorMessage("");
+    const trimmed = val.trim();
+    if (trimmed) {
+      if (/[<>{}\\]/.test(val)) {
+        setFieldErrors((prev) => ({
+          ...prev,
+          notes: "Special instructions cannot contain code characters (< > { }).",
+        }));
+        setTouched((prev) => ({ ...prev, notes: true }));
+        return;
+      }
+      if (/@/.test(val)) {
+        setFieldErrors((prev) => ({
+          ...prev,
+          notes: "Do not include email addresses or '@' symbols in instructions.",
+        }));
+        setTouched((prev) => ({ ...prev, notes: true }));
+        return;
+      }
+      if (trimmed.length >= 6 && !/\p{L}/u.test(trimmed)) {
+        setFieldErrors((prev) => ({
+          ...prev,
+          notes: "Special instructions must contain descriptive words, not just numbers or symbols.",
+        }));
+        setTouched((prev) => ({ ...prev, notes: true }));
+        return;
+      }
+      if (/(.)\1{6,}/.test(val)) {
+        setFieldErrors((prev) => ({
+          ...prev,
+          notes: "Instructions contain too many repeated characters.",
+        }));
+        setTouched((prev) => ({ ...prev, notes: true }));
+        return;
+      }
+      if (fieldErrors.notes) {
+        setFieldErrors((prev) => ({ ...prev, notes: undefined }));
+      }
+    } else if (fieldErrors.notes) {
+      setFieldErrors((prev) => ({ ...prev, notes: undefined }));
+    }
+  };
+
   // Load services
   useEffect(() => {
     let isMounted = true;
@@ -532,11 +614,7 @@ export default function NewBookingScreen() {
                   placeholder="Enter complete address, building number, street..."
                   placeholderTextColor="#8A91A4"
                   value={customAddress}
-                  onChangeText={(val) => {
-                    setCustomAddress(val);
-                    setFieldErrors((prev) => ({ ...prev, address: undefined }));
-                    setErrorMessage("");
-                  }}
+                  onChangeText={handleCustomAddressChange}
                   onBlur={() => setTouched((prev) => ({ ...prev, address: true }))}
                   maxLength={300}
                   style={themed([
@@ -576,11 +654,7 @@ export default function NewBookingScreen() {
               placeholder="e.g. Please call upon arrival, gate code is 1234, problem is in the upstairs bathroom..."
               placeholderTextColor="#8A91A4"
               value={notes}
-              onChangeText={(val) => {
-                setNotes(val);
-                setFieldErrors((prev) => ({ ...prev, notes: undefined }));
-                setErrorMessage("");
-              }}
+              onChangeText={handleNotesChange}
               onBlur={() => setTouched((prev) => ({ ...prev, notes: true }))}
               maxLength={500}
               style={themed([
