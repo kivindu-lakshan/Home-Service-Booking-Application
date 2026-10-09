@@ -49,11 +49,29 @@ test("address length and character limits are enforced", () => {
 
   const ctrlErrors = validateBooking({ ...validBooking, address: "Valid address\u0000bad" });
   assert.ok(ctrlErrors.address);
+
+  const numOnlyErrors = validateBooking({ ...validBooking, address: "12345678" });
+  assert.ok(numOnlyErrors.address);
+
+  const atSymbolErrors = validateBooking({ ...validBooking, address: "test@gmail.com" });
+  assert.ok(atSymbolErrors.address);
+
+  const spamRepeatErrors = validateBooking({ ...validBooking, address: "Main Street aaaaaaa" });
+  assert.ok(spamRepeatErrors.address);
 });
 
-test("notes length limit is enforced", () => {
+test("notes validation enforces length, numbers-only, script tags, and @ symbols", () => {
   const errors = validateBooking({ ...validBooking, notes: "A".repeat(501) });
   assert.ok(errors.notes);
+
+  const numOnlyNotes = validateBooking({ ...validBooking, notes: "987654321" });
+  assert.ok(numOnlyNotes.notes);
+
+  const scriptNotes = validateBooking({ ...validBooking, notes: "<script>alert('xss')</script>" });
+  assert.ok(scriptNotes.notes);
+
+  const atNotes = validateBooking({ ...validBooking, notes: "Contact me at user@test.com" });
+  assert.ok(atNotes.notes);
 });
 
 test("isSlotInPast detects past dates and past times today", () => {
@@ -66,7 +84,7 @@ test("isSlotInPast detects past dates and past times today", () => {
   assert.equal(isSlotInPast(futureDate, "08:00 AM"), false);
 });
 
-test("valid reschedule passes validation", () => {
+test("valid reschedule passes validation and rejects numbers-only or scripts", () => {
   const errors = validateReschedule({
     currentDate: tomorrow.toISOString(),
     currentTime: "09:30 AM",
@@ -75,6 +93,20 @@ test("valid reschedule passes validation", () => {
     notes: "Rescheduling due to meeting",
   });
   assert.deepEqual(errors, {});
+
+  const numOnlyReschedule = validateReschedule({
+    newDate: tomorrow.toISOString(),
+    newTime: "02:00 PM",
+    notes: "123456",
+  });
+  assert.ok(numOnlyReschedule.notes);
+
+  const scriptReschedule = validateReschedule({
+    newDate: tomorrow.toISOString(),
+    newTime: "02:00 PM",
+    notes: "<script>bad</script>",
+  });
+  assert.ok(scriptReschedule.notes);
 });
 
 test("reschedule to the exact same slot is rejected", () => {
@@ -92,7 +124,7 @@ test("valid cancellation with standard reason passes", () => {
   assert.deepEqual(errors, {});
 });
 
-test("cancellation with Other allows optional custom reason", () => {
+test("cancellation with Other allows optional custom reason and checks numbers/symbols", () => {
   const emptyCustom = validateCancellation({ reason: "Other", customReason: "" });
   assert.deepEqual(emptyCustom, {});
 
@@ -101,4 +133,10 @@ test("cancellation with Other allows optional custom reason", () => {
 
   const longCustom = validateCancellation({ reason: "Other", customReason: "A".repeat(301) });
   assert.ok(longCustom.customReason);
+
+  const numOnlyCustom = validateCancellation({ reason: "Other", customReason: "12345" });
+  assert.ok(numOnlyCustom.customReason);
+
+  const scriptCustom = validateCancellation({ reason: "Other", customReason: "<script>" });
+  assert.ok(scriptCustom.customReason);
 });

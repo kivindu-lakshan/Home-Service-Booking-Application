@@ -87,13 +87,27 @@ export function validateBooking(draft: BookingDraft): BookingErrors {
     errors.address = "Address must be 300 characters or fewer.";
   } else if (/[\u0000-\u001f\u007f]/u.test(addr)) {
     errors.address = "Address cannot contain control characters.";
+  } else if (!/\p{L}/u.test(addr)) {
+    errors.address = "Address cannot be only numbers. Please include a street or location name.";
+  } else if (/[@$%^*~+=<>{}\\]/.test(addr)) {
+    errors.address = "Address contains invalid symbols like '@'. Use standard address formats.";
+  } else if (/(.)\1{5,}/.test(addr)) {
+    errors.address = "Address contains too many repeated characters.";
   }
 
   const notes = (draft.notes || "").trim();
-  if (notes.length > 500) {
-    errors.notes = "Special instructions must be 500 characters or fewer.";
-  } else if (/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/u.test(notes)) {
-    errors.notes = "Instructions contain invalid control characters.";
+  if (notes) {
+    if (notes.length > 500) {
+      errors.notes = "Special instructions must be 500 characters or fewer.";
+    } else if (/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/u.test(notes) || /[<>{}\\]/.test(notes)) {
+      errors.notes = "Special instructions cannot contain code characters (< > { }).";
+    } else if (!/\p{L}/u.test(notes)) {
+      errors.notes = "Special instructions must contain descriptive words, not just numbers or symbols.";
+    } else if (/@/.test(notes)) {
+      errors.notes = "Do not include email addresses or '@' symbols in instructions.";
+    } else if (/(.)\1{6,}/.test(notes)) {
+      errors.notes = "Instructions contain too many repeated characters.";
+    }
   }
 
   if (!["pay_on_completion", "pay_now"].includes(draft.paymentMode)) {
@@ -129,8 +143,16 @@ export function validateReschedule(draft: RescheduleDraft): RescheduleErrors {
   }
 
   const notes = (draft.notes || "").trim();
-  if (notes.length > 300) {
-    errors.notes = "Reschedule notes must be 300 characters or fewer.";
+  if (notes) {
+    if (notes.length > 300) {
+      errors.notes = "Reschedule notes must be 300 characters or fewer.";
+    } else if (/[<>{}\\]/.test(notes)) {
+      errors.notes = "Reschedule notes cannot contain invalid characters (< > { }).";
+    } else if (!/\p{L}/u.test(notes)) {
+      errors.notes = "Reschedule reason must contain words, not just numbers or symbols.";
+    } else if (/(.)\1{6,}/.test(notes)) {
+      errors.notes = "Reason contains too many repeated characters.";
+    }
   }
 
   return errors;
@@ -151,6 +173,12 @@ export function validateCancellation(draft: CancellationDraft): CancellationErro
     const custom = draft.customReason.trim();
     if (custom.length > 300) {
       errors.customReason = "Reason must be 300 characters or fewer.";
+    } else if (/[<>{}\\]/.test(custom)) {
+      errors.customReason = "Explanation cannot contain invalid characters (< > { }).";
+    } else if (!/\p{L}/u.test(custom)) {
+      errors.customReason = "Explanation must contain words explaining the reason, not just numbers or symbols.";
+    } else if (/(.)\1{6,}/.test(custom)) {
+      errors.customReason = "Explanation contains too many repeated characters.";
     }
   }
 
