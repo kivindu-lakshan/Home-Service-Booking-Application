@@ -41,6 +41,13 @@ import {
   updateBookingStatus,
   type Booking,
 } from "@/api/bookings";
+import {
+  validateReschedule,
+  validateCancellation,
+  isSlotInPast,
+  type RescheduleDraft,
+  type CancellationDraft,
+} from "@/validation/booking";
 import { LoadingState } from "@/components/DataState";
 import ErrorText from "@/components/ErrorText";
 
@@ -126,10 +133,25 @@ export default function BookingDetailsScreen() {
   // Handle Reschedule
   const handleRescheduleSubmit = async () => {
     if (!booking) return;
+
+    const chosenDay = upcomingDays[rescheduleDateIndex]?.date;
+    const draft: RescheduleDraft = {
+      currentDate: booking.scheduledDate,
+      currentTime: booking.scheduledTime,
+      newDate: chosenDay ? chosenDay.toISOString() : "",
+      newTime: rescheduleSlot,
+      notes: rescheduleNotes,
+    };
+
+    const errors = validateReschedule(draft);
+    if (Object.keys(errors).length > 0) {
+      setRescheduleError(Object.values(errors)[0] || "Invalid reschedule selection");
+      return;
+    }
+
     setRescheduling(true);
     setRescheduleError("");
     try {
-      const chosenDay = upcomingDays[rescheduleDateIndex].date;
       const res = await rescheduleBooking(booking._id, {
         scheduledDate: chosenDay.toISOString(),
         timePeriod: reschedulePeriod,
@@ -150,6 +172,18 @@ export default function BookingDetailsScreen() {
   // Handle Cancel
   const handleCancelSubmit = async () => {
     if (!booking) return;
+
+    const draft: CancellationDraft = {
+      reason: cancelReason,
+      customReason: cancelCustomText,
+    };
+
+    const errors = validateCancellation(draft);
+    if (Object.keys(errors).length > 0) {
+      setCancelError(errors.customReason || errors.reason || "Please select a valid cancellation reason");
+      return;
+    }
+
     const finalReason =
       cancelReason === "Other"
         ? cancelCustomText.trim() || "Cancelled by customer"
@@ -696,9 +730,14 @@ export default function BookingDetailsScreen() {
                 placeholder="Reason for reschedule (optional)..."
                 placeholderTextColor="#8A91A4"
                 value={rescheduleNotes}
-                onChangeText={setRescheduleNotes}
+                maxLength={300}
+                onChangeText={(val) => {
+                  setRescheduleNotes(val);
+                  setRescheduleError("");
+                }}
                 style={themed(styles.modalInput)}
               />
+              <Text style={styles.modalCharCount}>{rescheduleNotes.length}/300</Text>
 
               <ErrorText>{rescheduleError}</ErrorText>
 
@@ -769,13 +808,20 @@ export default function BookingDetailsScreen() {
               </View>
 
               {cancelReason === "Other" && (
-                <TextInput
-                  placeholder="Specify cancellation reason..."
-                  placeholderTextColor="#8A91A4"
-                  value={cancelCustomText}
-                  onChangeText={setCancelCustomText}
-                  style={themed(styles.modalInput)}
-                />
+                <View style={{ width: "100%", gap: 4 }}>
+                  <TextInput
+                    placeholder="Specify cancellation reason (optional)..."
+                    placeholderTextColor="#8A91A4"
+                    value={cancelCustomText}
+                    maxLength={300}
+                    onChangeText={(val) => {
+                      setCancelCustomText(val);
+                      setCancelError("");
+                    }}
+                    style={themed(styles.modalInput)}
+                  />
+                  <Text style={styles.modalCharCount}>{cancelCustomText.length}/300</Text>
+                </View>
               )}
 
               <ErrorText>{cancelError}</ErrorText>
@@ -1144,4 +1190,5 @@ const styles = StyleSheet.create({
   },
   radioDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: "#D33F49" },
   cancelOptionText: { fontSize: 13, color: "#242E49" },
+  modalCharCount: { fontSize: 10, color: "#8A91A4", alignSelf: "flex-end", marginTop: 2 },
 });
