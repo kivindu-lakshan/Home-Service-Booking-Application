@@ -28,9 +28,9 @@ export function Button({
     </Pressable>
   );
 }
-export function Card({ children }: { children: ReactNode }) {
+export function Card({ children, style }: { children: ReactNode; style?: any }) {
   const themed = useAccountStyles();
-  return <View style={themed(styles.card)}>{children}</View>;
+  return <View style={themed([styles.card, style])}>{children}</View>;
 }
 export function Input(props: React.ComponentProps<typeof TextInput>) {
   const themed = useAccountStyles();
