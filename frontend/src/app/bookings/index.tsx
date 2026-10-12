@@ -57,6 +57,7 @@ const timeLabel = (value?: string) => value || "Time pending";
 
 function BookingCard({ booking }: { booking: Booking }) {
   const themed = useAccountStyles();
+  if (!booking) return null;
   const cancelled = booking.status === "cancelled";
   const completed = booking.status === "completed";
   return (
@@ -139,7 +140,7 @@ function BookingCard({ booking }: { booking: Booking }) {
               accessibilityRole="button"
               accessibilityLabel="Review provider"
               onPress={(e) => {
-                e.stopPropagation();
+                e.stopPropagation?.();
                 router.push({
                   pathname: "/reviews/rate",
                   params: { bookingId: booking._id },
