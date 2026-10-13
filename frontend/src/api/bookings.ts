@@ -110,7 +110,7 @@ export const getBookings = (params?: {
 export const getBookingById = (id: string) =>
   api.get<{
     success: boolean;
-    data: { booking: Booking; payment: any };
+    data: { booking: Booking; payment: any; refundRequest?: any };
     message: string;
   }>(`/bookings/${id}`);
 

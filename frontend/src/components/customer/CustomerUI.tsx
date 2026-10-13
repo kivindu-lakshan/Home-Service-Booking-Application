@@ -11,6 +11,7 @@ import { ProfileIcon, type ProfileIconName } from '@/components/profile/ProfileI
 import { Button, Card } from '@/components/ui';
 import { LoadingState } from '@/components/DataState';
 import type { Provider } from '@/api/catalogue';
+import { BrandHeader } from '@/components/BrandHeader';
 export function CustomerNav({ active }: { active: 'Home' | 'Services' | 'Bookings' | 'Profile' }) {
   const themed = useAccountStyles();
   const tabs: { name: typeof active; icon: ProfileIconName; path: '/' | '/customer/services' | '/bookings' | '/profile' }[] = [
@@ -25,7 +26,9 @@ export function CustomerPage({ title, children, home = false, refreshing = false
   const themed = useAccountStyles();
   return <SafeAreaView style={themed(css.safe)}><View style={css.page}>
     <ScrollView contentContainerStyle={css.content} keyboardShouldPersistTaps="handled" refreshControl={onRefresh ? <RefreshControl refreshing={refreshing} onRefresh={onRefresh} /> : undefined}>
-      {!home && <Pressable accessibilityRole="button" accessibilityLabel="Go back" onPress={() => router.canGoBack() ? router.back() : router.replace('/')} style={themed(css.back)}><Text style={themed(css.link)}>‹ Back</Text></Pressable>}
+      {home
+        ? <View style={css.homeHeader}><BrandHeader /></View>
+        : <Pressable accessibilityRole="button" accessibilityLabel="Go back" onPress={() => router.canGoBack() ? router.back() : router.replace('/')} style={themed(css.back)}><Text style={themed(css.link)}>‹ Back</Text></Pressable>}
       <Text accessibilityRole="header" style={themed(css.title)}>{title}</Text>{children}
     </ScrollView><CustomerNav active={home ? 'Home' : 'Services'} />
   </View></SafeAreaView>;
@@ -69,6 +72,7 @@ export function ProviderCard({ provider, serviceId }: { provider: Provider; serv
 export const css = StyleSheet.create({
   safe: { flex: 1, backgroundColor: '#F7F7FD' }, page: { flex: 1, width: '100%', maxWidth: 560, alignSelf: 'center' },
   content: { padding: 22, flexGrow: 1 }, title: { color: '#242E49', fontSize: 28, fontWeight: '800', marginBottom: 20 },
+  homeHeader: { marginBottom: 10, paddingTop: 4 },
   heading: { color: '#303B55', fontSize: 18, fontWeight: '700', marginVertical: 8 }, copy: { color: '#7D89A1', fontSize: 14, lineHeight: 22, marginBottom: 8 },
   link: { color: '#633CFF', fontWeight: '700', fontSize: 14, marginVertical: 8 }, error: { color: '#A13548', marginBottom: 14, lineHeight: 22 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 14 }, grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginVertical: 16 },

@@ -1,10 +1,16 @@
 import { AccountThemeProvider } from "@/context/AccountThemeContext";
 import { AuthProvider } from "@/context/AuthContext";
+import SplashScreen from "@/components/SplashScreen";
 import { Stack } from "expo-router";
+import { useState } from "react";
+import { View } from "react-native";
+
 export default function RootLayout() {
+  const [splashDone, setSplashDone] = useState(false);
   return (
-    <AuthProvider>
-      <AccountThemeProvider>
+    <View style={{ flex: 1 }}>
+      <AuthProvider>
+        <AccountThemeProvider>
         <Stack
           screenOptions={{
             headerBackTitle: "Back",
@@ -120,7 +126,11 @@ export default function RootLayout() {
           <Stack.Screen name="admin" options={{ headerShown: false }} />
 
         </Stack>
-      </AccountThemeProvider>
-    </AuthProvider>
+        </AccountThemeProvider>
+      </AuthProvider>
+      {!splashDone && (
+        <SplashScreen onFinish={() => setSplashDone(true)} />
+      )}
+    </View>
   );
 }

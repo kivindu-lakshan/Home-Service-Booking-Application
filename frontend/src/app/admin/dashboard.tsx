@@ -1,4 +1,6 @@
 import { getAdminDashboard } from "@/api/domain";
+import { getAdminRefundSummary } from "@/api/refunds";
+import { BrandHeader } from "@/components/BrandHeader";
 import { EmptyState, ErrorState, LoadingState } from "@/components/DataState";
 import { router } from "expo-router";
 import {
@@ -38,7 +40,8 @@ type Section =
   | "Payments"
   | "Reviews"
   | "Users"
-  | "Tickets";
+  | "Tickets"
+  | "Refunds";
 const sections: Section[] = [
   "Overview",
   "Bookings",
@@ -46,18 +49,25 @@ const sections: Section[] = [
   "Reviews",
   "Users",
   "Tickets",
+  "Refunds",
 ];
 
 export default function AdminDashboard() {
   const insets = useSafeAreaInsets();
   const [section, setSection] = useState<Section>("Overview");
   const [data, setData] = useState<any>();
+  const [pendingRefunds, setPendingRefunds] = useState<number>(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const load = useCallback(async () => {
     try {
       setError(false);
-      setData((await getAdminDashboard()).data.data);
+      const [dashRes, refundRes] = await Promise.all([
+        getAdminDashboard(),
+        getAdminRefundSummary().catch(() => ({ data: { data: { pending: 0 } } })),
+      ]);
+      setData(dashRes.data.data);
+      setPendingRefunds(refundRes.data?.data?.pending ?? 0);
     } catch {
       setError(true);
     } finally {
@@ -84,6 +94,7 @@ export default function AdminDashboard() {
     ["Ongoing", data.ongoing, BarChart3],
     ["Completed", data.completed, CheckCircle2],
     ["Available providers", data.availableProviders, UsersRound],
+    ["Refund requests", pendingRefunds, ShieldCheck],
   ] as const;
   return (
     <View style={{ flex: 1, backgroundColor: "#F7F7FD" }}>
@@ -103,10 +114,7 @@ export default function AdminDashboard() {
           }}
         >
           <View style={styles.row}>
-            <View>
-              <Text style={styles.overline}>OPERATIONS</Text>
-              <Text style={styles.heroTitle}>Admin dashboard</Text>
-            </View>
+            <BrandHeader subtitle="ADMIN PORTAL" dark />
             <Pressable
               accessibilityLabel="Open admin profile"
               onPress={() => router.push("/admin/profile")}
@@ -127,6 +135,7 @@ export default function AdminDashboard() {
         <View style={styles.body}>
           <Action title="Service Management" subtitle="Create, edit and organise your service catalogue." icon={<Wrench size={21} color={C.purple} />} onPress={() => router.push("/admin/services")} />
           <Action title="Provider Applications" subtitle={`${data.pendingProviderApplications ?? 0} Pending`} icon={<UsersRound size={21} color={C.purple} />} onPress={() => router.push("/admin/provider-applications")} />
+          <Action title="Refund Requests" subtitle={`${pendingRefunds} Pending review`} icon={<WalletCards size={21} color={C.purple} />} onPress={() => router.push("/admin/refunds" as any)} />
           <View style={styles.metricGrid}>
             {metrics.map(([label, value, Icon]) => (
               <View key={label} style={styles.metric}>
@@ -197,6 +206,14 @@ export default function AdminDashboard() {
               subtitle="Reply to and resolve customer complaints."
               icon={<MessageSquareText size={21} color={C.purple} />}
               onPress={() => router.push("/admin/tickets")}
+            />
+          )}
+          {section === "Refunds" && (
+            <Action
+              title="Refund Requests"
+              subtitle="Review, approve, or reject customer refund requests."
+              icon={<WalletCards size={21} color={C.purple} />}
+              onPress={() => router.push("/admin/refunds" as any)}
             />
           )}
         </View>
