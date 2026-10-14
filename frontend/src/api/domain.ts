@@ -18,6 +18,7 @@ export const createPayment = (
   payload: {
     method: "card" | "demo_card" | "cash_on_arrival" | "cash_on_completion";
     paymentMethodId?: string;
+    refundProtection?: boolean;
     card?: {
       cardholderName: string;
       cardNumber: string;

@@ -293,6 +293,47 @@ const ProviderApplication = make("ProviderApplication", {
 ProviderApplication.schema.index({ provider: 1, service: 1 }, { unique: true, partialFilterExpression: { status: { $in: ["pending", "approved"] } } });
 ProviderApplication.schema.index({ provider: 1, createdAt: -1 });
 
+const RefundRequest = make("RefundRequest", {
+  booking: { ...ref("Booking"), unique: true },
+  payment: ref("Payment"),
+  customer: ref("User"),
+  // Snapshot amounts captured at request time
+  serviceAmount: { type: Number, required: true },      // original booking totalPrice
+  protectionFee: { type: Number, required: true },      // 10% fee paid
+  totalPaid: { type: Number, required: true },          // serviceAmount + protectionFee
+  refundAmount: { type: Number, required: true },       // serviceAmount (fee non-refundable)
+  // Eligibility evidence stored at submission
+  cancelledAt: Date,                                    // booking cancellation timestamp
+  cancellationBeforeArrival: { type: Boolean, required: true },
+  paymentMethod: { type: String },                      // snapshot of payment method type
+  // Request lifecycle
+  status: {
+    type: String,
+    enum: ["pending", "approved", "rejected", "processing", "processed", "failed"],
+    default: "pending",
+    index: true,
+  },
+  // Admin decision
+  reviewedBy: ref("User", false),
+  reviewedAt: Date,
+  rejectionReason: { type: String, trim: true, maxlength: 2000 },
+  // Payment provider refund tracking
+  providerRefundRef: String,
+  providerRefundStatus: String,
+  providerRefundResponse: { type: Object },
+  processedAt: Date,
+}, { collection: "refundrequests" });
+RefundRequest.schema.index({ customer: 1, createdAt: -1 });
+RefundRequest.schema.index({ status: 1, createdAt: -1 });
+
+// Also add refund-protection fields to Payment at schema level (virtual approach – store on Payment)
+// We extend the Payment schema by patching the existing fields here:
+Payment.schema.add({
+  refundProtection: { type: Boolean, default: false },
+  refundProtectionFee: { type: Number, default: 0 },
+  protectedServiceAmount: { type: Number },   // original service amount before protection
+});
+
 const models = {
   ProviderLocation,
   ProviderApplication,
@@ -309,5 +350,6 @@ const models = {
   Review,
   Ticket,
   AdminActivityLog,
+  RefundRequest,
 };
 module.exports = { ...models, models, supportCategories };

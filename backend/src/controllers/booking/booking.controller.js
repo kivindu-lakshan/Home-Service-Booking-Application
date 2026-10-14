@@ -6,6 +6,7 @@ const {
   User,
   ProviderApplication,
   Payment,
+  RefundRequest,
 } = require("../../models");
 const { activeService, validId } = require("../catalogue/catalogue.controller");
 const { ok } = require("../../utils/response");
@@ -330,8 +331,10 @@ exports.getById = async (req, res, next) => {
     const payment = await Payment.findOne({ booking: booking._id }).populate(
       "paymentMethod",
     );
+    const refundRequest = await RefundRequest.findOne({ booking: booking._id })
+      .populate({ path: "reviewedBy", select: "fullName" });
 
-    return send(res, { booking, payment });
+    return send(res, { booking, payment, refundRequest });
   } catch (error) {
     return next(error);
   }

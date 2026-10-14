@@ -138,13 +138,30 @@ exports.create = async (req, res, next) => {
         });
     }
     const paid = method === "card" || method === "demo_card";
+
+    // ── Refund Protection ────────────────────────────────────────────────────
+    // The client may request protection; the backend always recalculates the fee.
+    // Only prepaid card methods can purchase Refund Protection.
+    const wantsProtection = Boolean(req.body.refundProtection) && paid;
+    const baseServiceAmount = Number(booking.totalPrice) || 0;
+    // Protection fee is exactly 10% of the original service amount, rounded to 2 dp.
+    const protectionFee = wantsProtection
+      ? Math.round(baseServiceAmount * 0.1 * 100) / 100
+      : 0;
+    const totalAmount = baseServiceAmount + protectionFee;
+    // ─────────────────────────────────────────────────────────────────────────
+
     const payment = await Payment.findOneAndUpdate(
       { booking: booking._id },
       {
         booking: booking._id,
         paymentMethod: req.body.paymentMethodId || undefined,
         method,
-        amount: booking.totalPrice,
+        amount: baseServiceAmount,
+        refundProtection: wantsProtection,
+        refundProtectionFee: protectionFee,
+        protectedServiceAmount: baseServiceAmount,
+        totalAmount,
         status: paid ? "paid" : "pending",
         receiptNo: paid ? receiptNumber() : undefined,
         paidAt: paid ? new Date() : undefined,

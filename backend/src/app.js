@@ -32,5 +32,6 @@ app.use("/api/services", require("./routes/service/service.routes"));
 app.use("/api/bookings", require("./routes/booking/booking.routes"));
 app.use("/api/admin", require("./routes/admin/admin.routes"));
 app.use("/api/provider", require("./routes/provider/provider.routes"));
+app.use("/api/refunds", require("./routes/refund/refund.routes"));
 app.use(errorHandler);
 module.exports = app;
