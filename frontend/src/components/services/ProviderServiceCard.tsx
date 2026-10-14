@@ -5,11 +5,13 @@ import { ArrowUpRight, BriefcaseBusiness, Check, Clock, MapPin } from 'lucide-re
 import { AccountText as Text } from '@/components/settings/AccountText';
 import { useAccountStyles } from '@/context/AccountThemeContext';
 import type { Service } from '@/api/services';
+import { serviceImageUri } from '@/utils/service-image';
 
 export default function ProviderServiceCard({ service }: { service: Service }) {
   const themed = useAccountStyles(); const [failedImage, setFailedImage] = useState(false);
+  const imageUri = serviceImageUri(service.imageUrl);
   return <View style={themed(styles.card)}>
-    {!!service.imageUrl && !failedImage && <Image source={{ uri: service.imageUrl }} accessibilityLabel={service.name} onError={() => setFailedImage(true)} style={styles.image} />}
+    {!!imageUri && !failedImage && <Image source={{ uri: imageUri }} accessibilityLabel={service.name} resizeMode="cover" onError={() => setFailedImage(true)} style={styles.image} />}
     <View style={styles.top}><View style={themed(styles.icon)}><BriefcaseBusiness size={21} color='#633CFF' /></View><Text style={themed(styles.category)}>{service.category?.name || 'Service'}</Text><View style={styles.available}><Check size={11} color='#217A62' /><Text style={styles.availableText}>Available</Text></View></View>
     <Text accessibilityRole='header' style={themed(styles.title)}>{service.name}</Text>
     {!!service.description && <Text style={themed(styles.description)}>{service.description}</Text>}

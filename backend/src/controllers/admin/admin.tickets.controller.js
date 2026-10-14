@@ -28,6 +28,31 @@ exports.list = async (req, res) => {
   }
 };
 
+exports.get = async (req, res) => {
+  try {
+    const ticket = await SupportTicket.findById(req.params.id)
+      .populate("user", "fullName email")
+      .lean();
+    if (!ticket) return fail(res, 404, "Support ticket not found.");
+    return ok(res, {
+      _id: ticket._id,
+      category: ticket.category,
+      subject: ticket.subject,
+      description: ticket.description,
+      status: ticket.status,
+      adminResponse: ticket.adminResponse,
+      respondedAt: ticket.respondedAt,
+      createdAt: ticket.createdAt,
+      updatedAt: ticket.updatedAt,
+      customer: ticket.user
+        ? { fullName: ticket.user.fullName, email: ticket.user.email }
+        : null,
+    });
+  } catch {
+    return fail(res, 500, "Unable to load support ticket. Please try again.");
+  }
+};
+
 exports.respond = async (req, res) => {
   try {
     const { adminResponse, status } = req.body || {};
@@ -37,8 +62,13 @@ exports.respond = async (req, res) => {
 
     const update = {};
     if (typeof adminResponse === "string") {
-      update.adminResponse = adminResponse.trim();
-      update.respondedAt = adminResponse.trim() ? new Date() : null;
+      const trimmed = adminResponse.trim();
+      update.adminResponse = trimmed;
+      update.respondedAt = trimmed ? new Date() : null;
+      if (req.user?._id) update.respondedBy = req.user._id;
+      if (!trimmed && !status) {
+        update.status = "pending";
+      }
     }
     if (status) update.status = status;
 
@@ -67,3 +97,34 @@ exports.respond = async (req, res) => {
     return fail(res, 500, "Unable to update ticket. Please try again.");
   }
 };
+
+exports.deleteResponse = async (req, res) => {
+  try {
+    const ticket = await SupportTicket.findByIdAndUpdate(
+      req.params.id,
+      {
+        $set: { adminResponse: "", status: "pending", respondedAt: null, respondedBy: null },
+      },
+      { new: true },
+    ).populate("user", "fullName email");
+
+    if (!ticket) return fail(res, 404, "Support ticket not found.");
+    return ok(res, {
+      _id: ticket._id,
+      category: ticket.category,
+      subject: ticket.subject,
+      description: ticket.description,
+      status: ticket.status,
+      adminResponse: "",
+      respondedAt: null,
+      createdAt: ticket.createdAt,
+      updatedAt: ticket.updatedAt,
+      customer: ticket.user
+        ? { fullName: ticket.user.fullName, email: ticket.user.email }
+        : null,
+    }, "Ticket response deleted.");
+  } catch {
+    return fail(res, 500, "Unable to delete ticket response. Please try again.");
+  }
+};
+

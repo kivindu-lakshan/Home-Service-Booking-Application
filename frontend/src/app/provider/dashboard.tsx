@@ -5,6 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { ArrowUpRight, BriefcaseBusiness, ChevronRight, ClipboardList, House, LogOut, ShieldCheck, Sparkles, UserRound, Headphones } from 'lucide-react-native';
 import { useAuth } from '@/context/AuthContext';
 import { getApplications } from '@/api/provider-applications';
+import { BrandHeader } from '@/components/BrandHeader';
 
 export default function ProviderDashboard() {
   const { user, logout } = useAuth();
@@ -29,7 +30,7 @@ export default function ProviderDashboard() {
     <View style={styles.shell}>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
         <View style={styles.header}>
-          <View style={styles.brandRow}><View style={styles.logo}><House size={23} color='#633CFF' strokeWidth={2.4} /></View><View><Text style={styles.brand}>HomeHalo</Text><Text style={styles.brandCaption}>PROVIDER WORKSPACE</Text></View></View>
+          <BrandHeader subtitle="PROVIDER WORKSPACE" />
           <Pressable accessibilityRole='button' accessibilityLabel='Open my profile' onPress={() => router.push('/profile')} style={styles.avatar}><Text style={styles.initials}>{initials}</Text></Pressable>
         </View>
         <Text style={styles.greeting}>Welcome back, {firstName}</Text>

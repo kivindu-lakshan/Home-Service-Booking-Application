@@ -5,7 +5,7 @@ const { randomUUID } = require('crypto');
 const { ok, fail } = require('../../utils/response');
 // Same local-file/Multer approach as provider documents; only service images are public.
 const storage = path.resolve(path.join(__dirname, '../../../storage/service-images'));
-const filenamePattern = /^[a-f\d]{8}-[a-f\d]{4}-[a-f\d]{4}-[a-f\d]{4}-[a-f\d]{12}\.(png|jpg)$/i;
+const filenamePattern = /^[a-f\d]{8}-[a-f\d]{4}-[a-f\d]{4}-[a-f\d]{4}-[a-f\d]{12}\.(png|jpe?g)$/i;
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024, files: 1, fields: 0, parts: 1 } }).single('image');
 exports.uploadMiddleware = (req, res, next) => upload(req, res, error => error ? fail(res, 400, 'Select one PNG or JPEG image, maximum 5 MB.') : next());
 exports.upload = async (req, res, next) => {

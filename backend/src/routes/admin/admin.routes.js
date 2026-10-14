@@ -14,5 +14,7 @@ router.get("/jobs", controller.jobs);
 router.patch("/jobs/:id/status", controller.updateJobStatus);
 router.get("/users", controller.users);
 router.get("/tickets", ticketsController.list);
+router.get("/tickets/:id", ticketsController.get);
 router.patch("/tickets/:id", ticketsController.respond);
+router.delete("/tickets/:id/response", ticketsController.deleteResponse);
 module.exports = router;

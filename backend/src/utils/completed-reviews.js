@@ -5,7 +5,7 @@ function completedReviews(match) {
   { $match: match },
   { $lookup: { from: Booking.collection.name, localField: 'booking', foreignField: '_id', as: 'completedBooking' } },
   { $unwind: '$completedBooking' },
-  { $match: { 'completedBooking.status': 'completed', $expr: { $and: [{ $eq: ['$provider', '$completedBooking.provider'] }, { $eq: ['$customer', '$completedBooking.customer'] }] } } },
+  { $match: { 'completedBooking.status': { $in: ['completed', 'in_progress'] }, $expr: { $and: [{ $eq: ['$provider', '$completedBooking.provider'] }, { $eq: ['$customer', '$completedBooking.customer'] }] } } },
  ];
 }
 async function providerRatings(providers) {

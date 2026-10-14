@@ -1,10 +1,16 @@
 import { AccountThemeProvider } from "@/context/AccountThemeContext";
 import { AuthProvider } from "@/context/AuthContext";
+import SplashScreen from "@/components/SplashScreen";
 import { Stack } from "expo-router";
+import { useState } from "react";
+import { View } from "react-native";
+
 export default function RootLayout() {
+  const [splashDone, setSplashDone] = useState(false);
   return (
-    <AuthProvider>
-      <AccountThemeProvider>
+    <View style={{ flex: 1 }}>
+      <AuthProvider>
+        <AccountThemeProvider>
         <Stack
           screenOptions={{
             headerBackTitle: "Back",
@@ -102,48 +108,29 @@ export default function RootLayout() {
           />
           <Stack.Screen
             name="reviews/rate"
-            options={{ title: "Rate provider" }}
+            options={{ headerShown: false }}
           />
           <Stack.Screen
             name="reviews/submitted"
-            options={{ title: "Review submitted" }}
+            options={{ headerShown: false }}
           />
           <Stack.Screen
             name="reviews/provider"
-            options={{ title: "Provider reviews" }}
-          />
-          <Stack.Screen name="reviews/mine" options={{ title: "My reviews" }} />
-          <Stack.Screen
-            name="admin/tickets"
-            options={{ title: "Support tickets" }}
-          />
-          <Stack.Screen
-            name="admin/services"
             options={{ headerShown: false }}
           />
           <Stack.Screen
-            name="admin/service-form"
+            name="reviews/mine"
             options={{ headerShown: false }}
           />
-          <Stack.Screen
-            name="admin/dashboard"
-            options={{ headerShown: false }}
-          />
-          <Stack.Screen
-            name="admin/profile"
-            options={{ title: "Admin profile" }}
-          />
-          <Stack.Screen
-            name="admin/bookings"
-            options={{ title: "Manage bookings" }}
-          />
-          <Stack.Screen
-            name="admin/assign-provider"
-            options={{ title: "Assign provider" }}
-          />
-          <Stack.Screen name="admin/jobs" options={{ title: "Job monitor" }} />
+          <Stack.Screen name="provider" options={{ headerShown: false }} />
+          <Stack.Screen name="admin" options={{ headerShown: false }} />
+
         </Stack>
-      </AccountThemeProvider>
-    </AuthProvider>
+        </AccountThemeProvider>
+      </AuthProvider>
+      {!splashDone && (
+        <SplashScreen onFinish={() => setSplashDone(true)} />
+      )}
+    </View>
   );
 }

@@ -103,7 +103,7 @@ exports.validateService = async (req, res, next) => {
       if (
         key === "imageUrl" &&
         changes[key] &&
-        !/^\/api\/services\/images\/[a-f\d]{8}-[a-f\d]{4}-[a-f\d]{4}-[a-f\d]{4}-[a-f\d]{12}\.(png|jpg)$/i.test(
+        !/^\/api\/services\/images\/[a-f\d]{8}-[a-f\d]{4}-[a-f\d]{4}-[a-f\d]{4}-[a-f\d]{12}\.(png|jpe?g)$/i.test(
           changes[key],
         )
       ) {

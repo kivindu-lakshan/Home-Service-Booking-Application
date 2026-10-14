@@ -28,6 +28,8 @@ export default function PaymentDetails() {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [refundProtection, setRefundProtection] = useState(false);
+  const [showProtectionInfo, setShowProtectionInfo] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -60,12 +62,19 @@ export default function PaymentDetails() {
       setError("Select a saved payment method.");
       return;
     }
+    let isFutureDate = false;
+    if (/^(0[1-9]|1[0-2])\/\d{2}$/.test(expiryDate)) {
+      const [month, year] = expiryDate.split("/").map(Number);
+      const expiry = new Date(2000 + year, month, 0, 23, 59, 59);
+      if (expiry >= new Date()) isFutureDate = true;
+    }
+
     if (
       method === "demo_card" &&
       (!cardholderName.trim() ||
         !/^\d{16}$/.test(cardNumber) ||
-        !/^(0[1-9]|1[0-2])\/\d{2}$/.test(expiryDate) ||
-        !/^\d{3,4}$/.test(cvv))
+        !isFutureDate ||
+        !/^\d{3}$/.test(cvv))
     ) {
       setError("Enter valid demo card details.");
       return;
@@ -76,6 +85,7 @@ export default function PaymentDetails() {
       const response = await createPayment(bookingId, {
         method,
         paymentMethodId: selectedMethod,
+        refundProtection: method !== "cash_on_completion" ? refundProtection : false,
         ...(!selectedMethod && needsCard
           ? { card: { cardholderName, cardNumber, expiryDate, cvv } }
           : {}),
@@ -114,7 +124,9 @@ export default function PaymentDetails() {
   const serviceFee = Number(booking.totalPrice || 0);
   const platformFee = Math.round(serviceFee * 0.05);
   const tax = Math.round(serviceFee * 0.08);
-  const totalAmount = serviceFee + platformFee + tax;
+  const isCardPayment = method === "demo_card" || method === "card";
+  const protectionFee = isCardPayment && refundProtection ? Math.round(serviceFee * 0.1) : 0;
+  const totalAmount = serviceFee + platformFee + tax + protectionFee;
 
   return (
     <View style={styles.screen}>
@@ -185,6 +197,16 @@ export default function PaymentDetails() {
             <Text style={styles.feeLabel}>Tax (8%)</Text>
             <Text style={styles.feeValue}>LKR {tax.toLocaleString()}</Text>
           </View>
+          {isCardPayment && refundProtection && (
+            <View style={styles.feeRow}>
+              <Text style={[styles.feeLabel, { color: "#5B3DF5", fontWeight: "700" }]}>
+                Refund Protection (10%)
+              </Text>
+              <Text style={[styles.feeValue, { color: "#5B3DF5", fontWeight: "800" }]}>
+                + LKR {protectionFee.toLocaleString()}
+              </Text>
+            </View>
+          )}
           <View style={styles.divider} />
           <View style={styles.feeRow}>
             <Text style={styles.totalLabel}>Total Amount</Text>
@@ -193,6 +215,61 @@ export default function PaymentDetails() {
             </Text>
           </View>
         </View>
+
+        {/* Refund Protection Section — optional 10% add-on */}
+        {isCardPayment && (
+          <View style={styles.protectionCard}>
+            <View style={styles.protectionHeader}>
+              <ShieldCheck size={20} color="#5B3DF5" />
+              <Text style={styles.protectionTitle}>Refund Protection — Add 10%</Text>
+              <Pressable
+                onPress={() => setShowProtectionInfo((v) => !v)}
+                style={styles.infoBtn}
+                accessibilityLabel="Refund protection info"
+              >
+                <Text style={styles.infoBtnText}>ⓘ</Text>
+              </Pressable>
+            </View>
+            <Text style={styles.protectionDescription}>
+              Add optional refund protection for an additional 10% of your booking amount. If you cancel before your service provider arrives, you may request a refund of your eligible booking payment.
+            </Text>
+            {showProtectionInfo && (
+              <View style={styles.protectionInfoBox}>
+                <Text style={styles.protectionInfoText}>
+                  • <Text style={{ fontWeight: "700" }}>Eligibility:</Text> You must cancel before the provider arrives. Once the provider has arrived, this protection no longer applies.{"\n"}
+                  • <Text style={{ fontWeight: "700" }}>Fee Non-Refundable:</Text> The 10% protection fee itself (LKR {protectionFee || Math.round(serviceFee * 0.1)}) is non-refundable.{"\n"}
+                  • <Text style={{ fontWeight: "700" }}>Review Process:</Text> Refunds are not automatic or guaranteed. Admin verification of cancellation timing and payment record is required.
+                </Text>
+              </View>
+            )}
+            <Pressable
+              onPress={() => setRefundProtection((v) => !v)}
+              style={styles.protectionRow}
+              accessibilityRole="checkbox"
+              accessibilityState={{ checked: refundProtection }}
+            >
+              <View style={[styles.checkbox, refundProtection && styles.checkboxActive]}>
+                {refundProtection && <Text style={styles.checkmark}>✓</Text>}
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.protectionLabel}>
+                  Add Refund Protection (+LKR {Math.round(serviceFee * 0.1).toLocaleString()})
+                </Text>
+                <Text style={styles.protectionSub}>
+                  Additional charge. Must be explicitly selected.
+                </Text>
+              </View>
+            </Pressable>
+            {refundProtection && (
+              <View style={styles.protectionFeeRow}>
+                <Text style={styles.protectionFeeLabel}>Protection fee added (10%)</Text>
+                <Text style={styles.protectionFeeValue}>
+                  + LKR {protectionFee.toLocaleString()}
+                </Text>
+              </View>
+            )}
+          </View>
+        )}
 
         {/* Pay Now / Pay on Completion toggle */}
         <View style={styles.payToggleRow}>
@@ -524,4 +601,90 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   payNowText: { color: "#FFF", fontSize: 16, fontWeight: "800" },
+
+  /* Refund Protection */
+  protectionCard: {
+    backgroundColor: "#F8F6FF",
+    borderRadius: 18,
+    borderWidth: 1.5,
+    borderColor: "#D6CCFF",
+    padding: 16,
+    marginBottom: 14,
+  },
+  protectionHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 10,
+  },
+  protectionTitle: {
+    flex: 1,
+    color: "#25213D",
+    fontSize: 14,
+    fontWeight: "800",
+  },
+  protectionBadge: {
+    backgroundColor: "#5B3DF5",
+    color: "#FFF",
+    fontSize: 10,
+    fontWeight: "800",
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+  },
+  infoBtn: {
+    width: 28,
+    height: 28,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  infoBtnText: { color: "#5B3DF5", fontSize: 17, fontWeight: "700" },
+  protectionDescription: {
+    color: "#554A78",
+    fontSize: 12,
+    lineHeight: 17,
+    marginBottom: 10,
+  },
+  protectionInfoBox: {
+    backgroundColor: "#EDE8FF",
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 12,
+  },
+  protectionInfoText: { color: "#4A3A7A", fontSize: 12, lineHeight: 19 },
+  protectionRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    paddingVertical: 4,
+  },
+  checkbox: {
+    width: 24,
+    height: 24,
+    borderRadius: 7,
+    borderWidth: 2,
+    borderColor: "#B0A8D4",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#FFF",
+  },
+  checkboxActive: {
+    backgroundColor: "#5B3DF5",
+    borderColor: "#5B3DF5",
+  },
+  checkmark: { color: "#FFF", fontSize: 14, fontWeight: "900" },
+  protectionLabel: { color: "#25213D", fontSize: 13, fontWeight: "800" },
+  protectionSub: { color: "#747B90", fontSize: 11, marginTop: 2 },
+  protectionFeeRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginTop: 12,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: "#D6CCFF",
+  },
+  protectionFeeLabel: { color: "#5B3DF5", fontSize: 12, fontWeight: "700" },
+  protectionFeeValue: { color: "#5B3DF5", fontSize: 14, fontWeight: "900" },
 });
+

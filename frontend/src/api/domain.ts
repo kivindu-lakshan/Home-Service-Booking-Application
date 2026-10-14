@@ -18,6 +18,7 @@ export const createPayment = (
   payload: {
     method: "card" | "demo_card" | "cash_on_arrival" | "cash_on_completion";
     paymentMethodId?: string;
+    refundProtection?: boolean;
     card?: {
       cardholderName: string;
       cardNumber: string;
@@ -44,16 +45,23 @@ export const createReview = (payload: {
   rating: number;
   comment?: string;
 }) => api.post("/reviews", payload);
+export const getMyReviews = () => api.get("/reviews/mine");
+export const updateReview = (
+  id: string,
+  payload: { rating?: number; comment?: string },
+) => api.patch(`/reviews/${encodeURIComponent(id)}`, payload);
+export const deleteReview = (id: string) =>
+  api.delete(`/reviews/${encodeURIComponent(id)}`);
+
 export const getAdminTickets = () => api.get("/admin/tickets");
+export const getAdminTicket = (id: string) =>
+  api.get(`/admin/tickets/${encodeURIComponent(id)}`);
 export const respondToTicket = (
   id: string,
   payload: { adminResponse: string; status: string },
 ) => api.patch(`/admin/tickets/${encodeURIComponent(id)}`, payload);
 export const deleteTicketResponse = (id: string) =>
-  api.patch(`/admin/tickets/${encodeURIComponent(id)}`, {
-    adminResponse: "",
-    status: "pending",
-  });
+  api.delete(`/admin/tickets/${encodeURIComponent(id)}/response`);
 export const getAdminDashboard = () => api.get("/admin/dashboard");
 export const getAdminBookings = (params: {
   status?: string;

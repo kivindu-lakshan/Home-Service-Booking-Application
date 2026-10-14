@@ -26,6 +26,7 @@ import {
   MapPin,
   Phone,
   RefreshCw,
+  ShieldCheck,
   Star,
   User,
   XCircle,
@@ -48,6 +49,12 @@ import {
   type RescheduleDraft,
   type CancellationDraft,
 } from "@/validation/booking";
+import type { RefundRequest } from "@/api/refunds";
+import {
+  RefundDetailsHistoryModal,
+  RefundRequestConfirmModal,
+  REFUND_STATUS_DISPLAY,
+} from "@/components/refunds/CustomerRefundModals";
 import { LoadingState } from "@/components/DataState";
 import ErrorText from "@/components/ErrorText";
 
@@ -66,6 +73,9 @@ export default function BookingDetailsScreen() {
 
   const [booking, setBooking] = useState<Booking | null>(null);
   const [payment, setPayment] = useState<any>(null);
+  const [refundRequest, setRefundRequest] = useState<RefundRequest | null>(null);
+  const [refundConfirmVisible, setRefundConfirmVisible] = useState(false);
+  const [refundDetailsModalVisible, setRefundDetailsModalVisible] = useState(false);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
@@ -116,6 +126,7 @@ export default function BookingDetailsScreen() {
       const res = await getBookingById(id);
       setBooking(res.data.data.booking);
       setPayment(res.data.data.payment);
+      setRefundRequest(res.data.data.refundRequest || null);
     } catch (err: any) {
       setErrorMessage(
         err?.response?.data?.message || "Failed to load booking details.",
@@ -264,6 +275,35 @@ export default function BookingDetailsScreen() {
   const isProvider = user?.role === "provider";
   const isCustomer = user?.role === "customer" || !isProvider;
 
+  // Refund eligibility assessment
+  const arrivedEntry = (booking.statusHistory || []).find((h) => h.status === "arrived");
+  const cancelledEntry = (booking.statusHistory || []).find((h) => h.status === "cancelled");
+  const cancelledBeforeArrival =
+    !arrivedEntry ||
+    (cancelledEntry && new Date(cancelledEntry.at) < new Date(arrivedEntry.at));
+  const isPrepaidCard =
+    booking.paymentMode === "pay_now" &&
+    ["card", "demo_card", "card_saved"].includes(payment?.method || "");
+  const hasProtection = Boolean(payment?.refundProtection);
+  const isPaymentPaid = payment?.status === "paid";
+
+  let refundIneligibleReason = "";
+  if (booking.status !== "cancelled") {
+    refundIneligibleReason = "You can request a refund only after the booking has been cancelled.";
+  } else if (booking.paymentMode !== "pay_now") {
+    refundIneligibleReason = "This booking was not paid in advance, so it is not eligible for a refund request through this feature.";
+  } else if (!isPrepaidCard) {
+    refundIneligibleReason = "Only eligible prepaid card or bank-transfer bookings can request refunds through this feature.";
+  } else if (!hasProtection) {
+    refundIneligibleReason = "You did not select Refund Protection when paying for this booking, so a refund request cannot be submitted through this feature.";
+  } else if (!cancelledBeforeArrival) {
+    refundIneligibleReason = "A refund request is unavailable because the service provider had already arrived before the booking was cancelled.";
+  } else if (!isPaymentPaid) {
+    refundIneligibleReason = "Payment was not completed for this booking.";
+  }
+
+  const isRefundEligible = !refundRequest && !refundIneligibleReason;
+
   // Active step index
   const currentStepIndex = (() => {
     switch (booking.status) {
@@ -323,6 +363,105 @@ export default function BookingDetailsScreen() {
                   <Text style={styles.cancelledReason}>Reason: {booking.cancelledReason}</Text>
                 )}
               </View>
+            </View>
+          )}
+
+          {/* Refund Protection & Refund Request Management Card */}
+          {isCancelled && isCustomer && (
+            <View style={themed(styles.infoCard)}>
+              <View style={styles.cardHeaderRow}>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                  <ShieldCheck size={20} color="#5B3DF5" />
+                  <Text style={themed(styles.cardHeading)}>Refund Protection & Status</Text>
+                </View>
+                {refundRequest && (
+                  <View
+                    style={[
+                      styles.refundStatusBadge,
+                      {
+                        backgroundColor:
+                          REFUND_STATUS_DISPLAY[refundRequest.status]?.bg || "#FEF3C7",
+                      },
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.refundStatusBadgeText,
+                        {
+                          color:
+                            REFUND_STATUS_DISPLAY[refundRequest.status]?.text || "#92400E",
+                        },
+                      ]}
+                    >
+                      {REFUND_STATUS_DISPLAY[refundRequest.status]?.label || refundRequest.status}
+                    </Text>
+                  </View>
+                )}
+              </View>
+
+              {/* State A: Request already submitted */}
+              {refundRequest && (
+                <View style={{ marginTop: 10 }}>
+                  <Text style={styles.refundMetaDescription}>
+                    {REFUND_STATUS_DISPLAY[refundRequest.status]?.description}
+                  </Text>
+                  {refundRequest.status === "rejected" && !!refundRequest.rejectionReason && (
+                    <View style={styles.rejectionNotice}>
+                      <Text style={styles.rejectionNoticeLabel}>Rejection Reason:</Text>
+                      <Text style={styles.rejectionNoticeVal}>{refundRequest.rejectionReason}</Text>
+                    </View>
+                  )}
+                  <View style={styles.refundAmountsRow}>
+                    <View style={styles.refundAmountCol}>
+                      <Text style={styles.refundAmountLabel}>Refund Requested</Text>
+                      <Text style={[styles.refundAmountVal, { color: "#5B3DF5" }]}>
+                        LKR {refundRequest.refundAmount.toLocaleString()}
+                      </Text>
+                    </View>
+                    <View style={styles.refundAmountCol}>
+                      <Text style={styles.refundAmountLabel}>Protection Fee (Non-refundable)</Text>
+                      <Text style={styles.refundAmountVal}>
+                        LKR {refundRequest.protectionFee.toLocaleString()}
+                      </Text>
+                    </View>
+                  </View>
+                  <Pressable
+                    onPress={() => setRefundDetailsModalVisible(true)}
+                    style={styles.viewFullRefundBtn}
+                  >
+                    <Text style={styles.viewFullRefundText}>View Full Refund Details & History</Text>
+                  </Pressable>
+                </View>
+              )}
+
+              {/* State B: No request, Eligible */}
+              {!refundRequest && isRefundEligible && (
+                <View style={{ marginTop: 10 }}>
+                  <View style={styles.eligibleNoticeBox}>
+                    <Text style={styles.eligibleNoticeTitle}>
+                      ✓ Eligible for Refund of LKR {Number(payment?.protectedServiceAmount || booking.totalPrice || 0).toLocaleString()}
+                    </Text>
+                    <Text style={styles.eligibleNoticeSub}>
+                      You purchased Refund Protection and cancelled prior to provider arrival. You may submit a request to refund your original service amount. The 10% protection fee is non-refundable.
+                    </Text>
+                  </View>
+                  <Pressable
+                    onPress={() => setRefundConfirmVisible(true)}
+                    style={styles.requestRefundFullBtn}
+                  >
+                    <ShieldCheck size={16} color="#FFFFFF" />
+                    <Text style={styles.requestRefundFullBtnText}>Request Refund</Text>
+                  </Pressable>
+                </View>
+              )}
+
+              {/* State C: No request, Ineligible */}
+              {!refundRequest && !isRefundEligible && (
+                <View style={styles.ineligibleBox}>
+                  <Text style={styles.ineligibleTitle}>Refund Request Unavailable</Text>
+                  <Text style={styles.ineligibleText}>{refundIneligibleReason}</Text>
+                </View>
+              )}
             </View>
           )}
 
@@ -527,11 +666,21 @@ export default function BookingDetailsScreen() {
                 LKR {Number(booking.tax || 0).toLocaleString()}
               </Text>
             </View>
+            {payment?.refundProtection && (
+              <View style={styles.feeRow}>
+                <Text style={themed([styles.feeLabel, { color: "#5B3DF5", fontWeight: "700" }])}>
+                  Refund Protection (10%)
+                </Text>
+                <Text style={themed([styles.feeValue, { color: "#5B3DF5", fontWeight: "800" }])}>
+                  + LKR {Number(payment.refundProtectionFee || 0).toLocaleString()}
+                </Text>
+              </View>
+            )}
             <View style={styles.divider} />
             <View style={styles.feeRow}>
               <Text style={themed(styles.totalFeeLabel)}>Total Amount</Text>
               <Text style={themed(styles.totalFeeValue)}>
-                LKR {Number(booking.totalPrice || 0).toLocaleString()}
+                LKR {Number(payment?.totalAmount || booking.totalPrice || 0).toLocaleString()}
               </Text>
             </View>
 
@@ -629,8 +778,8 @@ export default function BookingDetailsScreen() {
                 </Pressable>
               )}
 
-              {/* Rate Provider Button (if completed) */}
-              {isCompleted && (
+              {/* Rate Provider Button (if completed or in_progress) */}
+              {(isCompleted || booking.status === "in_progress") && (
                 <Pressable
                   onPress={() =>
                     router.push({
@@ -641,7 +790,11 @@ export default function BookingDetailsScreen() {
                   style={styles.rateButton}
                 >
                   <Star size={18} color="#FFFFFF" fill="#FFFFFF" />
-                  <Text style={styles.rateButtonText}>Rate & Review Service</Text>
+                  <Text style={styles.rateButtonText}>
+                    {booking.status === "in_progress"
+                      ? "Rate & Review Service (In Progress)"
+                      : "Rate & Review Service"}
+                  </Text>
                 </Pressable>
               )}
 
@@ -870,6 +1023,22 @@ export default function BookingDetailsScreen() {
             </View>
           </View>
         </Modal>
+
+        {/* REFUND REQUEST CONFIRMATION MODAL */}
+        <RefundRequestConfirmModal
+          visible={refundConfirmVisible}
+          booking={booking}
+          paymentInfo={payment}
+          onClose={() => setRefundConfirmVisible(false)}
+          onSuccess={() => void loadData(true)}
+        />
+
+        {/* REFUND DETAILS / HISTORY MODAL */}
+        <RefundDetailsHistoryModal
+          visible={refundDetailsModalVisible}
+          request={refundRequest}
+          onClose={() => setRefundDetailsModalVisible(false)}
+        />
       </View>
     </SafeAreaView>
   );
@@ -1211,4 +1380,76 @@ const styles = StyleSheet.create({
   radioDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: "#D33F49" },
   cancelOptionText: { fontSize: 13, color: "#242E49" },
   modalCharCount: { fontSize: 10, color: "#8A91A4", alignSelf: "flex-end", marginTop: 2 },
+
+  /* Refund Protection & Status Card Styles */
+  refundStatusBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 8,
+  },
+  refundStatusBadgeText: { fontSize: 11, fontWeight: "800" },
+  refundMetaDescription: {
+    color: "#554A78",
+    fontSize: 12,
+    lineHeight: 18,
+    marginBottom: 8,
+  },
+  rejectionNotice: {
+    backgroundColor: "#FEE2E2",
+    borderRadius: 10,
+    padding: 10,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: "#FCA5A5",
+  },
+  rejectionNoticeLabel: { color: "#991B1B", fontSize: 11, fontWeight: "800" },
+  rejectionNoticeVal: { color: "#7F1D1D", fontSize: 12, marginTop: 2 },
+  refundAmountsRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    backgroundColor: "#F7F6FD",
+    padding: 12,
+    borderRadius: 12,
+    marginBottom: 10,
+  },
+  refundAmountCol: { flex: 1 },
+  refundAmountLabel: { color: "#8E8E9A", fontSize: 11, fontWeight: "600" },
+  refundAmountVal: { fontSize: 14, fontWeight: "800", marginTop: 2, color: "#1A1A2E" },
+  viewFullRefundBtn: {
+    backgroundColor: "#EDE8FF",
+    paddingVertical: 10,
+    borderRadius: 10,
+    alignItems: "center",
+  },
+  viewFullRefundText: { color: "#5B3DF5", fontSize: 13, fontWeight: "800" },
+  eligibleNoticeBox: {
+    backgroundColor: "#F4F1FE",
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 10,
+    borderWidth: 1.5,
+    borderColor: "#DED6FF",
+  },
+  eligibleNoticeTitle: { color: "#5B3DF5", fontSize: 13, fontWeight: "800", marginBottom: 4 },
+  eligibleNoticeSub: { color: "#554A78", fontSize: 11, lineHeight: 16 },
+  requestRefundFullBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    backgroundColor: "#5B3DF5",
+    paddingVertical: 12,
+    borderRadius: 12,
+  },
+  requestRefundFullBtnText: { color: "#FFFFFF", fontSize: 14, fontWeight: "800" },
+  ineligibleBox: {
+    backgroundColor: "#F7F7FA",
+    borderRadius: 12,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: "#E5E7F0",
+    marginTop: 6,
+  },
+  ineligibleTitle: { color: "#6A7285", fontSize: 12, fontWeight: "800", marginBottom: 3 },
+  ineligibleText: { color: "#8E8E9A", fontSize: 11, lineHeight: 16 },
 });

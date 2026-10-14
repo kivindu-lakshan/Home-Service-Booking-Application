@@ -59,7 +59,7 @@ function ServiceForm() {
   const save = async () => {
     if (lock.current) return;
     const invalid = validateService(form); setFields(invalid); setError('');
-    if (Object.keys(invalid).length) return;
+    if (Object.keys(invalid).length) { setError('Please resolve all highlighted field errors before saving.'); return; }
     lock.current = true; setBusy(true);
     try {
       const payload = servicePayload(form);

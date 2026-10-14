@@ -1,4 +1,5 @@
 import { useCallback } from 'react';
+import { View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { AccountText as Text } from '@/components/settings/AccountText';
 import { useAccountStyles } from '@/context/AccountThemeContext';
@@ -13,7 +14,7 @@ export default function ProviderDetails() {
   const selectedService = p?.services.find(offering => offering.service._id === serviceId);
   return <CustomerPage title="Provider Details" refreshing={state.refreshing} onRefresh={() => void state.load(true)}>
     <CatalogueState loading={state.loading} error={state.error} retry={() => void state.load()} />
-    {p && <><CatalogueImage key={p.user?.avatarUrl} uri={p.user?.avatarUrl} label={p.user?.fullName || 'Provider'} /><Card><Text style={themed(css.heading)}>{p.user?.fullName || 'Provider'}</Text>
+    {p && <><View style={{ alignItems: 'center', marginBottom: 16 }}><CatalogueImage key={p.user?.avatarUrl} uri={p.user?.avatarUrl} label={p.user?.fullName || 'Provider'} large /></View><Card><Text style={themed(css.heading)}>{p.user?.fullName || 'Provider'}</Text>
       {p.isVerified === true && <Text style={themed(css.link)}>✓ Verified provider</Text>}{!!p.reviewCount && p.ratingAvg !== undefined && <Text style={themed(css.copy)}>★ {p.ratingAvg.toFixed(1)} · {p.reviewCount} reviews</Text>}
       {p.yearsExperience !== undefined && <Text style={themed(css.copy)}>{p.yearsExperience} years experience</Text>}{!!p.location.city && <Text style={themed(css.copy)}>{p.location.city}</Text>}
       {selectedService && <><Text style={themed(css.heading)}>{selectedService.service.name}</Text><Text style={themed(css.link)}>From {priceLabel(p.priceFrom)}</Text></>}

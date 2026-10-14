@@ -8,8 +8,15 @@ router.get("/images/:filename", images.read);
 router.use(auth, role("customer", "provider", "admin"));
 router.get("/categories", controller.categories);
 router.get("/", controller.list);
+router.post(
+  "/images",
+  role("provider", "admin"),
+  require("express-rate-limit")({ windowMs: 60000, max: 20 }),
+  images.uploadMiddleware,
+  images.upload,
+);
 // Also protect attempted writes at the shared URL rather than relying on UI hiding.
-router.post("/", role("admin"), controller.validateService, controller.create);
+router.post("/", role("provider", "admin"), controller.validateService, controller.create);
 router.patch(
   "/:id",
   role("admin"),

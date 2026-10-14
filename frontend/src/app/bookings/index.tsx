@@ -13,6 +13,8 @@ import {
     MapPin,
     Plus,
     Search,
+    ShieldCheck,
+    Star,
 } from "lucide-react-native";
 import { useCallback, useMemo, useState } from "react";
 import {
@@ -23,6 +25,16 @@ import {
     View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import {
+    getRefundsEligibilitySummary,
+    type RefundEligibilityInfo,
+    type RefundRequest,
+} from "@/api/refunds";
+import {
+    RefundDetailsHistoryModal,
+    RefundRequestConfirmModal,
+    REFUND_STATUS_DISPLAY,
+} from "@/components/refunds/CustomerRefundModals";
 
 type Filter = "all" | "active" | "completed" | "cancelled";
 const filters: { label: string; value: Filter }[] = [
@@ -54,14 +66,26 @@ const dateLabel = (value?: string) =>
     : "Date pending";
 const timeLabel = (value?: string) => value || "Time pending";
 
-function BookingCard({ booking }: { booking: Booking }) {
+function BookingCard({
+  booking,
+  refundInfo,
+  onRequestRefund,
+  onViewRefund,
+}: {
+  booking: Booking;
+  refundInfo?: RefundEligibilityInfo;
+  onRequestRefund?: (booking: Booking) => void;
+  onViewRefund?: (request: RefundRequest) => void;
+}) {
   const themed = useAccountStyles();
+  if (!booking) return null;
   const cancelled = booking.status === "cancelled";
   const completed = booking.status === "completed";
+  const hasRefundReq = Boolean(refundInfo?.hasRequest && refundInfo.request);
+  const isRefundEligible = Boolean(refundInfo && !refundInfo.hasRequest && refundInfo.eligible);
+
   return (
     <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={`View ${booking.service?.name || "booking"}`}
       onPress={() =>
         router.push({ pathname: "/bookings/[id]", params: { id: booking._id } })
       }
@@ -127,12 +151,119 @@ function BookingCard({ booking }: { booking: Booking }) {
               booking.totalPrice || booking.serviceFee || 0,
             ).toLocaleString()}
           </Text>
+          <Text style={themed(styles.paymentModeText)}>
+            {booking.paymentMode === "pay_now" ? "Paid" : "Pay on completion"}
+          </Text>
         </View>
-        <View style={styles.detailsLink}>
-          <Text style={themed(styles.detailsText)}>View Details</Text>
-          <ChevronRight size={19} color="#633CFF" />
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+
+          {(completed || booking.status === "in_progress") && (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Review provider"
+              onPress={(e) => {
+                e.stopPropagation?.();
+                router.push({
+                  pathname: "/reviews/rate",
+                  params: { bookingId: booking._id },
+                });
+              }}
+              style={styles.reviewBtn}
+            >
+              <Star size={14} color="#D97706" fill="#F59E0B" />
+              <Text style={styles.reviewBtnText}>
+                {booking.status === "in_progress" ? "Review Now" : "Review"}
+              </Text>
+            </Pressable>
+          )}
+          <View style={styles.detailsLink}>
+            <Text style={themed(styles.detailsText)}>View Details</Text>
+            <ChevronRight size={19} color="#633CFF" />
+          </View>
         </View>
       </View>
+
+      {/* ── Cancelled Booking Refund Section ────────────────────────────── */}
+      {cancelled && (
+        <View style={styles.cardRefundSection}>
+          {hasRefundReq && refundInfo?.request && (
+            <View style={styles.refundRow}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.refundStatusHeading}>Refund Request</Text>
+                <View
+                  style={[
+                    styles.refundStatusBadge,
+                    {
+                      backgroundColor:
+                        REFUND_STATUS_DISPLAY[refundInfo.request.status]?.bg ||
+                        "#FEF3C7",
+                    },
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.refundStatusBadgeText,
+                      {
+                        color:
+                          REFUND_STATUS_DISPLAY[refundInfo.request.status]?.text ||
+                          "#92400E",
+                      },
+                    ]}
+                  >
+                    {REFUND_STATUS_DISPLAY[refundInfo.request.status]?.label ||
+                      refundInfo.request.status}
+                  </Text>
+                </View>
+              </View>
+              <Pressable
+                accessibilityRole="button"
+                onPress={(e) => {
+                  e.stopPropagation?.();
+                  onViewRefund?.(refundInfo.request!);
+                }}
+                style={styles.viewRefundBtn}
+              >
+                <Text style={styles.viewRefundBtnText}>View Refund</Text>
+              </Pressable>
+            </View>
+          )}
+
+          {isRefundEligible && (
+            <View style={styles.refundEligibleRow}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.refundEligibleText}>
+                  Refund Protection active • Cancelled before arrival
+                </Text>
+                <Text style={styles.refundEligibleSub}>
+                  Eligible for service refund of LKR{" "}
+                  {Number(
+                    refundInfo?.payment?.amount || booking.totalPrice || 0
+                  ).toLocaleString()}
+                </Text>
+              </View>
+              <Pressable
+                accessibilityRole="button"
+                onPress={(e) => {
+                  e.stopPropagation?.();
+                  onRequestRefund?.(booking);
+                }}
+                style={styles.requestRefundBtn}
+              >
+                <ShieldCheck size={14} color="#FFFFFF" />
+                <Text style={styles.requestRefundBtnText}>Request Refund</Text>
+              </Pressable>
+            </View>
+          )}
+
+          {refundInfo && !hasRefundReq && !isRefundEligible && (
+            <View style={styles.refundIneligibleBox}>
+              <Text style={styles.refundIneligibleText}>
+                ⚠ {refundInfo.reason || "Refund request unavailable through this feature."}
+              </Text>
+            </View>
+          )}
+        </View>
+      )}
     </Pressable>
   );
 }
@@ -141,6 +272,15 @@ export default function BookingsScreen() {
   const themed = useAccountStyles();
   const { user, loading: authLoading } = useAuth();
   const [bookings, setBookings] = useState<Booking[]>([]);
+  const [refundEligibilityMap, setRefundEligibilityMap] = useState<
+    Record<string, RefundEligibilityInfo>
+  >({});
+  const [confirmModalBooking, setConfirmModalBooking] = useState<Booking | null>(
+    null
+  );
+  const [detailsModalRequest, setDetailsModalRequest] = useState<RefundRequest | null>(
+    null
+  );
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<Filter>("all");
   const [loading, setLoading] = useState(true);
@@ -153,11 +293,19 @@ export default function BookingsScreen() {
       else setLoading(true);
       setError(false);
       try {
-        const response = await getBookings({
-          filter: filter === "all" ? undefined : filter,
-          search: query.trim() || undefined,
-        });
-        setBookings(response.data.data || []);
+        const [bookingsRes, refundSummaryRes] = await Promise.all([
+          getBookings({
+            filter: filter === "all" ? undefined : filter,
+            search: query.trim() || undefined,
+          }),
+          user?.role === "customer"
+            ? getRefundsEligibilitySummary().catch(() => ({ data: { data: {} } }))
+            : Promise.resolve({ data: { data: {} } }),
+        ]);
+        setBookings(bookingsRes.data.data || []);
+        if (refundSummaryRes.data?.data) {
+          setRefundEligibilityMap(refundSummaryRes.data.data);
+        }
       } catch {
         setError(true);
       } finally {
@@ -165,7 +313,7 @@ export default function BookingsScreen() {
         setRefreshing(false);
       }
     },
-    [filter, query],
+    [filter, query, user?.role],
   );
 
   useFocusEffect(
@@ -284,7 +432,13 @@ export default function BookingsScreen() {
               <ErrorState onRetry={() => void load()} />
             ) : visibleBookings.length ? (
               visibleBookings.map((booking) => (
-                <BookingCard key={booking._id} booking={booking} />
+                <BookingCard
+                  key={booking._id}
+                  booking={booking}
+                  refundInfo={refundEligibilityMap[booking._id]}
+                  onRequestRefund={(b) => setConfirmModalBooking(b)}
+                  onViewRefund={(r) => setDetailsModalRequest(r)}
+                />
               ))
             ) : (
               <View style={styles.empty}>
@@ -302,6 +456,26 @@ export default function BookingsScreen() {
           </ScrollView>
           {user.role === "customer" && <CustomerNav active="Bookings" />}
         </View>
+
+        {/* Refund Request Confirmation Modal */}
+        <RefundRequestConfirmModal
+          visible={Boolean(confirmModalBooking)}
+          booking={confirmModalBooking}
+          paymentInfo={
+            confirmModalBooking
+              ? refundEligibilityMap[confirmModalBooking._id]?.payment
+              : undefined
+          }
+          onClose={() => setConfirmModalBooking(null)}
+          onSuccess={() => void load(true)}
+        />
+
+        {/* Refund Request Details / History Modal */}
+        <RefundDetailsHistoryModal
+          visible={Boolean(detailsModalRequest)}
+          request={detailsModalRequest}
+          onClose={() => setDetailsModalRequest(null)}
+        />
       </SafeAreaView>
   );
 }
@@ -423,9 +597,32 @@ const styles = StyleSheet.create({
     letterSpacing: 0.6,
   },
   fare: { color: "#633CFF", fontSize: 19, fontWeight: "900", marginTop: 3 },
+  paymentModeText: { color: "#8190AB", fontSize: 11, fontWeight: "700", marginTop: 4, textTransform: "uppercase" },
   detailsLink: { flexDirection: "row", alignItems: "center", gap: 2 },
   detailsText: { color: "#633CFF", fontSize: 14, fontWeight: "900" },
+  reviewBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    backgroundColor: "#FEF3C7",
+    borderWidth: 1,
+    borderColor: "#FDE68A",
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 10,
+    shadowColor: "#F59E0B",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.12,
+    shadowRadius: 4,
+    elevation: 1,
+  },
+  reviewBtnText: {
+    color: "#B45309",
+    fontSize: 12,
+    fontWeight: "800",
+  },
   empty: { alignItems: "center", paddingVertical: 44, gap: 10 },
+
   emptyTitle: { color: "#26324F", fontSize: 20, fontWeight: "900" },
   emptyCopy: {
     color: "#8190AB",
@@ -433,4 +630,72 @@ const styles = StyleSheet.create({
     textAlign: "center",
     marginBottom: 8,
   },
+
+  /* Cancelled Booking Refund Styles */
+  cardRefundSection: {
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: "#ECEEF5",
+  },
+  refundRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 10,
+  },
+  refundStatusHeading: {
+    color: "#8995AA",
+    fontSize: 10,
+    fontWeight: "800",
+    textTransform: "uppercase",
+    marginBottom: 4,
+  },
+  refundStatusBadge: {
+    alignSelf: "flex-start",
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 8,
+  },
+  refundStatusBadgeText: { fontSize: 11, fontWeight: "800" },
+  viewRefundBtn: {
+    backgroundColor: "#ECEAFE",
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 10,
+  },
+  viewRefundBtnText: { color: "#5B3DF5", fontSize: 12, fontWeight: "800" },
+
+  refundEligibleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 10,
+    backgroundColor: "#F7F5FF",
+    padding: 12,
+    borderRadius: 14,
+    borderWidth: 1.5,
+    borderColor: "#DED6FF",
+  },
+  refundEligibleText: { color: "#5B3DF5", fontSize: 11, fontWeight: "800" },
+  refundEligibleSub: { color: "#554A78", fontSize: 11, marginTop: 2 },
+  requestRefundBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: "#5B3DF5",
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 10,
+  },
+  requestRefundBtnText: { color: "#FFFFFF", fontSize: 12, fontWeight: "800" },
+
+  refundIneligibleBox: {
+    backgroundColor: "#F7F7FA",
+    padding: 10,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "#E5E7F0",
+  },
+  refundIneligibleText: { color: "#8A97B1", fontSize: 11, lineHeight: 16 },
 });

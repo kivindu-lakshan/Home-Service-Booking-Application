@@ -11,6 +11,7 @@ import { ProfileIcon, type ProfileIconName } from '@/components/profile/ProfileI
 import { Button, Card } from '@/components/ui';
 import { LoadingState } from '@/components/DataState';
 import type { Provider } from '@/api/catalogue';
+import { BrandHeader } from '@/components/BrandHeader';
 export function CustomerNav({ active }: { active: 'Home' | 'Services' | 'Bookings' | 'Profile' }) {
   const themed = useAccountStyles();
   const tabs: { name: typeof active; icon: ProfileIconName; path: '/' | '/customer/services' | '/bookings' | '/profile' }[] = [
@@ -25,7 +26,9 @@ export function CustomerPage({ title, children, home = false, refreshing = false
   const themed = useAccountStyles();
   return <SafeAreaView style={themed(css.safe)}><View style={css.page}>
     <ScrollView contentContainerStyle={css.content} keyboardShouldPersistTaps="handled" refreshControl={onRefresh ? <RefreshControl refreshing={refreshing} onRefresh={onRefresh} /> : undefined}>
-      {!home && <Pressable accessibilityRole="button" accessibilityLabel="Go back" onPress={() => router.canGoBack() ? router.back() : router.replace('/')} style={themed(css.back)}><Text style={themed(css.link)}>‹ Back</Text></Pressable>}
+      {home
+        ? <View style={css.homeHeader}><BrandHeader /></View>
+        : <Pressable accessibilityRole="button" accessibilityLabel="Go back" onPress={() => router.canGoBack() ? router.back() : router.replace('/')} style={themed(css.back)}><Text style={themed(css.link)}>‹ Back</Text></Pressable>}
       <Text accessibilityRole="header" style={themed(css.title)}>{title}</Text>{children}
     </ScrollView><CustomerNav active={home ? 'Home' : 'Services'} />
   </View></SafeAreaView>;
@@ -43,11 +46,13 @@ export function CatalogueState({ loading, error, retry }: { loading: boolean; er
   if (!error) return null;
   return <Card><Text accessibilityRole="alert" style={themed(css.error)}>{error}</Text><Button secondary onPress={retry}>Try again</Button>{error.includes('session has expired') && <Button onPress={() => router.replace('/auth/login')}>Sign in</Button>}</Card>;
 }
-export function CatalogueImage({ uri, label, avatar = false }: { uri?: string; label: string; avatar?: boolean }) {
+export function CatalogueImage({ uri, label, avatar = false, large = false }: { uri?: string; label: string; avatar?: boolean; large?: boolean }) {
   const themed = useAccountStyles(); const [failed, setFailed] = useState(false);
-  const imageUri = avatar ? uri : serviceImageUri(uri);
-  if (imageUri && !failed) return <Image accessibilityLabel={label} source={{ uri: imageUri }} resizeMode='cover' onError={() => setFailed(true)} style={avatar ? css.avatar : css.image} />;
-  return <View style={themed([avatar ? css.avatar : css.image, css.placeholder])}><Text style={themed(css.placeholderText)}>{avatar ? label.slice(0, 1).toUpperCase() : '⌂'}</Text></View>;
+  const imageUri = avatar ? uri : (serviceImageUri(uri) || uri);
+  const imgStyle = large ? css.largeAvatar : avatar ? css.avatar : css.image;
+  const txtStyle = large ? css.largeAvatarText : avatar ? css.avatarText : css.placeholderText;
+  if (imageUri && !failed) return <Image accessibilityLabel={label} source={{ uri: imageUri }} resizeMode='cover' onError={() => setFailed(true)} style={imgStyle} />;
+  return <View style={themed([imgStyle, css.placeholder])}><Text numberOfLines={1} style={themed(txtStyle)}>{(avatar || large) ? label.slice(0, 1).toUpperCase() : label}</Text></View>;
 }
 export const priceLabel = (price?: number) => Number.isFinite(price) ? `LKR ${price!.toLocaleString()}` : 'Price on request';
 export function ProviderCard({ provider, serviceId }: { provider: Provider; serviceId: string }) {
@@ -67,12 +72,14 @@ export function ProviderCard({ provider, serviceId }: { provider: Provider; serv
 export const css = StyleSheet.create({
   safe: { flex: 1, backgroundColor: '#F7F7FD' }, page: { flex: 1, width: '100%', maxWidth: 560, alignSelf: 'center' },
   content: { padding: 22, flexGrow: 1 }, title: { color: '#242E49', fontSize: 28, fontWeight: '800', marginBottom: 20 },
+  homeHeader: { marginBottom: 10, paddingTop: 4 },
   heading: { color: '#303B55', fontSize: 18, fontWeight: '700', marginVertical: 8 }, copy: { color: '#7D89A1', fontSize: 14, lineHeight: 22, marginBottom: 8 },
   link: { color: '#633CFF', fontWeight: '700', fontSize: 14, marginVertical: 8 }, error: { color: '#A13548', marginBottom: 14, lineHeight: 22 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 14 }, grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginVertical: 16 },
   tile: { width: '47%', minHeight: 125, padding: 16, borderRadius: 22, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E6EAF3' },
-  icon: { color: '#8157FF', fontSize: 30 }, image: { width: '100%', height: 190, borderRadius: 18, marginBottom: 12 }, avatar: { width: 74, height: 74, borderRadius: 24 },
-  placeholder: { alignItems: 'center', justifyContent: 'center', backgroundColor: '#EEE8FF' }, placeholderText: { color: '#8157FF', fontSize: 36, fontWeight: '700' },
+  icon: { color: '#8157FF', fontSize: 30 }, image: { width: '100%', height: 190, borderRadius: 18, marginBottom: 12 }, avatar: { width: 74, height: 74, borderRadius: 37 },
+  largeAvatar: { width: 90, height: 90, borderRadius: 45, backgroundColor: '#8157FF' },
+  placeholder: { alignItems: 'center', justifyContent: 'center', backgroundColor: '#8157FF', paddingHorizontal: 16 }, placeholderText: { color: '#8157FF', fontSize: 26, fontWeight: '700', textAlign: 'center' }, avatarText: { color: '#FFFFFF', fontSize: 32, fontWeight: '700', textAlign: 'center' }, largeAvatarText: { color: '#FFFFFF', fontSize: 40, fontWeight: '800', textAlign: 'center' },
   banner: { padding: 24, borderRadius: 26, backgroundColor: '#5B3DF5', marginBottom: 20 }, bannerTitle: { color: '#FFFFFF', fontSize: 25, fontWeight: '800', marginBottom: 10 }, bannerCopy: { color: '#FFFFFF', fontSize: 14, lineHeight: 22 },
   nav: { flexDirection: 'row', backgroundColor: '#FFFFFF', borderRadius: 32, padding: 6, marginHorizontal: 14, marginBottom: 8, borderWidth: 1, borderColor: '#F0EEF8' },
   navItem: { flex: 1, minHeight: 54, borderRadius: 26, alignItems: 'center', justifyContent: 'center', gap: 4 }, active: { backgroundColor: '#EEE8FF' }, back: { alignSelf: 'flex-start', minHeight: 44 },
