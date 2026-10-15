@@ -38,6 +38,7 @@ import {
   type BookingErrors,
 } from "@/validation/booking";
 import ErrorText from "@/components/ErrorText";
+import { AddToCalendarModal } from "@/components/booking/AddToCalendarModal";
 
 export default function NewBookingScreen() {
   const themed = useAccountStyles();
@@ -70,6 +71,21 @@ export default function NewBookingScreen() {
   const [submitting, setSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [createdBooking, setCreatedBooking] = useState<Booking | null>(null);
+  const [calendarModalVisible, setCalendarModalVisible] = useState(false);
+
+  const calendarEventDetails = useMemo(() => {
+    if (!createdBooking) return null;
+    return {
+      title: `HomeHalo: ${selectedService?.name || "Service Appointment"}`,
+      serviceName: selectedService?.name || "Home Service",
+      bookingRef: createdBooking.bookingRef,
+      scheduledDate: createdBooking.scheduledDate,
+      scheduledTime: createdBooking.scheduledTime,
+      durationHours: createdBooking.durationHours || "2",
+      address: createdBooking.addressSnapshot,
+      notes: createdBooking.notes,
+    };
+  }, [createdBooking, selectedService]);
 
   // Generate next 14 days
   const upcomingDays = useMemo(() => {
@@ -800,6 +816,14 @@ export default function NewBookingScreen() {
 
               <View style={styles.modalButtons}>
                 <Pressable
+                  onPress={() => setCalendarModalVisible(true)}
+                  style={styles.modalCalendarButton}
+                >
+                  <CalendarIcon size={17} color="#168A76" />
+                  <Text style={styles.modalCalendarText}>Add to Calendar</Text>
+                </Pressable>
+
+                <Pressable
                   onPress={() => {
                     const id = createdBooking?._id;
                     setCreatedBooking(null);
@@ -823,6 +847,13 @@ export default function NewBookingScreen() {
             </View>
           </View>
         </Modal>
+
+        {/* Add To Calendar Modal */}
+        <AddToCalendarModal
+          visible={calendarModalVisible}
+          onClose={() => setCalendarModalVisible(false)}
+          eventDetails={calendarEventDetails}
+        />
       </View>
     </SafeAreaView>
   );
@@ -1160,6 +1191,18 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   modalPrimaryText: { color: "#FFFFFF", fontSize: 14, fontWeight: "800" },
+  modalCalendarButton: {
+    backgroundColor: "#E2F6F3",
+    borderWidth: 1.5,
+    borderColor: "#A3E6D8",
+    borderRadius: 14,
+    minHeight: 48,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+  },
+  modalCalendarText: { color: "#168A76", fontSize: 14, fontWeight: "800" },
   modalSecondaryButton: {
     backgroundColor: "#EEE8FF",
     borderRadius: 14,
