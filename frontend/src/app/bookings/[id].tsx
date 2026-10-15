@@ -2,8 +2,10 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  KeyboardAvoidingView,
   Linking,
   Modal,
+  Platform,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -57,6 +59,7 @@ import {
 } from "@/components/refunds/CustomerRefundModals";
 import { LoadingState } from "@/components/DataState";
 import ErrorText from "@/components/ErrorText";
+import { AddToCalendarModal } from "@/components/booking/AddToCalendarModal";
 
 const statusSteps = [
   { key: "pending", label: "Requested" },
@@ -95,6 +98,24 @@ export default function BookingDetailsScreen() {
   const [cancelCustomText, setCancelCustomText] = useState("");
   const [cancelling, setCancelling] = useState(false);
   const [cancelError, setCancelError] = useState("");
+
+  // Calendar Modal State
+  const [calendarModalVisible, setCalendarModalVisible] = useState(false);
+
+  const calendarEventDetails = useMemo(() => {
+    if (!booking) return null;
+    return {
+      title: `HomeHalo: ${booking.service?.name || "Service Appointment"}`,
+      serviceName: booking.service?.name || "Home Service",
+      bookingRef: booking.bookingRef,
+      scheduledDate: booking.scheduledDate,
+      scheduledTime: booking.scheduledTime,
+      durationHours: booking.durationHours || "2",
+      address: booking.addressSnapshot,
+      providerName: booking.provider?.user?.fullName,
+      notes: booking.notes,
+    };
+  }, [booking]);
 
   // Status update state for provider
   const [updatingStatus, setUpdatingStatus] = useState(false);
@@ -366,8 +387,23 @@ export default function BookingDetailsScreen() {
             </View>
           )}
 
+          {/* No-charge notice for cancelled bookings that were never paid online */}
+          {isCancelled && isCustomer && booking.paymentMode !== "pay_now" && (
+            <View style={themed(styles.infoCard)}>
+              <View style={styles.noChargeBox}>
+                <CheckCircle2 size={22} color="#168A76" />
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.noChargeTitle}>No charges apply</Text>
+                  <Text style={styles.noChargeText}>
+                    This booking was set to pay on completion, so no payment was collected and no refund is needed.
+                  </Text>
+                </View>
+              </View>
+            </View>
+          )}
+
           {/* Refund Protection & Refund Request Management Card */}
-          {isCancelled && isCustomer && (
+          {isCancelled && isCustomer && booking.paymentMode === "pay_now" && (
             <View style={themed(styles.infoCard)}>
               <View style={styles.cardHeaderRow}>
                 <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
@@ -542,15 +578,26 @@ export default function BookingDetailsScreen() {
           <View style={themed(styles.infoCard)}>
             <View style={styles.cardHeaderRow}>
               <Text style={themed(styles.cardHeading)}>Scheduled Appointment</Text>
-              {canModify && isCustomer && (
-                <Pressable
-                  onPress={() => setRescheduleModalVisible(true)}
-                  style={styles.actionChip}
-                >
-                  <RefreshCw size={13} color="#633CFF" />
-                  <Text style={styles.actionChipText}>Reschedule</Text>
-                </Pressable>
-              )}
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                {!isCancelled && (
+                  <Pressable
+                    onPress={() => setCalendarModalVisible(true)}
+                    style={styles.actionChipCalendar}
+                  >
+                    <Calendar size={13} color="#168A76" />
+                    <Text style={styles.actionChipCalendarText}>Add to Calendar</Text>
+                  </Pressable>
+                )}
+                {canModify && isCustomer && (
+                  <Pressable
+                    onPress={() => setRescheduleModalVisible(true)}
+                    style={styles.actionChip}
+                  >
+                    <RefreshCw size={13} color="#633CFF" />
+                    <Text style={styles.actionChipText}>Reschedule</Text>
+                  </Pressable>
+                )}
+              </View>
             </View>
 
             <View style={styles.scheduleRow}>
@@ -581,6 +628,14 @@ export default function BookingDetailsScreen() {
                 </View>
               </View>
             </View>
+            {isCancelled && (
+              <View style={styles.cancelledScheduleNote}>
+                <XCircle size={15} color="#D33F49" />
+                <Text style={styles.cancelledScheduleNoteText}>
+                  This appointment slot has been released.
+                </Text>
+              </View>
+            )}
           </View>
 
           {/* Service Location */}
@@ -639,7 +694,9 @@ export default function BookingDetailsScreen() {
               <View style={styles.pendingProviderRow}>
                 <User size={20} color="#8A91A4" />
                 <Text style={themed(styles.pendingProviderText)}>
-                  Our team is assigning the best qualified professional for your area.
+                  {isCancelled
+                    ? "No professional was assigned before this booking was cancelled."
+                    : "Our team is assigning the best qualified professional for your area."}
                 </Text>
               </View>
             </View>
@@ -685,7 +742,12 @@ export default function BookingDetailsScreen() {
             </View>
 
             <View style={styles.paymentStatusBadge}>
-              {payment?.status === "paid" ? (
+              {isCancelled && payment?.status !== "paid" ? (
+                <View style={styles.cancelledPill}>
+                  <XCircle size={15} color="#626980" />
+                  <Text style={styles.cancelledPillText}>Cancelled • No payment required</Text>
+                </View>
+              ) : payment?.status === "paid" ? (
                 <View style={styles.paidPill}>
                   <CheckCircle2 size={15} color="#168A76" />
                   <Text style={styles.paidText}>Paid Online (Receipt: {payment.receiptNo || "Yes"})</Text>
@@ -806,6 +868,30 @@ export default function BookingDetailsScreen() {
                 >
                   <Text style={styles.cancelLinkText}>Cancel this booking</Text>
                 </Pressable>
+              )}
+
+              {/* Next actions after cancellation */}
+              {isCancelled && (
+                <>
+                  <Pressable
+                    onPress={() =>
+                      router.push({
+                        pathname: "/bookings/new",
+                        params: { serviceId: booking.service?._id },
+                      } as any)
+                    }
+                    style={styles.rebookButton}
+                  >
+                    <RefreshCw size={17} color="#FFFFFF" />
+                    <Text style={styles.rebookButtonText}>Book Again</Text>
+                  </Pressable>
+                  <Pressable
+                    onPress={() => router.replace("/bookings")}
+                    style={styles.backToBookingsButton}
+                  >
+                    <Text style={styles.backToBookingsText}>Back to My Bookings</Text>
+                  </Pressable>
+                </>
               )}
             </View>
           )}
@@ -936,13 +1022,22 @@ export default function BookingDetailsScreen() {
           animationType="fade"
           onRequestClose={() => setCancelModalVisible(false)}
         >
+          <KeyboardAvoidingView
+            behavior={Platform.OS === "ios" ? "padding" : undefined}
+            style={{ flex: 1 }}
+          >
           <View style={styles.modalOverlay}>
-            <View style={themed(styles.modalBox)}>
+            <View style={themed([styles.modalBox, styles.cancelModalBox])}>
+             <ScrollView
+               showsVerticalScrollIndicator={false}
+               keyboardShouldPersistTaps="handled"
+               contentContainerStyle={styles.cancelModalScroll}
+             >
               <View style={styles.warningIconCircle}>
                 <AlertTriangle size={32} color="#D33F49" />
               </View>
-              <Text style={themed(styles.modalHeading)}>Cancel Booking?</Text>
-              <Text style={themed(styles.modalSubheading)}>
+              <Text style={themed(styles.cancelHeading)}>Cancel Booking?</Text>
+              <Text style={themed(styles.cancelSubheading)}>
                 Are you sure you want to cancel this appointment? This action cannot be undone.
               </Text>
 
@@ -962,10 +1057,17 @@ export default function BookingDetailsScreen() {
                       cancelReason === reason && styles.cancelOptionSelected,
                     ])}
                   >
-                    <View style={styles.radio}>
+                    <View style={[styles.radio, cancelReason === reason && styles.radioSelected]}>
                       {cancelReason === reason && <View style={styles.radioDot} />}
                     </View>
-                    <Text style={themed(styles.cancelOptionText)}>{reason}</Text>
+                    <Text
+                      style={themed([
+                        styles.cancelOptionText,
+                        cancelReason === reason && styles.cancelOptionTextSelected,
+                      ])}
+                    >
+                      {reason}
+                    </Text>
                   </Pressable>
                 ))}
               </View>
@@ -991,7 +1093,8 @@ export default function BookingDetailsScreen() {
                         setCancelError("");
                       }
                     }}
-                    style={themed(styles.modalInput)}
+                    style={themed([styles.modalInput, styles.cancelCustomInput])}
+                    multiline
                   />
                   <Text style={styles.modalCharCount}>{cancelCustomText.length}/300</Text>
                 </View>
@@ -1020,8 +1123,10 @@ export default function BookingDetailsScreen() {
                   )}
                 </Pressable>
               </View>
+             </ScrollView>
             </View>
           </View>
+          </KeyboardAvoidingView>
         </Modal>
 
         {/* REFUND REQUEST CONFIRMATION MODAL */}
@@ -1038,6 +1143,13 @@ export default function BookingDetailsScreen() {
           visible={refundDetailsModalVisible}
           request={refundRequest}
           onClose={() => setRefundDetailsModalVisible(false)}
+        />
+
+        {/* ADD TO CALENDAR MODAL */}
+        <AddToCalendarModal
+          visible={calendarModalVisible}
+          onClose={() => setCalendarModalVisible(false)}
+          eventDetails={calendarEventDetails}
         />
       </View>
     </SafeAreaView>
@@ -1145,6 +1257,18 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   actionChipText: { fontSize: 11, fontWeight: "800", color: "#633CFF" },
+  actionChipCalendar: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: "#E2F6F3",
+    borderWidth: 1,
+    borderColor: "#A3E6D8",
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 8,
+  },
+  actionChipCalendarText: { fontSize: 11, fontWeight: "800", color: "#168A76" },
   scheduleRow: { flexDirection: "row", gap: 16 },
   scheduleItem: { flex: 1, flexDirection: "row", alignItems: "center", gap: 10 },
   scheduleLabel: { fontSize: 11, color: "#8A91A4" },
@@ -1368,6 +1492,65 @@ const styles = StyleSheet.create({
     borderColor: "#EBE8F5",
   },
   cancelOptionSelected: { borderColor: "#D33F49", backgroundColor: "#FEF7F7" },
+  radioSelected: { borderColor: "#D33F49" },
+  cancelOptionTextSelected: { fontWeight: "800", color: "#D33F49" },
+  cancelModalBox: { maxHeight: "92%" },
+  cancelModalScroll: { paddingBottom: 4 },
+  cancelHeading: { fontSize: 20, fontWeight: "800", color: "#242E49", textAlign: "center" },
+  cancelSubheading: { fontSize: 13, color: "#7C879F", textAlign: "center", marginTop: 6, marginBottom: 6, lineHeight: 19 },
+  cancelCustomInput: { minHeight: 84, textAlignVertical: "top" },
+  cancelledScheduleNote: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginTop: 12,
+    backgroundColor: "#FDEAEA",
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  cancelledScheduleNoteText: { fontSize: 12, fontWeight: "700", color: "#D33F49", flex: 1 },
+  scheduleRowCancelled: { opacity: 0.5 },
+  noChargeBox: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    backgroundColor: "#E8F8F5",
+    borderRadius: 12,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: "#A3E6D8",
+  },
+  noChargeTitle: { fontSize: 13, fontWeight: "800", color: "#168A76" },
+  noChargeText: { fontSize: 12, color: "#4F6F69", marginTop: 2, lineHeight: 17 },
+  cancelledPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: "#F2F0FA",
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 10,
+  },
+  cancelledPillText: { fontSize: 12, fontWeight: "800", color: "#626980" },
+  rebookButton: {
+    backgroundColor: "#633CFF",
+    borderRadius: 16,
+    minHeight: 50,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+  },
+  rebookButtonText: { color: "#FFFFFF", fontSize: 14, fontWeight: "800" },
+  backToBookingsButton: {
+    backgroundColor: "#EEE8FF",
+    borderRadius: 16,
+    minHeight: 48,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  backToBookingsText: { color: "#633CFF", fontSize: 14, fontWeight: "800" },
   radio: {
     width: 18,
     height: 18,
