@@ -24,7 +24,6 @@ import {
 } from "lucide-react-native";
 import { useCallback, useEffect, useState } from "react";
 import {
-  Alert,
   Modal,
   Pressable,
   RefreshControl,
@@ -57,6 +56,123 @@ const STATUS_COLOURS: Record<string, { bg: string; text: string; label: string }
   failed: { bg: "#FEE2E2", text: "#991B1B", label: "Failed" },
 };
 
+const errorMessage = (e: unknown, fallback: string) => {
+  if (isAxiosError(e)) {
+    return (
+      e.response?.data?.message ||
+      (e.response
+        ? `Request failed (${e.response.status}).`
+        : "Network error. Please check your connection.")
+    );
+  }
+  return e instanceof Error && e.message ? e.message : fallback;
+};
+
+/* ───────────────────────── Professional dialog ───────────────────────── */
+type DialogState = {
+  variant: "confirm" | "success" | "error";
+  title: string;
+  message: string;
+  confirmText?: string;
+  details?: { label: string; value: string }[];
+  onConfirm?: () => void;
+} | null;
+
+const DIALOG_THEME = {
+  confirm: { bg: "#E6F6F3", fg: C.success },
+  success: { bg: "#E6F6F3", fg: C.success },
+  error: { bg: "#FDECEA", fg: C.danger },
+};
+
+function AppDialog({
+  dialog,
+  onClose,
+}: {
+  dialog: DialogState;
+  onClose: () => void;
+}) {
+  if (!dialog) return null;
+  const theme = DIALOG_THEME[dialog.variant];
+  const isConfirm = dialog.variant === "confirm";
+  const Icon =
+    dialog.variant === "error"
+      ? AlertCircle
+      : dialog.variant === "confirm"
+        ? ShieldCheck
+        : CheckCircle2;
+
+  const handleConfirm = () => {
+    const fn = dialog.onConfirm;
+    onClose();
+    fn?.();
+  };
+
+  return (
+    <Modal
+      visible
+      transparent
+      animationType="fade"
+      statusBarTranslucent
+      onRequestClose={onClose}
+    >
+      <View style={dlg.overlay}>
+        <View style={dlg.card}>
+          <View style={[dlg.iconWrap, { backgroundColor: theme.bg }]}>
+            <Icon size={32} color={theme.fg} />
+          </View>
+          <Text style={dlg.title}>{dialog.title}</Text>
+          <Text style={dlg.message}>{dialog.message}</Text>
+
+          {!!dialog.details?.length && (
+            <View style={dlg.detailsBox}>
+              {dialog.details.map((d, i) => (
+                <View
+                  key={d.label}
+                  style={[dlg.detailRow, i > 0 && dlg.detailRowBorder]}
+                >
+                  <Text style={dlg.detailLabel}>{d.label}</Text>
+                  <Text style={dlg.detailValue} numberOfLines={1}>
+                    {d.value}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          )}
+
+          {isConfirm ? (
+            <View style={dlg.btnRow}>
+              <Pressable
+                onPress={onClose}
+                style={[dlg.btn, dlg.btnSecondary]}
+              >
+                <Text style={dlg.btnSecondaryText}>Cancel</Text>
+              </Pressable>
+              <Pressable
+                onPress={handleConfirm}
+                style={[dlg.btn, { backgroundColor: theme.fg }]}
+              >
+                <CheckCircle2 size={16} color={C.white} />
+                <Text style={dlg.btnPrimaryText}>
+                  {dialog.confirmText || "Confirm"}
+                </Text>
+              </Pressable>
+            </View>
+          ) : (
+            <Pressable
+              onPress={onClose}
+              style={[dlg.btn, dlg.btnFull, { backgroundColor: theme.fg }]}
+            >
+              <Text style={dlg.btnPrimaryText}>
+                {dialog.variant === "error" ? "Try Again" : "Done"}
+              </Text>
+            </Pressable>
+          )}
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
 export default function AdminRefundDetailScreen() {
   const insets = useSafeAreaInsets();
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -66,74 +182,107 @@ export default function AdminRefundDetailScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [dialog, setDialog] = useState<DialogState>(null);
 
   // Reject modal
   const [rejectModalOpen, setRejectModalOpen] = useState(false);
   const [rejectReason, setRejectReason] = useState("");
+  const [rejectError, setRejectError] = useState("");
 
-  const load = useCallback(async (isRefresh = false) => {
-    if (!id) return;
-    if (isRefresh) setRefreshing(true);
-    else setLoading(true);
-    setError(false);
-    try {
-      const res = await getAdminRefundRequest(id);
-      setReq(res.data.data);
-    } catch {
-      setError(true);
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  }, [id]);
+  const load = useCallback(
+    async (isRefresh = false) => {
+      if (!id) return;
+      if (isRefresh) setRefreshing(true);
+      else setLoading(true);
+      setError(false);
+      try {
+        const res = await getAdminRefundRequest(id);
+        setReq(res.data.data);
+      } catch {
+        setError(true);
+      } finally {
+        setLoading(false);
+        setRefreshing(false);
+      }
+    },
+    [id]
+  );
 
   useEffect(() => {
     void load();
   }, [load]);
 
+  const runApprove = async (requestId: string) => {
+    setBusy(true);
+    try {
+      await approveRefundRequest(requestId);
+      await load();
+      setDialog({
+        variant: "success",
+        title: "Refund Approved",
+        message:
+          "The refund has been approved and moved to processing status.",
+      });
+    } catch (e) {
+      setDialog({
+        variant: "error",
+        title: "Unable to Approve",
+        message: errorMessage(e, "Could not approve refund."),
+      });
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const handleApprove = () => {
-    if (!req) return;
-    Alert.alert(
-      "Approve Refund Request",
-      `Are you sure you want to approve this refund of LKR ${req.refundAmount.toLocaleString()}?\n\nThis will initiate processing with the payment provider.`,
-      [
-        { text: "Cancel", style: "cancel" },
+    if (!req || busy) return;
+    setDialog({
+      variant: "confirm",
+      title: "Approve Refund Request?",
+      message:
+        "This will approve the request and initiate processing with the payment provider. This action cannot be undone.",
+      confirmText: "Approve Refund",
+      details: [
         {
-          text: "Confirm Approval",
-          style: "default",
-          onPress: async () => {
-            setBusy(true);
-            try {
-              await approveRefundRequest(req._id);
-              Alert.alert("Approved", "Refund has been approved and moved to processing status.");
-              await load();
-            } catch (e) {
-              const msg = isAxiosError(e) ? e.response?.data?.message : "Failed to approve refund.";
-              Alert.alert("Error", msg || "Could not approve refund.");
-            } finally {
-              setBusy(false);
-            }
-          },
+          label: "Customer",
+          value: (req.customer as any)?.fullName || "Customer",
         },
-      ]
-    );
+        {
+          label: "Booking",
+          value: (req.booking as any)?.bookingRef || "—",
+        },
+        {
+          label: "Refund amount",
+          value: `LKR ${(req.refundAmount ?? 0).toLocaleString()}`,
+        },
+      ],
+      onConfirm: () => void runApprove(req._id),
+    });
   };
 
   const handleRejectSubmit = async () => {
     if (!req) return;
     if (!rejectReason.trim()) {
-      Alert.alert("Reason Required", "Please provide a clear rejection reason for the customer.");
+      setRejectError("Please provide a clear rejection reason for the customer.");
       return;
     }
+    setRejectError("");
     setBusy(true);
     try {
       await rejectRefundRequest(req._id, rejectReason.trim());
       setRejectModalOpen(false);
-      Alert.alert("Rejected", "The refund request has been rejected and the reason has been recorded.");
+      setRejectReason("");
       await load();
+      setTimeout(() => {
+        setDialog({
+          variant: "success",
+          title: "Request Rejected",
+          message:
+            "The refund request has been rejected and the reason has been recorded.",
+        });
+      }, 350);
     } catch (e) {
-      const msg = isAxiosError(e) ? e.response?.data?.message : "Failed to reject refund.";
-      Alert.alert("Error", msg || "Could not reject refund.");
+      setRejectError(errorMessage(e, "Could not reject refund."));
     } finally {
       setBusy(false);
     }
@@ -225,7 +374,11 @@ export default function AdminRefundDetailScreen() {
           </View>
 
           <View style={styles.evidenceItem}>
-            <CheckCircle2 size={18} color={C.success} />
+            {req.cancellationBeforeArrival ? (
+              <CheckCircle2 size={18} color={C.success} />
+            ) : (
+              <XCircle size={18} color={C.danger} />
+            )}
             <View style={{ flex: 1 }}>
               <Text style={styles.evidenceTitle}>Cancellation Before Provider Arrival</Text>
               <Text style={styles.evidenceSub}>
@@ -292,8 +445,8 @@ export default function AdminRefundDetailScreen() {
               {req.cancelledAt
                 ? new Date(req.cancelledAt).toLocaleString()
                 : booking?.updatedAt
-                ? new Date(booking.updatedAt).toLocaleString()
-                : "—"}
+                  ? new Date(booking.updatedAt).toLocaleString()
+                  : "—"}
             </Text>
           </View>
           {booking?.cancelledReason && (
@@ -358,11 +511,17 @@ export default function AdminRefundDetailScreen() {
               style={[styles.primaryActionBtn, styles.approveActionBtn, busy && { opacity: 0.6 }]}
             >
               <CheckCircle2 size={18} color={C.white} />
-              <Text style={styles.primaryActionText}>Approve Refund</Text>
+              <Text style={styles.primaryActionText}>
+                {busy ? "Working..." : "Approve Refund"}
+              </Text>
             </Pressable>
             <Pressable
               disabled={busy}
-              onPress={() => setRejectModalOpen(true)}
+              onPress={() => {
+                setRejectReason("");
+                setRejectError("");
+                setRejectModalOpen(true);
+              }}
               style={[styles.primaryActionBtn, styles.rejectActionBtn, busy && { opacity: 0.6 }]}
             >
               <XCircle size={18} color={C.white} />
@@ -373,7 +532,12 @@ export default function AdminRefundDetailScreen() {
       </ScrollView>
 
       {/* Reject Modal */}
-      <Modal visible={rejectModalOpen} transparent animationType="slide">
+      <Modal
+        visible={rejectModalOpen}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setRejectModalOpen(false)}
+      >
         <View style={styles.modalOverlay}>
           <View style={styles.modalCard}>
             <Text style={styles.modalTitle}>Reject Refund Request</Text>
@@ -381,14 +545,18 @@ export default function AdminRefundDetailScreen() {
               Please state why this request is being rejected. The customer will see this message.
             </Text>
             <TextInput
-              style={styles.modalInput}
+              style={[styles.modalInput, !!rejectError && styles.modalInputError]}
               multiline
               numberOfLines={4}
               placeholder="e.g. Booking cancelled after service professional arrived..."
               placeholderTextColor={C.muted}
               value={rejectReason}
-              onChangeText={setRejectReason}
+              onChangeText={(t) => {
+                setRejectReason(t);
+                if (rejectError) setRejectError("");
+              }}
             />
+            {!!rejectError && <Text style={styles.modalErrorText}>{rejectError}</Text>}
             <View style={styles.modalBtnRow}>
               <Pressable
                 style={[styles.modalBtn, styles.modalCancelBtn]}
@@ -398,8 +566,8 @@ export default function AdminRefundDetailScreen() {
                 <Text style={styles.modalCancelText}>Cancel</Text>
               </Pressable>
               <Pressable
-                style={[styles.modalBtn, styles.modalSubmitRejectBtn]}
-                onPress={handleRejectSubmit}
+                style={[styles.modalBtn, styles.modalSubmitRejectBtn, busy && { opacity: 0.6 }]}
+                onPress={() => void handleRejectSubmit()}
                 disabled={busy}
               >
                 <Text style={styles.modalSubmitRejectText}>
@@ -410,9 +578,97 @@ export default function AdminRefundDetailScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* Confirm / result dialog */}
+      <AppDialog dialog={dialog} onClose={() => setDialog(null)} />
     </View>
   );
 }
+
+const dlg = StyleSheet.create({
+  overlay: {
+    flex: 1,
+    backgroundColor: "rgba(26, 26, 46, 0.62)",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 24,
+  },
+  card: {
+    width: "100%",
+    maxWidth: 380,
+    backgroundColor: C.white,
+    borderRadius: 24,
+    paddingHorizontal: 22,
+    paddingTop: 28,
+    paddingBottom: 20,
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOpacity: 0.18,
+    shadowRadius: 24,
+    shadowOffset: { width: 0, height: 10 },
+    elevation: 12,
+  },
+  iconWrap: {
+    width: 68,
+    height: 68,
+    borderRadius: 34,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 16,
+  },
+  title: {
+    color: C.navy,
+    fontSize: 19,
+    fontWeight: "900",
+    textAlign: "center",
+  },
+  message: {
+    color: C.muted,
+    fontSize: 13.5,
+    lineHeight: 20,
+    textAlign: "center",
+    marginTop: 8,
+  },
+  detailsBox: {
+    width: "100%",
+    backgroundColor: "#F7F7FD",
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "#EAEAF4",
+    paddingHorizontal: 14,
+    marginTop: 18,
+  },
+  detailRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 11,
+    gap: 12,
+  },
+  detailRowBorder: { borderTopWidth: 1, borderTopColor: "#EAEAF4" },
+  detailLabel: { color: C.muted, fontSize: 12.5 },
+  detailValue: {
+    color: C.navy,
+    fontSize: 13,
+    fontWeight: "800",
+    flexShrink: 1,
+    textAlign: "right",
+  },
+  btnRow: { flexDirection: "row", gap: 10, width: "100%", marginTop: 22 },
+  btn: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 7,
+    paddingVertical: 14,
+    borderRadius: 14,
+  },
+  btnFull: { width: "100%", flex: 0, marginTop: 22 },
+  btnSecondary: { backgroundColor: "#F0F1F7" },
+  btnSecondaryText: { color: C.navy, fontSize: 14, fontWeight: "800" },
+  btnPrimaryText: { color: C.white, fontSize: 14, fontWeight: "800" },
+});
 
 const styles = StyleSheet.create({
   header: {
@@ -549,6 +805,8 @@ const styles = StyleSheet.create({
     minHeight: 100,
     textAlignVertical: "top",
   },
+  modalInputError: { borderColor: C.danger },
+  modalErrorText: { color: C.danger, fontSize: 12, fontWeight: "700", marginTop: -6 },
   modalBtnRow: {
     flexDirection: "row",
     gap: 12,

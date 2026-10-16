@@ -1,4 +1,16 @@
-import React, { useState } from "react";
+import type { Booking } from "@/api/bookings";
+import {
+  submitRefundRequest,
+  type RefundRequest,
+} from "@/api/refunds";
+import { isAxiosError } from "axios";
+import {
+  AlertCircle,
+  Receipt,
+  ShieldCheck,
+  X,
+} from "lucide-react-native";
+import { useState } from "react";
 import {
   Alert,
   Modal,
@@ -8,18 +20,6 @@ import {
   Text,
   View,
 } from "react-native";
-import {
-  AlertCircle,
-  Receipt,
-  ShieldCheck,
-  X,
-} from "lucide-react-native";
-import { isAxiosError } from "axios";
-import {
-  submitRefundRequest,
-  type RefundRequest,
-} from "@/api/refunds";
-import type { Booking } from "@/api/bookings";
 
 const C = {
   navy: "#1A1A2E",
@@ -43,17 +43,21 @@ export const REFUND_STATUS_DISPLAY: Record<
     text: "#92400E",
     description: "Your request has been submitted and is awaiting administrator review.",
   },
+  // Admin approval sets the status to "processing", so this is what the
+  // customer sees right after approval.
   processing: {
-    label: "Refund Under Review",
-    bg: "#DBEAFE",
-    text: "#1E40AF",
-    description: "Your request has been approved and is being processed with the payment provider.",
-  },
-  approved: {
-    label: "Refund Approved",
+    label: "Refund Accepted",
     bg: "#D1FAE5",
     text: "#065F46",
-    description: "Your refund has been approved and queued for fund settlement.",
+    description:
+      "Your refund request has been accepted. The refund is being processed to your original payment method.",
+  },
+  approved: {
+    label: "Refund Accepted",
+    bg: "#D1FAE5",
+    text: "#065F46",
+    description:
+      "Your refund request has been accepted and queued for fund settlement.",
   },
   rejected: {
     label: "Refund Rejected",
@@ -97,9 +101,10 @@ export function RefundRequestConfirmModal({
 
   const serviceAmount = Number(
     paymentInfo?.protectedServiceAmount ||
-      booking.totalPrice ||
-      booking.serviceFee ||
-      0
+    paymentInfo?.amount ||
+    booking.totalPrice ||
+    booking.serviceFee ||
+    0
   );
   const protectionFee = Number(
     paymentInfo?.refundProtectionFee || Math.round(serviceAmount * 0.1)
@@ -108,22 +113,34 @@ export function RefundRequestConfirmModal({
   const refundAmount = serviceAmount; // Protection fee is non-refundable
 
   const handleSubmit = async () => {
+    if (submitting) return;
     setSubmitting(true);
     try {
       await submitRefundRequest(booking._id);
-      Alert.alert(
-        "Refund Requested",
-        "Your refund request has been submitted successfully. Our team will verify your cancellation timing and process your eligible service refund."
-      );
+      setSubmitting(false);
+      // Refresh parent data and close the sheet first, then show the alert
+      // (an iOS Alert shown over an open Modal can fail to appear).
       onSuccess();
       onClose();
+      setTimeout(() => {
+        Alert.alert(
+          "Refund Requested",
+          "Your refund request has been submitted successfully. Our team will verify your cancellation timing and process your eligible service refund."
+        );
+      }, 350);
     } catch (err) {
-      const msg = isAxiosError(err)
-        ? err.response?.data?.message
-        : "Failed to submit refund request.";
-      Alert.alert("Unable to Submit", msg || "An unexpected error occurred.");
-    } finally {
       setSubmitting(false);
+      let msg = "An unexpected error occurred.";
+      if (isAxiosError(err)) {
+        msg =
+          err.response?.data?.message ||
+          (err.response
+            ? `Request failed (${err.response.status}).`
+            : "Network error. Please check your connection and try again.");
+      } else if (err instanceof Error && err.message) {
+        msg = err.message;
+      }
+      Alert.alert("Unable to Submit", msg);
     }
   };
 
@@ -133,7 +150,7 @@ export function RefundRequestConfirmModal({
   const cancellationDateStr = cancelledEntry?.at || booking.updatedAt;
 
   return (
-    <Modal visible={visible} transparent animationType="slide">
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <View style={styles.modalOverlay}>
         <View style={styles.modalSheet}>
           {/* Header */}
@@ -167,10 +184,10 @@ export function RefundRequestConfirmModal({
                 <Text style={styles.detailValue}>
                   {cancellationDateStr
                     ? new Date(cancellationDateStr).toLocaleDateString("en-US", {
-                        month: "short",
-                        day: "numeric",
-                        year: "numeric",
-                      })
+                      month: "short",
+                      day: "numeric",
+                      year: "numeric",
+                    })
                     : "—"}
                 </Text>
               </View>
@@ -265,7 +282,7 @@ export function RefundDetailsHistoryModal({
   const booking = request.booking as any;
 
   return (
-    <Modal visible={visible} transparent animationType="slide">
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <View style={styles.modalOverlay}>
         <View style={styles.modalSheet}>
           {/* Header */}
@@ -340,18 +357,20 @@ export function RefundDetailsHistoryModal({
                 <Text style={styles.detailValue}>
                   {request.createdAt
                     ? new Date(request.createdAt).toLocaleDateString("en-US", {
-                        month: "short",
-                        day: "numeric",
-                        year: "numeric",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })
+                      month: "short",
+                      day: "numeric",
+                      year: "numeric",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })
                     : "—"}
                 </Text>
               </View>
               {request.reviewedAt && (
                 <View style={styles.detailRow}>
-                  <Text style={styles.detailLabel}>Reviewed On</Text>
+                  <Text style={styles.detailLabel}>
+                    {request.status === "rejected" ? "Reviewed On" : "Accepted On"}
+                  </Text>
                   <Text style={styles.detailValue}>
                     {new Date(request.reviewedAt).toLocaleDateString("en-US", {
                       month: "short",
