@@ -1,6 +1,6 @@
 import { getPayment } from "@/api/domain";
 import { ErrorState, LoadingState } from "@/components/DataState";
-import { router, useLocalSearchParams } from "expo-router";
+import { router, Stack, useLocalSearchParams } from "expo-router";
 import { CheckCircle2, Download, Eye } from "lucide-react-native";
 import { useCallback, useEffect, useState } from "react";
 import {
@@ -10,8 +10,10 @@ import {
   Text,
   View,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export default function PaymentSuccess() {
+  const insets = useSafeAreaInsets();
   const { bookingId } = useLocalSearchParams<{ bookingId: string }>();
   const [data, setData] = useState<any>();
   const [error, setError] = useState(false);
@@ -28,8 +30,22 @@ export default function PaymentSuccess() {
     load().catch(() => undefined);
   }, [load]);
 
-  if (!data && !error) return <LoadingState label="Loading receipt..." />;
-  if (error) return <ErrorState onRetry={() => void load()} />;
+  if (!data && !error) {
+    return (
+      <>
+        <Stack.Screen options={{ headerShown: false }} />
+        <LoadingState label="Loading receipt..." />
+      </>
+    );
+  }
+  if (error) {
+    return (
+      <>
+        <Stack.Screen options={{ headerShown: false }} />
+        <ErrorState onRetry={() => void load()} />
+      </>
+    );
+  }
 
   const payment = data.payment;
   const booking = data.booking;
@@ -55,12 +71,12 @@ export default function PaymentSuccess() {
       label: "Date & Time",
       value: payment?.paidAt
         ? new Date(payment.paidAt).toLocaleString("en-US", {
-            month: "short",
-            day: "numeric",
-            year: "numeric",
-            hour: "2-digit",
-            minute: "2-digit",
-          })
+          month: "short",
+          day: "numeric",
+          year: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+        })
         : "—",
     },
     {
@@ -71,9 +87,15 @@ export default function PaymentSuccess() {
 
   return (
     <View style={styles.screen}>
+      {/* Hide the default navigator header ("payment successful" bar) */}
+      <Stack.Screen options={{ headerShown: false }} />
+
       <ScrollView
         style={styles.scrollView}
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[
+          styles.content,
+          { paddingTop: insets.top + 12 },
+        ]}
         showsVerticalScrollIndicator={false}
       >
         {/* Header */}

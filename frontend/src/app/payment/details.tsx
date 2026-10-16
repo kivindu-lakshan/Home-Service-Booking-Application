@@ -1,7 +1,7 @@
 import { createPayment, getPayment, getPaymentMethods } from "@/api/domain";
 import { ErrorState, LoadingState } from "@/components/DataState";
 import { isAxiosError } from "axios";
-import { router, useLocalSearchParams } from "expo-router";
+import { router, Stack, useLocalSearchParams } from "expo-router";
 import { CreditCard, Lock, Plus, ShieldCheck } from "lucide-react-native";
 import { useCallback, useEffect, useState } from "react";
 import {
@@ -12,8 +12,10 @@ import {
   TextInput,
   View,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export default function PaymentDetails() {
+  const insets = useSafeAreaInsets();
   const { bookingId } = useLocalSearchParams<{ bookingId: string }>();
   const [data, setData] = useState<any>();
   const [methods, setMethods] = useState<any[]>([]);
@@ -156,17 +158,25 @@ export default function PaymentDetails() {
   };
 
   if (loading) {
-    return <LoadingState label="Loading payment details..." />;
+    return (
+      <>
+        <Stack.Screen options={{ headerShown: false }} />
+        <LoadingState label="Loading payment details..." />
+      </>
+    );
   }
 
   if (!data) {
     return (
-      <ErrorState
-        onRetry={() => {
-          setLoading(true);
-          void load();
-        }}
-      />
+      <>
+        <Stack.Screen options={{ headerShown: false }} />
+        <ErrorState
+          onRetry={() => {
+            setLoading(true);
+            void load();
+          }}
+        />
+      </>
     );
   }
 
@@ -186,9 +196,15 @@ export default function PaymentDetails() {
 
   return (
     <View style={styles.screen}>
+      {/* Hide the default navigator header ("payment details" bar) */}
+      <Stack.Screen options={{ headerShown: false }} />
+
       <ScrollView
         style={styles.scrollView}
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[
+          styles.content,
+          { paddingTop: insets.top + 12 },
+        ]}
         showsVerticalScrollIndicator={false}
       >
         {/* Header */}
