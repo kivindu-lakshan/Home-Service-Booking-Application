@@ -208,12 +208,22 @@ const PaymentMethod = make("PaymentMethod", {
   gatewayToken: String,
   isDefault: Boolean,
 });
+
+// FIX: refund-protection fields are now part of the Payment schema definition
+// (previously added with Payment.schema.add() AFTER the model was compiled,
+// which made payment.refundProtection etc. come back undefined).
 const Payment = make("Payment", {
   booking: { ...ref("Booking"), unique: true },
   paymentMethod: ref("PaymentMethod", false),
   method: {
     type: String,
-    enum: ["card", "cash_on_arrival", "cash_on_completion"],
+    enum: [
+      "card",
+      "demo_card",
+      "card_saved",
+      "cash_on_arrival",
+      "cash_on_completion",
+    ],
   },
   amount: Number,
   serviceCharge: Number,
@@ -227,6 +237,10 @@ const Payment = make("Payment", {
   },
   receiptNo: { type: String, unique: true, sparse: true },
   paidAt: Date,
+  // Refund protection
+  refundProtection: { type: Boolean, default: false },
+  refundProtectionFee: { type: Number, default: 0 },
+  protectedServiceAmount: { type: Number }, // original service amount before protection
 });
 const Review = make("Review", {
   booking: { ...ref("Booking"), unique: true },
@@ -325,14 +339,6 @@ const RefundRequest = make("RefundRequest", {
 }, { collection: "refundrequests" });
 RefundRequest.schema.index({ customer: 1, createdAt: -1 });
 RefundRequest.schema.index({ status: 1, createdAt: -1 });
-
-// Also add refund-protection fields to Payment at schema level (virtual approach – store on Payment)
-// We extend the Payment schema by patching the existing fields here:
-Payment.schema.add({
-  refundProtection: { type: Boolean, default: false },
-  refundProtectionFee: { type: Number, default: 0 },
-  protectedServiceAmount: { type: Number },   // original service amount before protection
-});
 
 const models = {
   ProviderLocation,

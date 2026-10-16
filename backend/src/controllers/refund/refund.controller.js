@@ -4,6 +4,7 @@
  * Handles all Refund Protection and Refund Request logic.
  * Eligibility is always re-verified server-side; client state is never trusted.
  */
+const mongoose = require("mongoose");
 const { Booking, Payment, RefundRequest } = require("../../models");
 
 const send = (res, data, message = "Success", code = 200) =>
@@ -14,20 +15,12 @@ const fail = (res, message, code = 400) =>
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
-/**
- * Returns the status history entry where the booking was first set to 'arrived',
- * or null if it has never arrived.
- */
 function arrivedEntry(booking) {
   return (booking.statusHistory || []).find((h) => h.status === "arrived") || null;
 }
 
-/**
- * Check all seven eligibility conditions and return an object:
- *   { eligible: boolean, reason?: string }
- */
 async function checkEligibility(booking, payment) {
-  if (booking.status !== "cancelled")
+  if (!booking || booking.status !== "cancelled")
     return { eligible: false, reason: "Booking has not been cancelled." };
 
   if (booking.paymentMode !== "pay_now")
@@ -48,10 +41,8 @@ async function checkEligibility(booking, payment) {
   if (payment.status !== "paid")
     return { eligible: false, reason: "Payment was not successfully completed for this booking." };
 
-  // Cancellation timing – must be cancelled before provider arrived
   const arrived = arrivedEntry(booking);
   if (arrived) {
-    // If there is an 'arrived' entry, check whether cancellation happened before it
     const cancelledEntry = (booking.statusHistory || []).find((h) => h.status === "cancelled");
     const cancelledAt = cancelledEntry ? new Date(cancelledEntry.at) : null;
     const arrivedAt = new Date(arrived.at);
@@ -64,9 +55,40 @@ async function checkEligibility(booking, payment) {
 
 exports.checkEligibility = checkEligibility;
 
+const paymentSummary = (payment) =>
+  payment
+    ? {
+      amount: payment.amount,
+      refundProtection: payment.refundProtection,
+      refundProtectionFee: payment.refundProtectionFee,
+      protectedServiceAmount: payment.protectedServiceAmount,
+      totalAmount: payment.totalAmount,
+      method: payment.method,
+      status: payment.status,
+    }
+    : null;
+
+// Accept the rejection reason under several common key names
+const pickReason = (body = {}) => {
+  const raw =
+    body.reason ??
+    body.rejectionReason ??
+    body.rejection_reason ??
+    body.note ??
+    body.message ??
+    "";
+  return typeof raw === "string" ? raw.trim() : "";
+};
+
+// Standard population used for admin responses
+const populateAdmin = (query) =>
+  query
+    .populate({ path: "booking", populate: ["service"] })
+    .populate({ path: "customer", select: "fullName email phone" })
+    .populate({ path: "reviewedBy", select: "fullName" });
+
 /**
  * GET /api/refunds/eligibility-summary
- * Returns eligibility assessment and any existing request for all cancelled bookings of the customer.
  */
 exports.eligibilitySummary = async (req, res, next) => {
   try {
@@ -106,16 +128,7 @@ exports.eligibilitySummary = async (req, res, next) => {
         request: null,
         eligible,
         reason: eligible ? null : reason,
-        payment: payment
-          ? {
-              amount: payment.amount,
-              refundProtection: payment.refundProtection,
-              refundProtectionFee: payment.refundProtectionFee,
-              totalAmount: payment.totalAmount,
-              method: payment.method,
-              status: payment.status,
-            }
-          : null,
+        payment: paymentSummary(payment),
       };
     }
     return send(res, summary);
@@ -126,10 +139,12 @@ exports.eligibilitySummary = async (req, res, next) => {
 
 /**
  * GET /api/refunds/check/:bookingId
- * Check eligibility for a specific booking.
  */
 exports.checkSingle = async (req, res, next) => {
   try {
+    if (!mongoose.isValidObjectId(req.params.bookingId))
+      return fail(res, "Invalid booking id.", 422);
+
     const booking = await Booking.findOne({
       _id: req.params.bookingId,
       customer: req.user._id,
@@ -157,16 +172,7 @@ exports.checkSingle = async (req, res, next) => {
       request: null,
       eligible,
       reason: eligible ? null : reason,
-      payment: payment
-        ? {
-            amount: payment.amount,
-            refundProtection: payment.refundProtection,
-            refundProtectionFee: payment.refundProtectionFee,
-            totalAmount: payment.totalAmount,
-            method: payment.method,
-            status: payment.status,
-          }
-        : null,
+      payment: paymentSummary(payment),
     });
   } catch (err) {
     return next(err);
@@ -175,7 +181,6 @@ exports.checkSingle = async (req, res, next) => {
 
 /**
  * GET /api/refunds/eligible-bookings
- * Returns cancelled bookings that are eligible for a refund request.
  */
 exports.eligibleBookings = async (req, res, next) => {
   try {
@@ -190,8 +195,7 @@ exports.eligibleBookings = async (req, res, next) => {
     const results = [];
     for (const booking of cancelled) {
       const payment = await Payment.findOne({ booking: booking._id });
-      const { eligible, reason } = await checkEligibility(booking, payment);
-      // Only include if eligible and no request already exists
+      const { eligible } = await checkEligibility(booking, payment);
       if (!eligible) continue;
       const existingRequest = await RefundRequest.findOne({ booking: booking._id });
       if (existingRequest) continue;
@@ -205,12 +209,14 @@ exports.eligibleBookings = async (req, res, next) => {
 
 /**
  * POST /api/refunds/request
- * Customer submits a refund request.
+ * Body: { bookingId }
  */
 exports.create = async (req, res, next) => {
   try {
-    const { bookingId } = req.body;
+    const { bookingId } = req.body || {};
     if (!bookingId) return fail(res, "bookingId is required.", 422);
+    if (!mongoose.isValidObjectId(bookingId))
+      return fail(res, "Invalid booking id.", 422);
 
     const booking = await Booking.findOne({
       _id: bookingId,
@@ -223,17 +229,18 @@ exports.create = async (req, res, next) => {
     const { eligible, reason } = await checkEligibility(booking, payment);
     if (!eligible) return fail(res, reason, 422);
 
-    // Prevent duplicate
     const existing = await RefundRequest.findOne({ booking: booking._id });
     if (existing)
       return fail(res, "A refund request already exists for this booking.", 409);
 
-    // Determine cancellation timing
     const cancelledEntry = (booking.statusHistory || []).find((h) => h.status === "cancelled");
     const arrived = arrivedEntry(booking);
 
-    const serviceAmount = payment.protectedServiceAmount || booking.totalPrice || 0;
-    const protectionFee = payment.refundProtectionFee || 0;
+    const serviceAmount = Number(
+      payment.protectedServiceAmount || payment.amount || booking.totalPrice || 0
+    );
+    const protectionFee = Number(payment.refundProtectionFee || 0);
+    const totalPaid = Number(payment.totalAmount || serviceAmount + protectionFee);
 
     const refundReq = await RefundRequest.create({
       booking: booking._id,
@@ -241,7 +248,7 @@ exports.create = async (req, res, next) => {
       customer: req.user._id,
       serviceAmount,
       protectionFee,
-      totalPaid: payment.totalAmount || serviceAmount + protectionFee,
+      totalPaid,
       refundAmount: serviceAmount, // protection fee is non-refundable
       cancelledAt: cancelledEntry ? cancelledEntry.at : booking.updatedAt,
       cancellationBeforeArrival: !arrived,
@@ -251,13 +258,14 @@ exports.create = async (req, res, next) => {
 
     return send(res, refundReq, "Refund request submitted successfully.", 201);
   } catch (err) {
+    if (err && err.code === 11000)
+      return fail(res, "A refund request already exists for this booking.", 409);
     return next(err);
   }
 };
 
 /**
  * GET /api/refunds/my-requests
- * Customer views their own refund requests.
  */
 exports.myRequests = async (req, res, next) => {
   try {
@@ -272,10 +280,12 @@ exports.myRequests = async (req, res, next) => {
 
 /**
  * GET /api/refunds/my-requests/:id
- * Customer views a single refund request.
  */
 exports.myRequest = async (req, res, next) => {
   try {
+    if (!mongoose.isValidObjectId(req.params.id))
+      return fail(res, "Invalid refund request id.", 422);
+
     const request = await RefundRequest.findOne({
       _id: req.params.id,
       customer: req.user._id,
@@ -290,8 +300,7 @@ exports.myRequest = async (req, res, next) => {
 // ─── Admin endpoints ─────────────────────────────────────────────────────────
 
 /**
- * GET /api/admin/refunds
- * List all refund requests with optional status filter.
+ * GET /api/refunds/admin  (and /api/admin/refunds if adminRouter is mounted)
  */
 exports.adminList = async (req, res, next) => {
   try {
@@ -299,23 +308,20 @@ exports.adminList = async (req, res, next) => {
     const query = {};
     if (status && status !== "all") query.status = status;
 
-    const requests = await RefundRequest.find(query)
-      .populate({ path: "booking", populate: ["service"] })
-      .populate({ path: "customer", select: "fullName email phone" })
-      .populate({ path: "reviewedBy", select: "fullName" })
-      .sort({ createdAt: -1 });
+    const requests = await populateAdmin(RefundRequest.find(query)).sort({
+      createdAt: -1,
+    });
 
-    // Simple search filter
     const filtered = search
       ? requests.filter((r) => {
-          const s = search.toLowerCase();
-          return (
-            r.customer?.fullName?.toLowerCase().includes(s) ||
-            r.booking?.bookingRef?.toLowerCase().includes(s) ||
-            r.booking?.service?.name?.toLowerCase().includes(s) ||
-            r._id.toString().includes(s)
-          );
-        })
+        const s = String(search).toLowerCase();
+        return (
+          r.customer?.fullName?.toLowerCase().includes(s) ||
+          r.booking?.bookingRef?.toLowerCase().includes(s) ||
+          r.booking?.service?.name?.toLowerCase().includes(s) ||
+          r._id.toString().includes(s)
+        );
+      })
       : requests;
 
     return send(res, filtered);
@@ -325,8 +331,7 @@ exports.adminList = async (req, res, next) => {
 };
 
 /**
- * GET /api/admin/refunds/summary
- * Returns counts by status (for the dashboard card).
+ * GET /admin/summary
  */
 exports.adminSummary = async (req, res, next) => {
   try {
@@ -345,11 +350,13 @@ exports.adminSummary = async (req, res, next) => {
 };
 
 /**
- * GET /api/admin/refunds/:id
- * Admin views a single refund request in full detail.
+ * GET /admin/:id
  */
 exports.adminGet = async (req, res, next) => {
   try {
+    if (!mongoose.isValidObjectId(req.params.id))
+      return fail(res, "Invalid refund request id.", 422);
+
     const request = await RefundRequest.findById(req.params.id)
       .populate({ path: "booking", populate: ["service", "provider"] })
       .populate({ path: "customer", select: "fullName email phone" })
@@ -363,98 +370,90 @@ exports.adminGet = async (req, res, next) => {
 };
 
 /**
- * PATCH /api/admin/refunds/:id/approve
- * Admin approves a refund.
- *
- * NOTE: In a production system this would call the payment provider's refund
- * API using the original transaction reference. Since no live gateway is
- * configured, we record approval and set status to "processing", clearly
- * distinguishing it from "processed" (money returned).
+ * PATCH /admin/:id/approve
+ * A failed eligibility re-check returns 422 and leaves the request pending.
+ * The status change is atomic (only matches status "pending").
  */
 exports.adminApprove = async (req, res, next) => {
   try {
+    if (!mongoose.isValidObjectId(req.params.id))
+      return fail(res, "Invalid refund request id.", 422);
+
     const request = await RefundRequest.findById(req.params.id).populate("payment booking");
     if (!request) return fail(res, "Refund request not found.", 404);
     if (request.status !== "pending")
       return fail(res, `Cannot approve a request that is already '${request.status}'.`, 409);
 
-    // Re-verify eligibility from trusted records
     const { eligible, reason } = await checkEligibility(request.booking, request.payment);
-    if (!eligible) {
-      await RefundRequest.findByIdAndUpdate(req.params.id, {
-        status: "rejected",
-        reviewedBy: req.user._id,
-        reviewedAt: new Date(),
-        rejectionReason: `Auto-rejected: ${reason}`,
-      });
+    if (!eligible)
       return fail(res, `Eligibility re-check failed: ${reason}`, 422);
-    }
 
-    // Prevent double-refund
     if (request.payment?.status === "refunded")
       return fail(res, "This payment has already been refunded.", 409);
 
-    // ── Payment provider integration ─────────────────────────────────────
-    // TODO: When a live payment gateway (e.g. Stripe, PayHere) is configured,
-    // call its refund API here using:
-    //   request.payment.transactionReference  (original charge ID)
-    //   request.refundAmount                  (amount to refund)
-    //
-    // Example (Stripe):
-    //   const refund = await stripe.refunds.create({
-    //     charge: request.payment.transactionReference,
-    //     amount: Math.round(request.refundAmount * 100),
-    //   });
-    //   providerRefundRef = refund.id;
-    //   providerRefundStatus = refund.status;
-    //
-    // Until the gateway is configured, we move to "processing" (not "processed").
-    // ─────────────────────────────────────────────────────────────────────
+    // TODO: call the live payment gateway's refund API here
+    // (request.payment.transactionReference, request.refundAmount).
     const providerRefundRef = `PENDING-${Date.now().toString(36).toUpperCase()}`;
 
-    const updated = await RefundRequest.findByIdAndUpdate(
-      req.params.id,
-      {
-        status: "processing",
-        reviewedBy: req.user._id,
-        reviewedAt: new Date(),
-        providerRefundRef,
-        providerRefundStatus: "awaiting_gateway",
-      },
-      { new: true }
+    const updated = await populateAdmin(
+      RefundRequest.findOneAndUpdate(
+        { _id: req.params.id, status: "pending" },
+        {
+          status: "processing",
+          reviewedBy: req.user._id,
+          reviewedAt: new Date(),
+          providerRefundRef,
+          providerRefundStatus: "awaiting_gateway",
+        },
+        { new: true, runValidators: true }
+      )
     );
 
-    return send(res, updated, "Refund approved and queued for processing. Configure the payment gateway to complete the transfer.");
+    if (!updated)
+      return fail(res, "This request was already reviewed by another admin.", 409);
+
+    return send(
+      res,
+      updated,
+      "Refund approved and queued for processing. Configure the payment gateway to complete the transfer."
+    );
   } catch (err) {
     return next(err);
   }
 };
 
 /**
- * PATCH /api/admin/refunds/:id/reject
- * Admin rejects a refund with a required reason.
+ * PATCH /admin/:id/reject
+ * Body: { reason }  (also accepts rejectionReason / note / message)
  */
 exports.adminReject = async (req, res, next) => {
   try {
-    const { reason } = req.body;
-    if (!reason?.trim())
-      return fail(res, "A rejection reason is required.", 422);
+    if (!mongoose.isValidObjectId(req.params.id))
+      return fail(res, "Invalid refund request id.", 422);
+
+    const reason = pickReason(req.body);
+    if (!reason) return fail(res, "A rejection reason is required.", 422);
 
     const request = await RefundRequest.findById(req.params.id);
     if (!request) return fail(res, "Refund request not found.", 404);
     if (request.status !== "pending")
       return fail(res, `Cannot reject a request that is already '${request.status}'.`, 409);
 
-    const updated = await RefundRequest.findByIdAndUpdate(
-      req.params.id,
-      {
-        status: "rejected",
-        reviewedBy: req.user._id,
-        reviewedAt: new Date(),
-        rejectionReason: reason.trim(),
-      },
-      { new: true }
-    ).populate({ path: "customer", select: "fullName email" });
+    const updated = await populateAdmin(
+      RefundRequest.findOneAndUpdate(
+        { _id: req.params.id, status: "pending" },
+        {
+          status: "rejected",
+          reviewedBy: req.user._id,
+          reviewedAt: new Date(),
+          rejectionReason: reason.slice(0, 2000),
+        },
+        { new: true, runValidators: true }
+      )
+    );
+
+    if (!updated)
+      return fail(res, "This request was already reviewed by another admin.", 409);
 
     return send(res, updated, "Refund request rejected.");
   } catch (err) {
